@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
 import { ArrowRight, CircleCheck, Clock3, Dumbbell, Flame, Info, Pencil, Trash2 } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router';
-import { AREA_LABELS, FOCUS_LABELS, calculateEstimates, formatSchedule, localDate, occursOn, plannedVolume, snapshotEstimate, type EstimateSnapshot, type Exercise, type Prescription } from '../../domain';
+import { AREA_LABELS, FOCUS_LABELS, INTENSITY_LABELS, calculateEstimates, formatSchedule, localDate, occursOn, plannedVolume, snapshotEstimate, type EstimateSnapshot, type Exercise, type Prescription, type WorkoutIntensity } from '../../domain';
 import { deletePlan as removePlan, now, updatePlanEstimate, type AuthenticatedPlannerData } from '../../data/db';
 import { EXERCISES } from '../../data/exercises';
 import { formatDateTime } from '../../shared/formatters';
 import { EmptyState, Page } from '../../shared/ui';
 import { FocusIllustration } from './FocusIllustration';
-import { assessPrescriptionEffort, type EffortAssessment } from './recommendations';
+import { assessPlanIntensity, assessPrescriptionEffort, type EffortAssessment, type IntensityAssessment } from './recommendations';
 
 export function PlanDetail({ data }: { data: AuthenticatedPlannerData }) {
   const { planId } = useParams();
@@ -33,6 +33,7 @@ export function PlanDetail({ data }: { data: AuthenticatedPlannerData }) {
 
   const plan = selectedPlan;
   const focus = plan.focus ?? plan.primaryTargetArea;
+  const intensity = plan.intensity ?? 'moderate';
   const today = localDate();
   const canStartToday = occursOn(plan, today);
   const previewEstimate = calculateEstimates(data.profile);
@@ -65,7 +66,7 @@ export function PlanDetail({ data }: { data: AuthenticatedPlannerData }) {
   return (
     <Page
       title={plan.name}
-      subtitle={`${FOCUS_LABELS[focus]} focus · ${formatSchedule(plan.schedule)}`}
+      subtitle={`${FOCUS_LABELS[focus]} focus · ${INTENSITY_LABELS[intensity]} intensity · ${formatSchedule(plan.schedule)}`}
       backTo="/plans"
       action={<div className="page-actions"><Link className="button secondary" to={`/plans/${plan.id}/edit`}><Pencil size={16} /> Edit</Link>{canStartToday && <Link className="button primary" to={`/sessions/${plan.id}/${today}`}><Dumbbell size={16} /> Start today</Link>}</div>}
     >
@@ -83,6 +84,7 @@ export function PlanDetail({ data }: { data: AuthenticatedPlannerData }) {
         </div>
         <aside className="detail-side">
           <EstimateSnapshotCard estimate={plan.estimate} onRecalculate={() => setShowRecalc(true)} />
+          <IntensityCard target={intensity} assessment={assessPlanIntensity(plan, data.records)} />
           <EffortSummary assessments={plan.prescriptions.map((prescription) => assessPrescriptionEffort(prescription, plan.id, data.records))} />
           <div className="side-card">
             <p className="eyebrow">Plan actions</p>
@@ -121,6 +123,11 @@ function EffortSummary({ assessments }: { assessments: EffortAssessment[] }) {
   const trends = assessments.filter((assessment) => assessment.direction === 'insufficient-data').length;
   const summary = decreases ? 'Some exercises need less effort.' : increases ? 'Some exercises are ready for more effort.' : trends === assessments.length ? 'Log two completed sessions to calculate changes.' : 'Your current effort is repeatable.';
   return <div className="side-card effort-summary"><p className="eyebrow">Effort guidance</p><h3>{summary}</h3><div className="effort-summary-stats"><span><strong>{increases}</strong> increase</span><span><strong>{decreases}</strong> decrease</span><span><strong>{trends}</strong> building</span></div></div>;
+}
+
+function IntensityCard({ target, assessment }: { target: WorkoutIntensity; assessment: IntensityAssessment }) {
+  const pillClass = assessment.result === 'above' ? 'increase' : assessment.result === 'below' ? 'decrease' : assessment.result === 'on-target' ? 'hold' : 'insufficient-data';
+  return <div className="side-card intensity-card"><div className="section-heading"><div><p className="eyebrow">Target intensity</p><h3>{INTENSITY_LABELS[target]}</h3></div><span className={`effort-pill ${pillClass}`}>{assessment.label}</span></div><p className="effort-detail">{assessment.detail}</p></div>;
 }
 
 function ExerciseDetail({ prescription, exercise, index, effort }: { prescription: Prescription; exercise: Exercise; index: number; effort: EffortAssessment }) {

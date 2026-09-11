@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { CalendarDays, Check, CircleCheck } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router';
-import { FOCUS_LABELS, dateIsValid, plannedVolume, type Exercise, type Prescription, type SetRecord, type WorkoutRecord } from '../../domain';
+import { FOCUS_LABELS, INTENSITY_LABELS, dateIsValid, plannedVolume, type Exercise, type Prescription, type SetRecord, type WorkoutRecord } from '../../domain';
 import type { PlannerData } from '../../data/db';
 import { now, saveWorkoutRecord, uid, updatePlanPrescriptions } from '../../data/db';
 import { EXERCISES } from '../../data/exercises';
 import { formatLongDate } from '../../shared/formatters';
 import { EmptyState, Page } from '../../shared/ui';
-import { recommendNextPrescriptions } from '../plans/recommendations';
+import { assessPlanIntensity, adjustPrescriptionsForIntensity, recommendNextIntensity, recommendNextPrescriptions } from '../plans/recommendations';
 import { makePlanSnapshot } from './snapshot';
 
 type SetValueField = 'actualReps' | 'actualDurationSeconds' | 'loadKg' | 'rir';
@@ -71,18 +71,30 @@ export function Session({ data }: { data: PlannerData }) {
       await saveWorkoutRecord(record);
       if (status === 'completed') {
         const recordsForRecommendation = data.records.filter((item) => item.id !== record.id).concat(record);
-        const nextPrescriptions = recommendNextPrescriptions(plan, recordsForRecommendation);
+        const currentIntensity = plan.intensity ?? 'moderate';
+        const nextIntensity = recommendNextIntensity(plan, recordsForRecommendation);
+        const intensityChanged = plan.intensity !== undefined && nextIntensity !== currentIntensity;
+        const nextPrescriptions = intensityChanged
+          ? adjustPrescriptionsForIntensity(plan.prescriptions, currentIntensity, nextIntensity)
+          : recommendNextPrescriptions(plan, recordsForRecommendation);
         const changed = nextPrescriptions.some((item, index) => item !== plan.prescriptions[index]);
 
-        if (changed) {
+        if (changed || intensityChanged) {
           try {
-            await updatePlanPrescriptions(plan.id, nextPrescriptions, plan.revision + 1);
-            setMessage('Session complete. Your next recommendation was adjusted from recent performance.');
+            await updatePlanPrescriptions(plan.id, nextPrescriptions, plan.revision + 1, intensityChanged ? nextIntensity : undefined);
+            setMessage(intensityChanged
+              ? `Session complete. You exceeded the ${INTENSITY_LABELS[currentIntensity]} target twice, so this plan is now ${INTENSITY_LABELS[nextIntensity]}.`
+              : 'Session complete. Your next recommendation was adjusted from recent performance.');
           } catch {
             setMessage('Session complete. Your next recommendation could not be updated.');
           }
         } else {
-          setMessage('Session complete. Nice work.');
+          const intensityResult = assessPlanIntensity(plan, recordsForRecommendation).result;
+          setMessage(intensityResult === 'above'
+            ? `Session complete. You exceeded the ${INTENSITY_LABELS[currentIntensity]} target.`
+            : intensityResult === 'on-target'
+              ? `Session complete. You achieved the ${INTENSITY_LABELS[currentIntensity]} target.`
+              : 'Session complete. Nice work.');
         }
       } else {
         setMessage('Progress saved.');
@@ -98,7 +110,7 @@ export function Session({ data }: { data: PlannerData }) {
     <Page title={existing?.status === 'completed' ? 'Completed session' : 'Follow your session'} subtitle={`${snapshot.name} · ${formatLongDate(date)}`} backTo={`/plans/${plan.id}`}>
       <div className="session-layout">
         <div className="session-main">
-          <div className="session-intro"><span className="session-date"><CalendarDays size={16} /> {formatLongDate(date)}</span><span className="area-pill">{FOCUS_LABELS[focus]} focus</span><h2>{snapshot.name}</h2><p className="muted">Log actual reps, load, and optional RIR. Blank fields stay unknown, and completion never requires performance details.</p></div>
+          <div className="session-intro"><span className="session-date"><CalendarDays size={16} /> {formatLongDate(date)}</span><span className="area-pill">{FOCUS_LABELS[focus]} focus</span><span className="area-pill intensity-pill">Target: {INTENSITY_LABELS[snapshot.intensity ?? plan.intensity ?? 'moderate']}</span><h2>{snapshot.name}</h2><p className="muted">Log actual reps, load, and optional RIR. Blank fields stay unknown, and completion never requires performance details.</p></div>
           {snapshot.prescriptions.map((prescription, index) => {
             const exercise = snapshot.exercises.find((item) => item.id === prescription.exerciseId) ?? EXERCISES.find((item) => item.id === prescription.exerciseId);
             return exercise ? <SessionExercise key={prescription.id} prescription={prescription} exercise={exercise} index={index} getSet={getSet} updateSet={updateSet} /> : null;

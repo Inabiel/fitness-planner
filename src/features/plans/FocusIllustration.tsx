@@ -1,19 +1,19 @@
 import { FOCUS_LABELS, type WorkoutFocus } from '../../domain';
 
 const FOCUS_IMAGES: Record<WorkoutFocus, string> = {
-  chest: 'assets/body-areas/chest.svg',
-  back: 'assets/body-areas/back.svg',
-  shoulders: 'assets/body-areas/shoulders.svg',
-  arms: 'assets/body-areas/arms.svg',
-  legs: 'assets/body-areas/legs.svg',
-  glutes: 'assets/body-areas/glutes.svg',
-  core: 'assets/body-areas/core.svg',
-  'full-body': 'assets/body-areas/full-body.svg',
-  push: 'assets/body-areas/push.svg',
-  pull: 'assets/body-areas/pull.svg',
-  'upper-body': 'assets/body-areas/upper-body.svg',
-  'lower-body': 'assets/body-areas/lower-body.svg',
-  aerobic: 'assets/body-areas/aerobic.svg',
+  chest: 'assets/body-areas/chest.webp',
+  back: 'assets/body-areas/back.webp',
+  shoulders: 'assets/body-areas/shoulders.webp',
+  arms: 'assets/body-areas/arms.webp',
+  legs: 'assets/body-areas/legs.webp',
+  glutes: 'assets/body-areas/glutes.webp',
+  core: 'assets/body-areas/core.webp',
+  'full-body': 'assets/body-areas/full-body.webp',
+  push: 'assets/body-areas/push.webp',
+  pull: 'assets/body-areas/pull.webp',
+  'upper-body': 'assets/body-areas/upper-body.webp',
+  'lower-body': 'assets/body-areas/lower-body.webp',
+  aerobic: 'assets/body-areas/aerobic.webp',
 };
 
 export function FocusIllustration({ focus, className = '' }: { focus: WorkoutFocus; className?: string }) {

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Activity, ArrowLeft, ArrowRight, CalendarDays, CircleCheck, Dumbbell, Flame, HeartPulse, Plus, TrendingUp } from 'lucide-react';
 import { Link } from 'react-router';
-import { FOCUS_LABELS, calculateEstimates, formatSchedule, localDate, occurrenceAfter, occurrenceBefore, occursOn, plannedVolume, type Profile, type WorkoutPlan } from '../../domain';
+import { FOCUS_LABELS, INTENSITY_LABELS, calculateEstimates, formatSchedule, localDate, occurrenceAfter, occurrenceBefore, occursOn, plannedVolume, type Profile, type WorkoutPlan } from '../../domain';
 import type { PlannerData } from '../../data/db';
 import { formatLongDate, formatShortDate, getGreeting } from '../../shared/formatters';
 import { EmptyState, Page } from '../../shared/ui';
@@ -118,7 +118,7 @@ function ScheduleCard({ plan, completed, date }: { plan: WorkoutPlan; completed:
   const focus = plan.focus ?? plan.primaryTargetArea;
   return <Link to={`/sessions/${plan.id}/${date}`} className={`schedule-card ${completed ? 'done' : ''}`}>
     <span className="schedule-status">{completed ? <CircleCheck size={20} /> : <span className="empty-circle" />}</span>
-    <span className="schedule-card-main"><span className="card-kicker">{FOCUS_LABELS[focus]} focus · {plannedVolume(plan.prescriptions)} planned sets</span><strong>{plan.name}</strong><span className="muted">{plan.prescriptions.length} exercises · {formatSchedule(plan.schedule)}</span><span className="schedule-occurrence"><CalendarDays size={13} /> {formatShortDate(date)}</span></span>
+    <span className="schedule-card-main"><span className="card-kicker">{FOCUS_LABELS[focus]} focus · {INTENSITY_LABELS[plan.intensity ?? 'moderate']} intensity · {plannedVolume(plan.prescriptions)} planned sets</span><strong>{plan.name}</strong><span className="muted">{plan.prescriptions.length} exercises · {formatSchedule(plan.schedule)}</span><span className="schedule-occurrence"><CalendarDays size={13} /> {formatShortDate(date)}</span></span>
     <ArrowRight size={18} />
   </Link>;
 }

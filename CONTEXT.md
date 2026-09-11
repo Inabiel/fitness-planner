@@ -11,9 +11,10 @@ This file owns the project vocabulary. The current implementation snapshot below
 - Dexie-backed IndexedDB database named `form-fitness-planner`.
 - One singleton profile, saved plans, workout records, and body-weight records.
 - 32 built-in Exercises: 24 strength-oriented entries and 8 aerobic entries.
-- Local SVG focus illustrations for body areas, splits, and aerobic focus.
+- Local focus illustrations for body areas, splits, and aerobic focus.
 - Four-step onboarding and profile editing with a final confirmation modal.
 - Six Workout Presets, paginated/searchable/filterable Exercise Library, and persisted Custom Exercise Order.
+- Four target intensity levels that shape generated prescriptions and can advance after repeated above-target recurring sessions.
 - Dated session logging with optional reps/duration, load, and RIR per set.
 - Dashboard schedule browsing for the selected date, nearest earlier occurrences, nearest upcoming occurrences, and direct specific-date navigation.
 - Simple two-session progression guidance that can adjust the next prescription.
@@ -64,6 +65,12 @@ The optional estimate of how many more repetitions could have been completed aft
 
 **Workout Preset**  
 A selectable template that replaces the current exercise selection and applies an effort profile to the confirmed Workout Focus. Current presets are Easy One, Strength Base, Muscle Builder, Machine Circuit, Quick Sweat, and Aerobic Flow.
+
+**Target Intensity**  
+The desired exertion profile for a Workout Plan: Easy, Moderate, Hard, or Very hard. It shapes generated sets, dose, rest, and target RIR; it is a relative planning target, not a medical or one-repetition-maximum measurement.
+
+**Achieved Intensity**  
+The latest logged recurring session’s measured result against the plan’s Target Intensity. It is reported as below target, on target, or above target when enough actual dose or RIR data is recorded. Two consecutive above-target sessions can advance the plan’s Target Intensity by one level.
 
 **Workout Session**  
 A dated use of a Workout Plan. The current implementation stores the first explicit save or completion as a Workout Record rather than materializing an infinite recurrence series.

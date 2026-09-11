@@ -5,7 +5,9 @@ import {
   AREA_LABELS,
   AREAS,
   FOCUS_LABELS,
+  INTENSITY_LABELS,
   SPLITS,
+  WORKOUT_INTENSITIES,
   WORKOUT_STYLES,
   dateIsValid,
   localDate,
@@ -17,6 +19,7 @@ import {
   type Prescription,
   type Schedule,
   type WorkoutFocus,
+  type WorkoutIntensity,
   type WorkoutPlan,
 } from '../../domain';
 import { now, savePlan as savePlanRecord, uid, type AuthenticatedPlannerData } from '../../data/db';
@@ -25,7 +28,7 @@ import { normalizeExerciseOrder } from '../exercises/order';
 import { weekdayLabel } from '../../shared/formatters';
 import { EmptyState, Field, Page } from '../../shared/ui';
 import { IntentionPreview } from './IntentionPreview';
-import { createPresetPrescriptions, createRecommendedPrescriptions, WORKOUT_PRESETS, type WorkoutPreset } from './recommendations';
+import { adjustPrescriptionsForIntensity, createPresetPrescriptions, createRecommendedPrescriptions, WORKOUT_PRESETS, type WorkoutPreset } from './recommendations';
 
 const EXERCISES_PER_PAGE = 6;
 type ExerciseSort = 'popularity' | 'name-asc' | 'name-desc' | 'area' | 'custom';
@@ -40,8 +43,9 @@ export function PlanEditor({ data }: { data: AuthenticatedPlannerData }) {
   const [date, setDate] = useState(source?.schedule.kind === 'date' ? source.schedule.date : localDate());
   const [weekday, setWeekday] = useState(String(source?.schedule.kind === 'weekly' ? source.schedule.weekday : 1));
   const [focus, setFocus] = useState<WorkoutFocus>(source?.focus ?? source?.primaryTargetArea ?? 'full-body');
+  const [intensity, setIntensity] = useState<WorkoutIntensity>(source?.intensity ?? 'moderate');
   const [focusConfirmed, setFocusConfirmed] = useState(source?.focusConfirmed ?? false);
-  const [prescriptions, setPrescriptions] = useState<Prescription[]>(() => source?.prescriptions.length ? source.prescriptions : createRecommendedPrescriptions(source?.focus ?? source?.primaryTargetArea ?? 'full-body', data.profile.experience, data.profile.primaryGoal, EXERCISES, uid));
+  const [prescriptions, setPrescriptions] = useState<Prescription[]>(() => source?.prescriptions.length ? source.prescriptions : createRecommendedPrescriptions(source?.focus ?? source?.primaryTargetArea ?? 'full-body', data.profile.experience, data.profile.primaryGoal, EXERCISES, uid, source?.intensity ?? 'moderate'));
   const [search, setSearch] = useState('');
   const [filterArea, setFilterArea] = useState<Area | 'aerobic' | 'all'>('all');
   const [exerciseSort, setExerciseSort] = useState<ExerciseSort>(() => data.profile.exerciseOrder?.length ? 'custom' : 'popularity');
@@ -70,7 +74,7 @@ export function PlanEditor({ data }: { data: AuthenticatedPlannerData }) {
       recommendedLoadKg: null,
       targetRir: exercise.doseKind === 'reps' ? 2 : undefined,
     };
-    setPrescriptions((current) => [...current, prescription]);
+    setPrescriptions((current) => [...current, adjustPrescriptionsForIntensity([prescription], 'moderate', intensity)[0]]);
   }
 
   function updateLibrarySearch(value: string) {
@@ -93,15 +97,20 @@ export function PlanEditor({ data }: { data: AuthenticatedPlannerData }) {
     if (!preset || (preset.id === 'aerobic-flow' && focus !== 'aerobic')) return;
 
     setFocusConfirmed(true);
-    setPrescriptions(createPresetPrescriptions(preset.id, focus, data.profile.experience, data.profile.primaryGoal, EXERCISES, uid));
+    setPrescriptions(createPresetPrescriptions(preset.id, focus, data.profile.experience, data.profile.primaryGoal, EXERCISES, uid, intensity));
     if (!name.trim()) setName(preset.name);
   }
 
   function selectFocus(nextFocus: WorkoutFocus) {
     setFocus(nextFocus);
     setFocusConfirmed(false);
-    setPrescriptions(createRecommendedPrescriptions(nextFocus, data.profile.experience, data.profile.primaryGoal, EXERCISES, uid));
+    setPrescriptions(createRecommendedPrescriptions(nextFocus, data.profile.experience, data.profile.primaryGoal, EXERCISES, uid, intensity));
     if (!name.trim()) setName(`${FOCUS_LABELS[nextFocus]} day`);
+  }
+
+  function selectIntensity(nextIntensity: WorkoutIntensity) {
+    setPrescriptions((current) => adjustPrescriptionsForIntensity(current, intensity, nextIntensity));
+    setIntensity(nextIntensity);
   }
 
   function updatePrescription(id: string, patch: Partial<Prescription>) {
@@ -139,6 +148,7 @@ export function PlanEditor({ data }: { data: AuthenticatedPlannerData }) {
       updatedAt: now(),
       primaryTargetArea: targetAreaForFocus(focus),
       focus,
+      intensity,
       focusConfirmed: true,
       schedule,
       prescriptions,
@@ -174,6 +184,7 @@ export function PlanEditor({ data }: { data: AuthenticatedPlannerData }) {
               <button type="button" className="button small ghost" onClick={() => selectFocus(suggestion.area)}>Use suggestion</button>
             </div>
             <IntentionPreview focus={focus} />
+            <div className="focus-group"><Field label="Target intensity" hint="Sets a starting dose, rest, and target effort for this plan"><select value={intensity} onChange={(event) => selectIntensity(event.target.value as WorkoutIntensity)}>{WORKOUT_INTENSITIES.map((option) => <option key={option} value={option}>{INTENSITY_LABELS[option]}</option>)}</select></Field></div>
             <div className="focus-group"><p className="field-label">Body part</p><div className="area-grid">
               {AREAS.map((area) => <button type="button" key={area} className={`area-option ${focus === area ? 'selected' : ''}`} onClick={() => selectFocus(area)}><span className={`area-dot ${area}`} /><span>{AREA_LABELS[area]}</span>{focus === area && <Check size={15} />}</button>)}
             </div></div>

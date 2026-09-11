@@ -1,6 +1,6 @@
 import Dexie, { type Table } from 'dexie';
 import { useLiveQuery } from 'dexie-react-hooks';
-import type { BodyWeightRecord, Profile, WorkoutPlan, WorkoutRecord } from '../domain';
+import type { BodyWeightRecord, Profile, WorkoutIntensity, WorkoutPlan, WorkoutRecord } from '../domain';
 
 class FitnessDatabase extends Dexie {
   declare profiles: Table<Profile, string>;
@@ -39,8 +39,8 @@ export function updatePlanEstimate(planId: string, estimate: WorkoutPlan['estima
   return db.plans.update(planId, { estimate, revision, updatedAt: now() });
 }
 
-export function updatePlanPrescriptions(planId: string, prescriptions: WorkoutPlan['prescriptions'], revision: number) {
-  return db.plans.update(planId, { prescriptions, revision, updatedAt: now() });
+export function updatePlanPrescriptions(planId: string, prescriptions: WorkoutPlan['prescriptions'], revision: number, intensity?: WorkoutIntensity) {
+  return db.plans.update(planId, { prescriptions, revision, updatedAt: now(), ...(intensity ? { intensity } : {}) });
 }
 
 export function saveWorkoutRecord(record: WorkoutRecord) {

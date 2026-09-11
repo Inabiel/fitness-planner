@@ -1,6 +1,6 @@
 import { ArrowRight, CalendarDays, Dumbbell, Plus, Sparkles, Target } from 'lucide-react';
 import { Link } from 'react-router';
-import { FOCUS_LABELS, plannedVolume, type WorkoutPlan, type WorkoutRecord } from '../../domain';
+import { FOCUS_LABELS, INTENSITY_LABELS, plannedVolume, type WorkoutPlan, type WorkoutRecord } from '../../domain';
 import type { PlannerData } from '../../data/db';
 import { weekdayLabel } from '../../shared/formatters';
 import { EmptyState, Page } from '../../shared/ui';
@@ -35,6 +35,7 @@ function PlanCard({ plan, records }: { plan: WorkoutPlan; records: WorkoutRecord
   const lastUsedLabel = lastRecord ? `Last used ${lastRecord.sessionDate}` : 'Not used yet';
   const scheduleLabel = plan.schedule.kind === 'weekly' ? `Every ${weekdayLabel(plan.schedule.weekday)}` : plan.schedule.date;
   const focus = plan.focus ?? plan.primaryTargetArea;
+  const intensity = plan.intensity ?? 'moderate';
 
   return (
     <Link className="plan-card" to={`/plans/${plan.id}`} aria-label={`Open ${plan.name} workout plan`}>
@@ -42,7 +43,7 @@ function PlanCard({ plan, records }: { plan: WorkoutPlan; records: WorkoutRecord
       <div className="plan-card-body">
         <div className="card-topline"><span className="area-pill">{FOCUS_LABELS[focus]}</span><span className="muted">{lastUsedLabel}</span></div>
         <h2>{plan.name}</h2>
-        <p className="muted">{plan.prescriptions.length} exercises · {plannedVolume(plan.prescriptions)} planned work sets</p>
+        <p className="muted">{plan.prescriptions.length} exercises · {plannedVolume(plan.prescriptions)} planned work sets · {INTENSITY_LABELS[intensity]} intensity</p>
         <div className="plan-card-footer">
           <span className="schedule-label"><CalendarDays size={15} /> {scheduleLabel}</span>
           <span className="text-link">Open plan <ArrowRight size={15} /></span>

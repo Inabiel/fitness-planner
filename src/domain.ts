@@ -9,6 +9,16 @@ export const WORKOUT_STYLES = ['aerobic'] as const;
 export type WorkoutStyle = (typeof WORKOUT_STYLES)[number];
 export type WorkoutFocus = Area | Split | WorkoutStyle;
 
+export const WORKOUT_INTENSITIES = ['easy', 'moderate', 'hard', 'very-hard'] as const;
+export type WorkoutIntensity = (typeof WORKOUT_INTENSITIES)[number];
+
+export const INTENSITY_LABELS: Record<WorkoutIntensity, string> = {
+  easy: 'Easy',
+  moderate: 'Moderate',
+  hard: 'Hard',
+  'very-hard': 'Very hard',
+};
+
 export type Sex = 'female' | 'male';
 export type ActivityLevel = 'sedentary' | 'light' | 'moderate' | 'high' | 'athlete';
 export type Experience = 'beginner' | 'intermediate' | 'advanced';
@@ -76,6 +86,7 @@ export interface WorkoutPlan {
   updatedAt: string;
   primaryTargetArea: Area;
   focus?: WorkoutFocus;
+  intensity?: WorkoutIntensity;
   focusConfirmed: boolean;
   schedule: Schedule;
   prescriptions: Prescription[];
@@ -86,6 +97,7 @@ export interface PlanSnapshot {
   name: string;
   primaryTargetArea: Area;
   focus?: WorkoutFocus;
+  intensity?: WorkoutIntensity;
   schedule: Schedule;
   prescriptions: Prescription[];
   exercises: Exercise[];

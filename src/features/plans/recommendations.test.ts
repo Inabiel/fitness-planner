@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { PlanSnapshot, Prescription, WorkoutPlan, WorkoutRecord } from '../../domain';
 import { EXERCISES } from '../../data/exercises';
-import { assessPrescriptionEffort, createPresetPrescriptions, createRecommendedPrescriptions, recommendNextPrescriptions, selectRecommendedExercises } from './recommendations';
+import { assessPlanIntensity, assessPrescriptionEffort, createPresetPrescriptions, createRecommendedPrescriptions, recommendNextIntensity, recommendNextPrescriptions, selectRecommendedExercises } from './recommendations';
 
 const prescription: Prescription = {
   id: 'push-up-prescription',
@@ -22,6 +22,7 @@ const plan: WorkoutPlan = {
   updatedAt: '2026-01-01T00:00:00.000Z',
   primaryTargetArea: 'chest',
   focus: 'push',
+  intensity: 'moderate',
   focusConfirmed: true,
   schedule: { kind: 'weekly', weekday: 1, startsOn: '2026-01-05' },
   prescriptions: [prescription],
@@ -32,6 +33,7 @@ function record(date: string, reps: number[], rir: number[]): WorkoutRecord {
     name: plan.name,
     primaryTargetArea: plan.primaryTargetArea,
     focus: plan.focus,
+    intensity: plan.intensity,
     schedule: plan.schedule,
     prescriptions: [prescription],
     exercises: [EXERCISES[0]],
@@ -75,6 +77,15 @@ describe('workout recommendations', () => {
     expect(aerobic.every((item) => item.sets === 1 && item.dose.kind === 'duration' && item.dose.value === 600)).toBe(true);
   });
 
+  it('changes generated dose and target effort with intensity', () => {
+    const easy = createPresetPrescriptions('machine-circuit', 'push', 'beginner', 'general-fitness', EXERCISES, () => 'easy-id', 'easy');
+    const hard = createPresetPrescriptions('machine-circuit', 'push', 'beginner', 'general-fitness', EXERCISES, () => 'hard-id', 'hard');
+
+    expect(easy[0].dose.value).toBeLessThan(hard[0].dose.value);
+    expect(easy[0].targetRir).toBe(3);
+    expect(hard[0].targetRir).toBe(1);
+  });
+
   it('increases load after two sessions above the recommendation', () => {
     const next = recommendNextPrescriptions(plan, [record('2026-01-12', [11, 12, 11], [3, 3, 3]), record('2026-01-05', [11, 11, 12], [3, 3, 3])]);
 
@@ -90,5 +101,27 @@ describe('workout recommendations', () => {
   it('explains whether logged effort should increase or decrease', () => {
     expect(assessPrescriptionEffort(prescription, plan.id, [record('2026-01-12', [11, 12, 11], [3, 3, 3]), record('2026-01-05', [11, 11, 12], [3, 3, 3])]).direction).toBe('increase');
     expect(assessPrescriptionEffort(prescription, plan.id, [record('2026-01-12', [7, 6, 6], [0, 0, 0]), record('2026-01-05', [7, 7, 6], [1, 0, 0])]).direction).toBe('decrease');
+  });
+
+  it('reports and advances a recurring plan after repeated above-target intensity', () => {
+    const records = [record('2026-01-12', [11, 12, 11], [2, 2, 2]), record('2026-01-05', [11, 11, 12], [2, 2, 2])];
+
+    expect(assessPlanIntensity(plan, records).result).toBe('above');
+    expect(assessPlanIntensity({ ...plan, intensity: 'hard' }, records).label).toBe('Target advanced');
+    expect(recommendNextIntensity(plan, records)).toBe('hard');
+  });
+
+  it('does not treat the planned very-hard RIR as a burden signal', () => {
+    const veryHardPlan = { ...plan, intensity: 'very-hard' as const, prescriptions: [{ ...prescription, targetRir: 0 }] };
+    const veryHardRecord = (date: string): WorkoutRecord => {
+      const base = record(date, [10, 10, 10], [0, 0, 0]);
+      return {
+        ...base,
+        planSnapshot: { ...base.planSnapshot, intensity: 'very-hard', prescriptions: veryHardPlan.prescriptions },
+        sets: base.sets.map((set) => ({ ...set, prescriptionId: veryHardPlan.prescriptions[0].id })),
+      };
+    };
+
+    expect(recommendNextPrescriptions(veryHardPlan, [veryHardRecord('2026-01-12'), veryHardRecord('2026-01-05')])[0]).toEqual(veryHardPlan.prescriptions[0]);
   });
 });

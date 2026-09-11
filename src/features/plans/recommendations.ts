@@ -1,4 +1,5 @@
-import type { Area, Experience, Exercise, Goal, Prescription, SetRecord, WorkoutFocus, WorkoutPlan, WorkoutRecord } from '../../domain';
+import { INTENSITY_LABELS } from '../../domain';
+import type { Area, Experience, Exercise, Goal, Prescription, SetRecord, WorkoutFocus, WorkoutIntensity, WorkoutPlan, WorkoutRecord } from '../../domain';
 
 const FOCUS_AREAS: Record<WorkoutFocus, readonly Area[]> = {
   chest: ['chest'],
@@ -67,6 +68,13 @@ export const WORKOUT_PRESETS = [
 
 export type WorkoutPreset = (typeof WORKOUT_PRESETS)[number]['id'];
 
+const INTENSITY_PROFILES: Record<WorkoutIntensity, { doseFactor: number; setDelta: number; restDelta: number; targetRir: number }> = {
+  easy: { doseFactor: 0.8, setDelta: -1, restDelta: -30, targetRir: 3 },
+  moderate: { doseFactor: 1, setDelta: 0, restDelta: 0, targetRir: 2 },
+  hard: { doseFactor: 1.15, setDelta: 0, restDelta: 30, targetRir: 1 },
+  'very-hard': { doseFactor: 1.3, setDelta: 1, restDelta: 45, targetRir: 0 },
+};
+
 export function selectRecommendedExercises(focus: WorkoutFocus, exercises: Exercise[]): Exercise[] {
   const targetAreas = FOCUS_AREAS[focus];
   const candidates = focus === 'aerobic' ? exercises.filter((exercise) => exercise.exerciseType === 'aerobic') : exercises;
@@ -78,11 +86,11 @@ export function selectRecommendedExercises(focus: WorkoutFocus, exercises: Exerc
     .map((item) => item.exercise);
 }
 
-export function createRecommendedPrescriptions(focus: WorkoutFocus, experience: Experience, goal: Goal, exercises: Exercise[], createId: () => string): Prescription[] {
-  return selectRecommendedExercises(focus, exercises).map((exercise) => createPrescription(exercise, experience, goal, createId));
+export function createRecommendedPrescriptions(focus: WorkoutFocus, experience: Experience, goal: Goal, exercises: Exercise[], createId: () => string, intensity: WorkoutIntensity = 'moderate'): Prescription[] {
+  return selectRecommendedExercises(focus, exercises).map((exercise) => applyIntensity(createPrescription(exercise, experience, goal, createId), intensity));
 }
 
-export function createPresetPrescriptions(presetId: WorkoutPreset, focus: WorkoutFocus, experience: Experience, goal: Goal, exercises: Exercise[], createId: () => string): Prescription[] {
+export function createPresetPrescriptions(presetId: WorkoutPreset, focus: WorkoutFocus, experience: Experience, goal: Goal, exercises: Exercise[], createId: () => string, intensity: WorkoutIntensity = 'moderate'): Prescription[] {
   if (presetId === 'aerobic-flow' && focus !== 'aerobic') return [];
 
   const machineExercises = exercises.filter((exercise) => Boolean(exercise.equipment));
@@ -90,7 +98,22 @@ export function createPresetPrescriptions(presetId: WorkoutPreset, focus: Workou
   const presetExercises = selectRecommendedExercises(focus, sourceExercises);
   const fallbackExercises = presetId === 'machine-circuit' && presetExercises.length === 0 ? selectRecommendedExercises(focus, exercises) : presetExercises;
 
-  return fallbackExercises.map((exercise) => applyPreset(presetId, exercise, createPrescription(exercise, experience, goal, createId), experience));
+  return fallbackExercises.map((exercise) => applyIntensity(applyPreset(presetId, exercise, createPrescription(exercise, experience, goal, createId), experience), intensity));
+}
+
+export function adjustPrescriptionsForIntensity(prescriptions: Prescription[], from: WorkoutIntensity, to: WorkoutIntensity): Prescription[] {
+  if (from === to) return prescriptions;
+
+  const current = INTENSITY_PROFILES[from];
+  const next = INTENSITY_PROFILES[to];
+  return prescriptions.map((prescription) => ({
+    ...prescription,
+    sets: Math.max(1, prescription.sets + next.setDelta - current.setDelta),
+    dose: { ...prescription.dose, value: adjustIntensityDose(prescription.dose.value, prescription.dose.kind, next.doseFactor / current.doseFactor) },
+    restSeconds: Math.min(180, Math.max(0, prescription.restSeconds + next.restDelta - current.restDelta)),
+    notes: updateIntensityNote(prescription.notes, prescription.dose.kind === 'reps' ? next.targetRir : undefined),
+    targetRir: prescription.dose.kind === 'reps' ? next.targetRir : undefined,
+  }));
 }
 
 function applyPreset(presetId: WorkoutPreset, exercise: Exercise, prescription: Prescription, experience: Experience): Prescription {
@@ -116,6 +139,19 @@ function createPrescription(exercise: Exercise, experience: Experience, goal: Go
   };
 }
 
+function applyIntensity(prescription: Prescription, intensity: WorkoutIntensity): Prescription {
+  return adjustPrescriptionsForIntensity([prescription], 'moderate', intensity)[0];
+}
+
+function adjustIntensityDose(value: number, kind: Prescription['dose']['kind'], factor: number): number {
+  const step = kind === 'duration' ? 5 : 1;
+  return Math.max(step, Math.round((value * factor) / step) * step);
+}
+
+function updateIntensityNote(note: string, targetRir: number | undefined): string {
+  return targetRir === undefined ? note : note.replace(/\d+\s+reps?\s+in\s+reserve/i, `${targetRir} reps in reserve`);
+}
+
 function reduceStartingLoad(load: number | null | undefined): number | null | undefined {
   return load && load > 0 ? roundLoad(load * 0.8) : load;
 }
@@ -131,6 +167,74 @@ export interface EffortAssessment {
   label: string;
   detail: string;
   completedSessions: number;
+}
+
+export type IntensityResult = 'above' | 'on-target' | 'below' | 'insufficient-data';
+
+export interface IntensityAssessment {
+  result: IntensityResult;
+  label: string;
+  detail: string;
+  completedSessions: number;
+}
+
+export function assessPlanIntensity(plan: WorkoutPlan, records: WorkoutRecord[]): IntensityAssessment {
+  const completed = completedPlanRecords(plan.id, records);
+  const latest = completed.find((record) => recordHasIntensityData(record));
+  if (!latest) return { result: 'insufficient-data', label: 'No intensity result yet', detail: 'Log actual reps, duration, load, or RIR in a completed session.', completedSessions: 0 };
+
+  const currentIntensity = plan.intensity ?? 'moderate';
+  const measuredIntensity = latest.planSnapshot.intensity ?? currentIntensity;
+  const result = compareRecordIntensity(latest, measuredIntensity);
+  if (measuredIntensity !== currentIntensity && result === 'above') return { result, label: 'Target advanced', detail: `You exceeded the previous ${INTENSITY_LABELS[measuredIntensity]} target, so this plan is now ${INTENSITY_LABELS[currentIntensity]}.`, completedSessions: completed.filter(recordHasIntensityData).length };
+  if (result === 'above') return { result, label: 'Above target intensity', detail: 'Your latest logged session was harder than this plan’s target.', completedSessions: completed.filter(recordHasIntensityData).length };
+  if (result === 'below') return { result, label: 'Below target intensity', detail: 'Your latest logged session was lighter than this plan’s target.', completedSessions: completed.filter(recordHasIntensityData).length };
+  return { result, label: 'Target intensity achieved', detail: 'Your latest logged session matched this plan’s target.', completedSessions: completed.filter(recordHasIntensityData).length };
+}
+
+export function recommendNextIntensity(plan: WorkoutPlan, records: WorkoutRecord[]): WorkoutIntensity {
+  const current = plan.intensity ?? 'moderate';
+  const recent = completedPlanRecords(plan.id, records).slice(0, 2);
+  if (recent.length < 2 || recent.some((record) => compareRecordIntensity(record, record.planSnapshot.intensity ?? current) !== 'above')) return current;
+  return nextIntensity(current) ?? current;
+}
+
+function nextIntensity(intensity: WorkoutIntensity): WorkoutIntensity | undefined {
+  return ({ easy: 'moderate', moderate: 'hard', hard: 'very-hard', 'very-hard': undefined } as const)[intensity];
+}
+
+function completedPlanRecords(planId: string, records: WorkoutRecord[]): WorkoutRecord[] {
+  return records.filter((record) => record.sourcePlanId === planId && record.status === 'completed').sort((a, b) => b.sessionDate.localeCompare(a.sessionDate));
+}
+
+function recordHasIntensityData(record: WorkoutRecord): boolean {
+  return record.sets.some((set) => set.actualReps !== null || set.actualDurationSeconds !== null || set.loadKg !== null || set.rir !== null && set.rir !== undefined);
+}
+
+function compareRecordIntensity(record: WorkoutRecord, intensity: WorkoutIntensity): IntensityResult {
+  const scores = record.planSnapshot.prescriptions.flatMap((prescription) => record.sets
+    .filter((set) => set.prescriptionId === prescription.id)
+    .map((set) => intensityScore(prescription, set, intensity))
+    .filter((score): score is number => score !== null));
+  if (!scores.length) return 'insufficient-data';
+
+  const average = scores.reduce((total, score) => total + score, 0) / scores.length;
+  return average > 0.25 ? 'above' : average < -0.25 ? 'below' : 'on-target';
+}
+
+function intensityScore(prescription: Prescription, set: SetRecord, intensity: WorkoutIntensity): number | null {
+  const scores: number[] = [];
+  const actual = actualValue(set, prescription.dose.kind);
+  if (actual !== null) scores.push(actual > prescription.dose.value ? 1 : actual < prescription.dose.value * 0.8 ? -1 : 0);
+
+  if (prescription.dose.kind === 'reps' && set.rir !== null && set.rir !== undefined) {
+    const targetRir = INTENSITY_PROFILES[intensity].targetRir;
+    scores.push(set.rir < targetRir ? 1 : set.rir > targetRir ? -1 : 0);
+  }
+
+  const plannedLoad = prescription.recommendedLoadKg;
+  if (plannedLoad && plannedLoad > 0 && set.loadKg !== null) scores.push(set.loadKg > plannedLoad ? 1 : set.loadKg < plannedLoad * 0.8 ? -1 : 0);
+  return scores.length ? scores.reduce((total, score) => total + score, 0) / scores.length : null;
 }
 
 export function assessPrescriptionEffort(prescription: Prescription, planId: string, records: WorkoutRecord[]): EffortAssessment {
@@ -175,7 +279,7 @@ function performanceSignal(performance: { prescription: Prescription; sets: SetR
   const values = performance.sets.map((set) => actualValue(set, performance.prescription.dose.kind)).filter((value): value is number => value !== null);
   const dropOff = values.length > 1 && values[0] - values[values.length - 1] >= Math.max(2, target * 0.25);
   const lowReps = values.some((value) => value <= target * 0.8);
-  const lowReserve = performance.sets.some((set) => set.rir !== null && set.rir !== undefined && set.rir <= 1);
+  const lowReserve = performance.sets.some((set) => set.rir !== null && set.rir !== undefined && set.rir < (performance.prescription.targetRir ?? 2));
 
   return {
     burden: lowReps || dropOff || lowReserve,

@@ -33,7 +33,7 @@ Exact package versions are governed by package.json and package-lock.json.
 | src/data/db.ts | Dexie database, CRUD helpers, clear-all transaction, and usePlanner live query. |
 | src/data/exercises.ts | Static Exercise Library and curated popularity ranks. |
 | src/features/profile | Onboarding stepper, profile settings, form conversion, and validation guards. |
-| src/features/plans | Plan list/editor/detail, focus previews, SVG illustration, presets, and progression heuristics. |
+| src/features/plans | Plan list/editor/detail, focus previews, illustration assets, presets, and progression heuristics. |
 | src/features/sessions | Dated session logger, plan snapshot creation, and historical record detail. |
 | src/features/progress | Body-weight entry/chart, workout history, and performance table. |
 | src/features/exercises | Persisted Custom Exercise Order with arrow and drag-and-drop reorder behavior. |
@@ -70,8 +70,8 @@ The core model is in src/domain.ts:
 - Exercise: stable ID, name, instructions, primary/secondary areas, dose kind, popularity rank, optional equipment/aerobic type, and media label.
 - Prescription: stable ID, exercise ID, sets, reps or duration, rest seconds, notes, optional recommended load, and optional target RIR.
 - Schedule: date or weekly weekday plus startsOn.
-- WorkoutPlan: name, revision/timestamps, compatibility primaryTargetArea, optional WorkoutFocus, confirmation, schedule, prescriptions, and optional EstimateSnapshot.
-- PlanSnapshot: plan name, focus/schedule, prescriptions, exercise metadata, and estimate captured for a WorkoutRecord.
+- WorkoutPlan: name, revision/timestamps, compatibility primaryTargetArea, optional WorkoutFocus and target intensity, confirmation, schedule, prescriptions, and optional EstimateSnapshot.
+- PlanSnapshot: plan name, focus/target intensity/schedule, prescriptions, exercise metadata, and estimate captured for a WorkoutRecord.
 - SetRecord: prescription ID, one-based set number, optional actual reps or duration, optional load, and optional RIR.
 - WorkoutRecord: source plan ID, session date, status, completion time, revision, plan snapshot, and set records.
 - BodyWeightRecord: date, weight, timestamps, and revision.

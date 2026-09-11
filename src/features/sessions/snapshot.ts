@@ -14,6 +14,7 @@ export function makePlanSnapshot(plan: WorkoutPlan): PlanSnapshot {
     name: plan.name,
     primaryTargetArea: plan.primaryTargetArea,
     focus: plan.focus,
+    intensity: plan.intensity,
     schedule: plan.schedule,
     prescriptions,
     exercises,
