@@ -98,14 +98,14 @@ function EstimateCard({ estimate, profile }: { estimate: ReturnType<typeof calcu
   if (!estimate || !profile) return null;
   return (
     <div className="side-card estimate-card">
-      <div className="section-heading"><div><p className="eyebrow">Daily targets</p><h3>{estimate.dailyCalories.toLocaleString()} <small>kcal</small></h3></div><span className="target-icon"><Flame size={18} /></span></div>
+      <div className="section-heading"><div><p className="eyebrow">Daily nutrition targets</p><h3>{estimate.dailyCalories.toLocaleString()} <small>calories/day</small></h3></div><span className="target-icon"><Flame size={18} /></span></div>
       <div className="macro-bars">
         <MacroBar label="Protein" value={`${estimate.proteinGrams}g`} width={Math.min(100, estimate.proteinGrams / 2)} tone="green" />
         <MacroBar label="Carbs" value={`${estimate.carbohydrateGrams}g`} width={Math.min(100, estimate.carbohydrateGrams / 3)} tone="gold" />
         <MacroBar label="Fat" value={`${estimate.fatGrams}g`} width={Math.min(100, estimate.fatGrams * 1.2)} tone="peach" />
       </div>
-      <div className="bmi-row"><span><HeartPulse size={16} /> BMI estimate</span><strong>{estimate.bmi.toFixed(1)}</strong></div>
-      <p className="fine-print">A daily estimate based on your profile and primary goal. It isn’t a per-workout allowance.</p>
+      <div className="bmi-row"><span><HeartPulse size={16} /> BMI estimate <small>body mass index</small></span><strong>{estimate.bmi.toFixed(1)}</strong></div>
+      <p className="fine-print">A daily estimate based on your profile and primary goal. BMI is a height-to-weight screening number, not a diagnosis. It isn’t a per-workout allowance.</p>
     </div>
   );
 }
@@ -118,7 +118,7 @@ function ScheduleCard({ plan, completed, date }: { plan: WorkoutPlan; completed:
   const focus = plan.focus ?? plan.primaryTargetArea;
   return <Link to={`/sessions/${plan.id}/${date}`} className={`schedule-card ${completed ? 'done' : ''}`}>
     <span className="schedule-status">{completed ? <CircleCheck size={20} /> : <span className="empty-circle" />}</span>
-    <span className="schedule-card-main"><span className="card-kicker">{FOCUS_LABELS[focus]} focus · {INTENSITY_LABELS[plan.intensity ?? 'moderate']} intensity · {plannedVolume(plan.prescriptions)} planned sets</span><strong>{plan.name}</strong><span className="muted">{plan.prescriptions.length} exercises · {formatSchedule(plan.schedule)}</span><span className="schedule-occurrence"><CalendarDays size={13} /> {formatShortDate(date)}</span></span>
+    <span className="schedule-card-main"><span className="card-kicker">{FOCUS_LABELS[focus]} focus · {INTENSITY_LABELS[plan.intensity ?? 'moderate']} intensity · {plannedVolume(plan.prescriptions)} planned work sets</span><strong>{plan.name}</strong><span className="muted">{plan.prescriptions.length} exercises · {formatSchedule(plan.schedule)}</span><span className="schedule-occurrence"><CalendarDays size={13} /> {formatShortDate(date)}</span></span>
     <ArrowRight size={18} />
   </Link>;
 }

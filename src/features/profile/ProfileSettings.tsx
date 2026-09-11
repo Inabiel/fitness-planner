@@ -103,7 +103,7 @@ export function ProfileSettings({ profile }: { profile: Profile }) {
         <aside className="settings-side">
           <div className="side-card">
             <p className="eyebrow">Current estimate</p>
-            {estimate && <><strong className="settings-calories">{estimate.dailyCalories.toLocaleString()} <small>kcal / day</small></strong><div className="saved-macros"><span>{estimate.proteinGrams}g protein</span><span>{estimate.carbohydrateGrams}g carbs</span><span>{estimate.fatGrams}g fat</span></div><p className="fine-print">BMI estimate: {estimate.bmi.toFixed(1)}</p></>}
+            {estimate && <><strong className="settings-calories">{estimate.dailyCalories.toLocaleString()} <small>calories/day</small></strong><div className="saved-macros"><span>{estimate.proteinGrams}g protein</span><span>{estimate.carbohydrateGrams}g carbohydrates</span><span>{estimate.fatGrams}g fat</span></div><p className="fine-print">BMI (body mass index): {estimate.bmi.toFixed(1)}. This is a height-to-weight screening number, not a diagnosis.</p></>}
           </div>
           <div className="side-card privacy-card"><Info size={18} /><h3>Local by default</h3><p>Your profile, plans, measurements, and workout records stay in this browser on this device. Clearing browser data may remove them. No account or sync is involved.</p></div>
           <div className="side-card danger-zone">

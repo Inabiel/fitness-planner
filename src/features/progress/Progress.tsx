@@ -5,7 +5,7 @@ import { dateIsValid, localDate, type BodyWeightRecord, type WorkoutRecord } fro
 import { deleteBodyWeight, now, saveBodyWeight, type PlannerData } from '../../data/db';
 import { formatShortDate } from '../../shared/formatters';
 import { getProgressPoints } from '../../shared/progress';
-import { ProgressLineChart } from '../../shared/progressChart';
+import { ChartMarker, ProgressLineChart } from '../../shared/progressChart';
 import { EmptyState, Field, Page } from '../../shared/ui';
 import { positiveNumber } from '../../shared/validation';
 
@@ -85,9 +85,44 @@ function WeightChart({ weights }: { weights: BodyWeightRecord[] }) {
   const min = Math.min(...weights.map((item) => item.weightKg));
   const max = Math.max(...weights.map((item) => item.weightKg));
   const spread = Math.max(1, max - min);
-  const points = weights.map((item, index) => pointForWeight(item.weightKg, index, weights.length, min, spread)).join(' ');
+  const chartPoints = weights.map((item, index) => pointForWeight(item.weightKg, index, weights.length, min, spread));
+  const points = chartPoints.join(' ');
 
-  return <div className="chart-wrap"><svg viewBox="0 0 100 100" preserveAspectRatio="none" role="img" aria-label={`Body weight trend from ${weights[0].weightKg} to ${weights[weights.length - 1].weightKg} kilograms`}><path className="chart-gridline" d="M8 24 H92 M8 55 H92 M8 86 H92" /><polyline className="chart-line" points={points} />{weights.map((item, index) => { const [x, y] = pointForWeight(item.weightKg, index, weights.length, min, spread).split(','); return <circle key={item.date} className="chart-point" cx={x} cy={y} r="2.2" />; })}</svg><div className="chart-labels"><span>{formatShortDate(weights[0].date)}</span><strong>{weights[weights.length - 1].weightKg} kg</strong><span>{formatShortDate(weights[weights.length - 1].date)}</span></div></div>;
+  return (
+    <div className="chart-wrap">
+      <div className="chart-stage">
+        <svg
+          viewBox="0 0 100 100"
+          preserveAspectRatio="none"
+          role="img"
+          aria-label={`Body weight trend from ${weights[0].weightKg} to ${weights[weights.length - 1].weightKg} kilograms`}
+        >
+          <path className="chart-gridline" d="M8 24 H92 M8 55 H92 M8 86 H92" />
+          <polyline className="chart-line" points={points} />
+        </svg>
+        <div className="chart-markers">
+          {weights.map((item, index) => {
+            const [x, y] = chartPoints[index].split(',');
+
+            return (
+              <ChartMarker
+                detail={`${item.weightKg} kg`}
+                key={item.date}
+                label={formatShortDate(item.date)}
+                x={Number(x)}
+                y={Number(y)}
+              />
+            );
+          })}
+        </div>
+      </div>
+      <div className="chart-labels">
+        <span>{formatShortDate(weights[0].date)}</span>
+        <strong>{weights[weights.length - 1].weightKg} kg</strong>
+        <span>{formatShortDate(weights[weights.length - 1].date)}</span>
+      </div>
+    </div>
+  );
 }
 
 function pointForWeight(weight: number, index: number, count: number, min: number, spread: number): string {
@@ -103,6 +138,6 @@ function PerformanceTable({ records }: { records: WorkoutRecord[] }) {
     return { id: `${record.id}-${set.prescriptionId}-${set.setNumber}`, date: record.sessionDate, exercise: exercise?.name ?? 'Exercise', value: set.actualReps ?? set.actualDurationSeconds, unit: set.actualReps !== null ? 'reps' : 'sec', load: set.loadKg, rir: set.rir };
   })).filter((entry) => entry.value !== null);
 
-  if (!entries.length) return <EmptyState compact icon={<BarChart3 size={21} />} title="No set details recorded yet" body="When you add actual reps, duration, or load, those observations will show here." />;
-  return <div className="data-table-wrap"><table className="data-table"><thead><tr><th>Date</th><th>Exercise</th><th>Result</th><th>Load</th><th>RIR</th></tr></thead><tbody>{entries.slice(0, 12).map((entry) => <tr key={entry.id}><td>{formatShortDate(entry.date)}</td><td><strong>{entry.exercise}</strong></td><td>{entry.value} {entry.unit}</td><td>{entry.load === null ? 'Unknown' : `${entry.load} kg`}</td><td>{entry.rir === null || entry.rir === undefined ? '—' : entry.rir}</td></tr>)}</tbody></table></div>;
+  if (!entries.length) return <EmptyState compact icon={<BarChart3 size={21} />} title="No set details recorded yet" body="When you add actual reps, duration, or weight/resistance, those observations will show here." />;
+  return <div className="data-table-wrap"><table className="data-table"><thead><tr><th>Date</th><th>Exercise</th><th>Result</th><th>Weight/resistance</th><th title="RIR means reps in reserve: how many more good-form reps you could have done">RIR (reps left)</th></tr></thead><tbody>{entries.slice(0, 12).map((entry) => <tr key={entry.id}><td>{formatShortDate(entry.date)}</td><td><strong>{entry.exercise}</strong></td><td>{entry.value} {entry.unit}</td><td>{entry.load === null ? 'Unknown' : `${entry.load} kg`}</td><td>{entry.rir === null || entry.rir === undefined ? '—' : entry.rir}</td></tr>)}</tbody></table></div>;
 }

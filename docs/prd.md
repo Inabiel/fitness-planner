@@ -27,7 +27,7 @@ The intended user has access to a standard gym and wants a low-friction personal
 4. Plan creation starts with a focus-aware recommendation and supports body-part, split, and aerobic focus.
 5. The person can apply a preset, edit the generated prescriptions, or add individual exercises from the library.
 6. Plan detail shows the focus illustration, recurring performance trend, sequence, planned volume, saved estimate, effort guidance, logging entry point, copy actions, and delete action.
-7. A dated session accepts optional actual dose, load, and RIR per set, and can copy an individual workout step. Completion is always possible without performance input.
+7. A dated session accepts optional actual dose, load, and RIR per set. Completion is always possible without performance input.
 8. Progress and history show weight observations, recorded sessions, snapshots, and entered exercise results.
 9. Profile settings allow profile edits and a modal-confirmed clear-all operation that returns to onboarding.
 

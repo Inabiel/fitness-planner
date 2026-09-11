@@ -315,8 +315,8 @@ function ReviewStep({ form, estimate }: { form: ProfileForm; estimate: ReturnTyp
       </div>
       <div className="estimate-preview">
         <div className="section-heading"><div><p className="eyebrow">Your first estimate</p><h3>Useful, not absolute.</h3></div><Info size={18} /></div>
-        {estimate ? <div className="mini-estimates"><div><strong>{estimate.dailyCalories.toLocaleString()}</strong><span>daily kcal</span></div><div><strong>{estimate.proteinGrams}g</strong><span>protein</span></div><div><strong>{estimate.bmi.toFixed(1)}</strong><span>BMI estimate</span></div></div> : <p className="muted">Complete the earlier steps to preview your estimate.</p>}
-        <p className="fine-print">Uses the MVP rule: Mifflin–St Jeor, activity factor, a goal adjustment, and rounded daily macros. It is a starting point—not medical advice.</p>
+        {estimate ? <div className="mini-estimates"><div><strong>{estimate.dailyCalories.toLocaleString()}</strong><span>daily calories</span></div><div><strong>{estimate.proteinGrams}g</strong><span>protein</span></div><div><strong>{estimate.bmi.toFixed(1)}</strong><span>BMI (body mass index)</span></div></div> : <p className="muted">Complete the earlier steps to preview your estimate.</p>}
+        <p className="fine-print">Uses your profile, daily activity, and goal to estimate calories plus protein, carbohydrate, and fat targets. BMI is a height-to-weight screening number, not a diagnosis. It is a starting point—not medical advice.</p>
       </div>
     </div>
   );

@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { CalendarDays, Check, CircleCheck, Clipboard } from 'lucide-react';
+import { CalendarDays, Check, CircleCheck } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { FOCUS_LABELS, INTENSITY_LABELS, dateIsValid, plannedVolume, type Exercise, type Prescription, type SetRecord, type WorkoutRecord } from '../../domain';
 import type { PlannerData } from '../../data/db';
@@ -7,7 +7,6 @@ import { now, saveWorkoutRecord, uid, updatePlanPrescriptions } from '../../data
 import { EXERCISES } from '../../data/exercises';
 import { formatLongDate } from '../../shared/formatters';
 import { EmptyState, Page, Snackbar } from '../../shared/ui';
-import { copyToClipboard, formatWorkoutStepText } from '../../shared/workoutExport';
 import { assessPlanIntensity, adjustPrescriptionsForIntensity, recommendNextIntensity, recommendNextPrescriptions } from '../plans/recommendations';
 import { makePlanSnapshot } from './snapshot';
 
@@ -108,23 +107,14 @@ export function Session({ data }: { data: PlannerData }) {
     }
   }
 
-  async function copyStep(prescription: Prescription, exercise: Exercise, index: number) {
-    try {
-      await copyToClipboard(formatWorkoutStepText(prescription, exercise, index + 1));
-      setSnackbar({ message: `${exercise.name} step copied to clipboard.`, tone: 'success' });
-    } catch {
-      setSnackbar({ message: 'The workout step could not be copied.', tone: 'error' });
-    }
-  }
-
   return (
     <Page title={existing?.status === 'completed' ? 'Completed session' : 'Follow your session'} subtitle={`${snapshot.name} · ${formatLongDate(date)}`} backTo={`/plans/${plan.id}`}>
       <div className="session-layout">
         <div className="session-main">
-          <div className="session-intro"><span className="session-date"><CalendarDays size={16} /> {formatLongDate(date)}</span><span className="area-pill">{FOCUS_LABELS[focus]} focus</span><span className="area-pill intensity-pill">Target: {INTENSITY_LABELS[snapshot.intensity ?? plan.intensity ?? 'moderate']}</span><h2>{snapshot.name}</h2><p className="muted">Log actual reps, load, and optional RIR. Blank fields stay unknown, and completion never requires performance details.</p></div>
+          <div className="session-intro"><span className="session-date"><CalendarDays size={16} /> {formatLongDate(date)}</span><span className="area-pill">{FOCUS_LABELS[focus]} focus</span><span className="area-pill intensity-pill">Target: {INTENSITY_LABELS[snapshot.intensity ?? plan.intensity ?? 'moderate']}</span><h2>{snapshot.name}</h2><p className="muted">Log actual reps, weight/resistance, and optional RIR (reps in reserve). RIR means how many more good-form reps you could have done after a set. Blank fields stay unknown, and completion never requires performance details.</p></div>
           {snapshot.prescriptions.map((prescription, index) => {
             const exercise = snapshot.exercises.find((item) => item.id === prescription.exerciseId) ?? EXERCISES.find((item) => item.id === prescription.exerciseId);
-            return exercise ? <SessionExercise key={prescription.id} prescription={prescription} exercise={exercise} index={index} getSet={getSet} updateSet={updateSet} onCopy={() => copyStep(prescription, exercise, index)} /> : null;
+            return exercise ? <SessionExercise key={prescription.id} prescription={prescription} exercise={exercise} index={index} getSet={getSet} updateSet={updateSet} /> : null;
           })}
           <div className="session-actions">
             <button className="button ghost" onClick={() => navigate(-1)}>Exit</button>
@@ -132,18 +122,18 @@ export function Session({ data }: { data: PlannerData }) {
             <button className="button primary" onClick={() => save('completed')} disabled={saving}><CircleCheck size={16} /> Mark complete</button>
           </div>
         </div>
-        <aside className="session-side"><div className="side-card"><p className="eyebrow">Session note</p><h3>Presence over perfection.</h3><p className="muted">You can finish a session without recording a single set. Actual performance is optional, not assumed.</p></div><div className="side-card"><p className="eyebrow">Planned volume</p><strong className="big-number">{plannedVolume(snapshot.prescriptions)}</strong><span className="muted">work sets planned</span></div></aside>
+        <aside className="session-side"><div className="side-card"><p className="eyebrow">Session note</p><h3>Presence over perfection.</h3><p className="muted">You can finish a session without recording a single set. Actual performance is optional, not assumed.</p></div><div className="side-card"><p className="eyebrow">Planned work sets</p><strong className="big-number">{plannedVolume(snapshot.prescriptions)}</strong><span className="muted">sets scheduled in this session</span></div></aside>
       </div>
       {snackbar && <Snackbar message={snackbar.message} tone={snackbar.tone} onDismiss={dismissSnackbar} />}
     </Page>
   );
 }
 
-function SessionExercise({ prescription, exercise, index, getSet, updateSet, onCopy }: { prescription: Prescription; exercise: Exercise; index: number; getSet: (prescriptionId: string, setNumber: number) => SetRecord; updateSet: (prescriptionId: string, setNumber: number, field: SetValueField, value: string) => void; onCopy: () => void }) {
+function SessionExercise({ prescription, exercise, index, getSet, updateSet }: { prescription: Prescription; exercise: Exercise; index: number; getSet: (prescriptionId: string, setNumber: number) => SetRecord; updateSet: (prescriptionId: string, setNumber: number, field: SetValueField, value: string) => void }) {
   const doseLabel = prescription.dose.kind === 'reps' ? 'reps' : 'sec';
-  const loadLabel = prescription.recommendedLoadKg === 0 ? 'bodyweight' : prescription.recommendedLoadKg ? `${prescription.recommendedLoadKg} kg` : 'choose a load';
-  const effortLabel = prescription.targetRir === undefined ? '' : ` · target ${prescription.targetRir} RIR`;
-  return <section className="session-exercise"><div className="session-exercise-heading"><span className="sequence-number">{String(index + 1).padStart(2, '0')}</span><div><div className="session-exercise-title"><h3>{exercise.name}</h3><button className="button small ghost copy-step" type="button" onClick={onCopy}><Clipboard size={14} /> Copy step</button></div><p className="worked-label">Planned: {prescription.sets} × {prescription.dose.value} {doseLabel} · {loadLabel} · {prescription.restSeconds}s rest{effortLabel}</p></div></div><div className={`set-table ${prescription.dose.kind}`}><div className="set-table-head"><span>Set</span><span>{prescription.dose.kind === 'reps' ? 'Actual reps' : 'Actual sec'}</span><span>Load <small>kg</small></span>{prescription.dose.kind === 'reps' && <span>RIR</span>}</div>{Array.from({ length: prescription.sets }, (_, index) => <SetRow key={index + 1} exercise={exercise} prescription={prescription} setNumber={index + 1} current={getSet(prescription.id, index + 1)} onChange={updateSet} />)}</div></section>;
+  const loadLabel = prescription.recommendedLoadKg === 0 ? 'bodyweight' : prescription.recommendedLoadKg ? `${prescription.recommendedLoadKg} kg` : 'choose a weight/resistance';
+  const effortLabel = prescription.targetRir === undefined ? '' : ` · target ${prescription.targetRir} RIR (reps left)`;
+  return <section className="session-exercise"><div className="session-exercise-heading"><span className="sequence-number">{String(index + 1).padStart(2, '0')}</span><div><h3>{exercise.name}</h3><p className="worked-label">Planned: {prescription.sets} × {prescription.dose.value} {doseLabel} · {loadLabel} · {prescription.restSeconds}s rest{effortLabel}</p></div></div><div className={`set-table ${prescription.dose.kind}`}><div className="set-table-head"><span>Set</span><span>{prescription.dose.kind === 'reps' ? 'Actual reps' : 'Actual sec'}</span><span title="Weight or resistance used for the exercise">Weight/resistance <small>kg</small></span>{prescription.dose.kind === 'reps' && <span title="RIR means reps in reserve: how many more good-form reps you could have done">RIR <small>reps left</small></span>}</div>{Array.from({ length: prescription.sets }, (_, index) => <SetRow key={index + 1} exercise={exercise} prescription={prescription} setNumber={index + 1} current={getSet(prescription.id, index + 1)} onChange={updateSet} />)}</div></section>;
 }
 
 function SetRow({ exercise, prescription, setNumber, current, onChange }: { exercise: Exercise; prescription: Prescription; setNumber: number; current: SetRecord; onChange: (prescriptionId: string, setNumber: number, field: SetValueField, value: string) => void }) {
@@ -151,5 +141,5 @@ function SetRow({ exercise, prescription, setNumber, current, onChange }: { exer
   const actualLabel = prescription.dose.kind === 'reps' ? 'actual reps' : 'actual duration';
   const actualValue = prescription.dose.kind === 'reps' ? current.actualReps : current.actualDurationSeconds;
 
-  return <div className="set-row"><span className="set-number">{setNumber}</span><input aria-label={`${exercise.name} set ${setNumber} ${actualLabel}`} type="number" min="0" step="1" value={actualValue ?? ''} onChange={(event) => onChange(prescription.id, setNumber, actualField, event.target.value)} placeholder="—" /><input aria-label={`${exercise.name} set ${setNumber} load in kilograms`} type="number" min="0" step="0.5" value={current.loadKg ?? ''} onChange={(event) => onChange(prescription.id, setNumber, 'loadKg', event.target.value)} placeholder="—" />{prescription.dose.kind === 'reps' && <input aria-label={`${exercise.name} set ${setNumber} reps in reserve`} type="number" min="0" max="5" step="1" value={current.rir ?? ''} onChange={(event) => onChange(prescription.id, setNumber, 'rir', event.target.value)} placeholder="—" />}</div>;
+  return <div className="set-row"><span className="set-number">{setNumber}</span><input aria-label={`${exercise.name} set ${setNumber} ${actualLabel}`} type="number" min="0" step="1" value={actualValue ?? ''} onChange={(event) => onChange(prescription.id, setNumber, actualField, event.target.value)} placeholder="—" /><input aria-label={`${exercise.name} set ${setNumber} weight or resistance in kilograms`} type="number" min="0" step="0.5" value={current.loadKg ?? ''} onChange={(event) => onChange(prescription.id, setNumber, 'loadKg', event.target.value)} placeholder="—" />{prescription.dose.kind === 'reps' && <input aria-label={`${exercise.name} set ${setNumber} reps in reserve`} type="number" min="0" max="5" step="1" value={current.rir ?? ''} onChange={(event) => onChange(prescription.id, setNumber, 'rir', event.target.value)} placeholder="—" />}</div>;
 }

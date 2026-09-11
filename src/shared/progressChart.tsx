@@ -21,28 +21,34 @@ export function ProgressLineChart({
 
   return (
     <div className="progress-chart-wrap">
-      <svg
-        className="progress-chart"
-        viewBox="0 0 100 100"
-        preserveAspectRatio="none"
-        role="img"
-        aria-label={ariaLabel}
-      >
-        <path className="chart-gridline" d="M8 24 H92 M8 55 H92 M8 86 H92" />
-        <path className="progress-target-line" d={`M8 ${targetY} H92`} />
-        <polyline className="progress-chart-line" points={chartPoints.join(' ')} />
-        {points.map((point, index) => {
-          const [x, y] = chartPoints[index].split(',');
+      <div className="chart-stage">
+        <svg
+          className="progress-chart"
+          viewBox="0 0 100 100"
+          preserveAspectRatio="none"
+          role="img"
+          aria-label={ariaLabel}
+        >
+          <path className="chart-gridline" d="M8 24 H92 M8 55 H92 M8 86 H92" />
+          <path className="progress-target-line" d={`M8 ${targetY} H92`} />
+          <polyline className="progress-chart-line" points={chartPoints.join(' ')} />
+        </svg>
+        <div className="chart-markers">
+          {points.map((point, index) => {
+            const [x, y] = chartPoints[index].split(',');
 
-          return (
-            <circle className="progress-chart-point" key={point.id} cx={x} cy={y} r="2.2">
-              <title>
-                {point.label}: {point.value}% of planned dose
-              </title>
-            </circle>
-          );
-        })}
-      </svg>
+            return (
+              <ChartMarker
+                detail={`${point.value}% of planned dose`}
+                key={point.id}
+                label={point.label}
+                x={Number(x)}
+                y={Number(y)}
+              />
+            );
+          })}
+        </div>
+      </div>
       <div className="chart-labels">
         <span>{points[0].label}</span>
         <strong>{points[points.length - 1].value}% target</strong>
@@ -50,6 +56,36 @@ export function ProgressLineChart({
       </div>
       <p className="chart-caption">100% means the planned reps or duration were completed.</p>
     </div>
+  );
+}
+
+export function ChartMarker({
+  x,
+  y,
+  label,
+  detail,
+}: {
+  x: number;
+  y: number;
+  label: string;
+  detail: string;
+}) {
+  const description = `${label}: ${detail}`;
+
+  return (
+    <span
+      aria-label={description}
+      className="chart-marker"
+      role="img"
+      style={{ left: `${x}%`, top: `${y}%` }}
+      tabIndex={0}
+      title={description}
+    >
+      <span aria-hidden="true" className="chart-tooltip">
+        <span>{label}</span>
+        <strong>{detail}</strong>
+      </span>
+    </span>
   );
 }
 

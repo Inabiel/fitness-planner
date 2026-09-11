@@ -39,7 +39,7 @@ These values are implemented heuristics with rule version `MVP-2026.1`. They req
 - Add at least one Exercise Prescription, reorder it, remove it, and edit sets, reps/duration, load, rest, and notes.
 - Apply six focus-aware presets: Easy One, Strength Base, Muscle Builder, Machine Circuit, Quick Sweat, and Aerobic Flow.
 - Choose Easy, Moderate, Hard, or Very hard target intensity; generated prescriptions adjust dose, rest, and target RIR.
-- Copy a complete plan or individual workout step as text for use outside the local site.
+- Copy a complete plan as text, with optional exercise steps, for use outside the local site.
 - Entire plan cards navigate to plan details and include hover/focus treatment. Plan deletion confirms in a modal and leaves history intact.
 
 ## Exercise Library

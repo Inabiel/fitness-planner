@@ -63,7 +63,7 @@ export const WORKOUT_PRESETS = [
   { id: 'muscle-builder', name: 'Muscle Builder', description: 'Balanced growth-focused session' },
   { id: 'machine-circuit', name: 'Machine Circuit', description: 'Simple machines for your focus' },
   { id: 'quick-sweat', name: 'Quick Sweat', description: 'Fast circuit built around your focus' },
-  { id: 'aerobic-flow', name: 'Aerobic Flow', description: 'Steady cardio without max effort' },
+  { id: 'aerobic-flow', name: 'Cardio Flow', description: 'Steady cardio without max effort' },
 ] as const;
 
 export type WorkoutPreset = (typeof WORKOUT_PRESETS)[number]['id'];
@@ -119,7 +119,7 @@ export function adjustPrescriptionsForIntensity(prescriptions: Prescription[], f
 function applyPreset(presetId: WorkoutPreset, exercise: Exercise, prescription: Prescription, experience: Experience): Prescription {
   const aerobic = exercise.exerciseType === 'aerobic';
   if (presetId === 'easy-one') return { ...prescription, sets: aerobic ? 1 : 2, dose: { ...prescription.dose, value: aerobic ? 600 : Math.max(6, Math.round(prescription.dose.value * 0.8)) }, restSeconds: 60, notes: 'Keep this easy and controlled. Finish with about 3 reps in reserve.', recommendedLoadKg: reduceStartingLoad(prescription.recommendedLoadKg), targetRir: aerobic ? undefined : 3 };
-  if (presetId === 'strength-base') return { ...prescription, sets: aerobic ? 1 : experience === 'beginner' ? 3 : 4, dose: { ...prescription.dose, value: aerobic ? 600 : 5 }, restSeconds: 120, notes: 'Use a controlled load and stop with about 2 reps in reserve.', targetRir: aerobic ? undefined : 2 };
+  if (presetId === 'strength-base') return { ...prescription, sets: aerobic ? 1 : experience === 'beginner' ? 3 : 4, dose: { ...prescription.dose, value: aerobic ? 600 : 5 }, restSeconds: 120, notes: 'Use a controlled weight/resistance and stop with about 2 reps in reserve.', targetRir: aerobic ? undefined : 2 };
   if (presetId === 'muscle-builder') return { ...prescription, sets: aerobic ? 1 : 3, dose: { ...prescription.dose, value: aerobic ? 900 : 10 }, restSeconds: 90, notes: 'Use a full range of motion and finish with about 2 reps in reserve.', targetRir: aerobic ? undefined : 2 };
   if (presetId === 'machine-circuit') return { ...prescription, sets: aerobic ? 1 : 3, dose: { ...prescription.dose, value: aerobic ? 600 : 12 }, restSeconds: 60, notes: 'Set the station up carefully and keep the movement controlled.', targetRir: aerobic ? undefined : 2 };
   if (presetId === 'quick-sweat') return { ...prescription, sets: aerobic ? 3 : 2, dose: { ...prescription.dose, value: aerobic ? 120 : 12 }, restSeconds: 30, notes: 'Move steadily and keep the effort challenging but repeatable.', recommendedLoadKg: reduceStartingLoad(prescription.recommendedLoadKg), targetRir: aerobic ? undefined : 3 };
@@ -181,7 +181,7 @@ export interface IntensityAssessment {
 export function assessPlanIntensity(plan: WorkoutPlan, records: WorkoutRecord[]): IntensityAssessment {
   const completed = completedPlanRecords(plan.id, records);
   const latest = completed.find((record) => recordHasIntensityData(record));
-  if (!latest) return { result: 'insufficient-data', label: 'No intensity result yet', detail: 'Log actual reps, duration, load, or RIR in a completed session.', completedSessions: 0 };
+  if (!latest) return { result: 'insufficient-data', label: 'No intensity result yet', detail: 'Log actual reps, duration, weight/resistance, or RIR (reps in reserve) in a completed session.', completedSessions: 0 };
 
   const currentIntensity = plan.intensity ?? 'moderate';
   const measuredIntensity = latest.planSnapshot.intensity ?? currentIntensity;
@@ -244,7 +244,7 @@ export function assessPrescriptionEffort(prescription: Prescription, planId: str
   if (recent.length < 2) return { direction: 'insufficient-data', label: 'Trend building', detail: 'Complete one more session to calculate a change.', completedSessions: recent.length };
 
   const signals = recent.map(performanceSignal);
-  if (signals.every((signal) => signal.burden)) return { direction: 'decrease', label: 'Decrease effort', detail: 'Recent results show below-target work, drop-off, or very low RIR.', completedSessions: recent.length };
+  if (signals.every((signal) => signal.burden)) return { direction: 'decrease', label: 'Decrease effort', detail: 'Recent results show below-target work, drop-off, or very low RIR (reps in reserve).', completedSessions: recent.length };
   if (signals.every((signal) => signal.overperformed)) return { direction: 'increase', label: 'Increase effort', detail: 'Recent results exceeded the planned target in every logged set.', completedSessions: recent.length };
   return { direction: 'hold', label: 'Hold effort', detail: 'Recent results are within a repeatable range.', completedSessions: recent.length };
 }

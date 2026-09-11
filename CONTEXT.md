@@ -19,7 +19,7 @@ This file owns the project vocabulary. The current implementation snapshot below
 - Dashboard schedule browsing for the selected date, nearest earlier occurrences, nearest upcoming occurrences, and direct specific-date navigation.
 - Simple two-session progression guidance that can adjust the next prescription.
 - Body-weight and session-performance trend graphs, with exact tables retained for detail.
-- WhatsApp-friendly plan/step text copy with snackbar feedback for transient actions.
+- WhatsApp-friendly plan text copy with optional exercise steps and snackbar feedback for transient actions.
 - Plan deletion preserves historical Workout Records. Profile settings can clear all local data and reload onboarding.
 
 ## Profile and goals

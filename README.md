@@ -23,7 +23,7 @@ It runs entirely in the browser. Profile data, plans, workout records, and body-
 - Effort guidance that recommends increasing, decreasing, or holding effort from recent logged results.
 - Four target intensity levels that shape plan prescriptions and advance after repeated above-target recurring sessions.
 - Historical plan snapshots that remain available after a plan is edited or deleted.
-- Copyable workout plans and individual workout steps for use in WhatsApp or elsewhere.
+- Copyable workout plans with optional exercise steps for use in WhatsApp or elsewhere.
 - Body-weight chart, workout history, performance trend graph, and recorded performance table.
 - Snackbar confirmations for copy, save-progress, and session-completion actions.
 - Responsive desktop sidebar and mobile navigation drawer.

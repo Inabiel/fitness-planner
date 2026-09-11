@@ -52,9 +52,9 @@ The application uses hash routes so a static host does not need to rewrite unkno
 | #/ | Dashboard | Selected-date schedule, earlier/upcoming occurrences, date navigation, estimates, BMI, quick links, and responsive shell. |
 | #/plans | Plans | Saved plan cards and empty state. |
 | #/plans/new | PlanEditor | New plan form, focus selection, presets, library, prescriptions, and save. |
-| #/plans/:planId | PlanDetail | Focus, recurring progress trend, sequence, effort guidance, estimate, logging action, text export, recalculate, and delete. |
+| #/plans/:planId | PlanDetail | Focus, recurring progress trend, sequence, effort guidance, estimate, logging action, optional-step text export, recalculate, and delete. |
 | #/plans/:planId/edit | PlanEditor | Existing plan editing. |
-| #/sessions/:planId/:date | Session | Dated occurrence logger, step text export, and completion action. |
+| #/sessions/:planId/:date | Session | Dated occurrence logger and completion action. |
 | #/history/:recordId | HistoryDetail | Historical snapshot independent of a current plan. |
 | #/progress | Progress | Body-weight entry/trend, workout history, performance trend, and performance observations. |
 | #/exercise-order | ExerciseOrder | Profile-level custom ordering for future library browsing. |
@@ -150,13 +150,13 @@ Two repeated burden signals reduce load by roughly 10% or dose by one rep/five s
 
 ### Progress charts
 
-sessionProgress compares each logged set’s actual reps or duration with its plan snapshot target, averages those ratios across prescriptions, and reports a rounded percentage. 100% means the planned dose was completed. Charts use the latest eight completed sessions with actual dose entries; they intentionally do not combine load or RIR into the percentage. The progress page shows the overall trend, while recurring plan detail shows the trend for that plan. Body-weight history remains a separate kilogram chart with an exact-value table.
+sessionProgress compares each logged set’s actual reps or duration with its plan snapshot target, averages those ratios across prescriptions, and reports a rounded percentage. 100% means the planned dose was completed. Charts use the latest eight completed sessions with actual dose entries; they intentionally do not combine load or RIR into the percentage. The progress page shows the overall trend, while recurring plan detail shows the trend for that plan. Body-weight history remains a separate kilogram chart with an exact-value table. Both charts use flat 2D SVG lines with round hover/focus markers that reveal the corresponding date and value.
 
 ## UI, export, and assets
 
 FocusIllustration resolves the focus union to relative local WebP files so the same build works at the domain root and a repository Pages path. The HTML favicon uses Vite’s BASE_URL placeholder. Optimized focus assets are used in onboarding intention preview, plan cards, and plan detail.
 
-Plan detail and active sessions can copy a complete workout plan or an individual exercise step as WhatsApp-friendly text. Copying uses the Clipboard API with a local/older-browser textarea fallback. The shared Snackbar confirms copy, save-progress, and session-completion actions, auto-dismisses, and supports manual dismissal.
+Plan detail can copy a complete workout plan as WhatsApp-friendly text, with an optional checkbox to include every exercise step and its written instructions. Copying uses the Clipboard API with a local/older-browser textarea fallback. The shared Snackbar confirms copy, save-progress, and session-completion actions, auto-dismisses, and supports manual dismissal.
 
 Exercise entries currently render a written-instructions/media placeholder. No exercise GIF/video URL, source, attribution, or playback control exists yet.
 
@@ -179,7 +179,7 @@ Current automated checks:
 
 - npm run build: passes TypeScript checking and Vite production build.
 - npm run lint: passes ESLint.
-- npm test: passes 18 Vitest tests across domain rules, exercise ordering, recommendations, text export, and progress metrics.
+- npm test: passes 19 Vitest tests across domain rules, exercise ordering, recommendations, text export, and progress metrics.
 
 The domain suite also covers nearest earlier and upcoming occurrences for recurring and one-time schedules. Browser, IndexedDB, mobile, modal, and real asset smoke tests remain to be added.
 The package includes npm run test:browser, but there are currently no Playwright test files or Playwright configuration. The package also includes npm run media, but scripts/generate-media.mjs is not currently present.

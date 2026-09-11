@@ -112,7 +112,7 @@ Recommendation: add small Zod parsers for each stored root entity, introduce exp
 
 ### 4. The test suite proves rules, not the application
 
-Evidence: the current suite has 18 Vitest tests for estimates/scheduling/suggestions, ordering, presets, progression, export formatting, and progress metrics. package.json includes a browser test command, but there are no Playwright spec files or Playwright configuration. There are no IndexedDB integration tests.
+Evidence: the current suite has 19 Vitest tests for estimates/scheduling/suggestions, ordering, presets, progression, export formatting, and progress metrics. package.json includes a browser test command, but there are no Playwright spec files or Playwright configuration. There are no IndexedDB integration tests.
 
 Impact: regressions in routes, forms, modals, snapshots, deletion, mobile navigation, and reload behavior can pass CI unnoticed.
 

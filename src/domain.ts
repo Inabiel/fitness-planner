@@ -180,7 +180,7 @@ export const FOCUS_LABELS: Record<WorkoutFocus, string> = {
   pull: 'Pull',
   'upper-body': 'Upper body',
   'lower-body': 'Lower body',
-  aerobic: 'Aerobic',
+  aerobic: 'Cardio (aerobic)',
 };
 
 export function targetAreaForFocus(focus: WorkoutFocus): Area {

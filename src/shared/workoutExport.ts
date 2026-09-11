@@ -2,13 +2,13 @@ import { FOCUS_LABELS, formatSchedule, INTENSITY_LABELS, type Exercise, type Pre
 
 export function formatWorkoutStepText(prescription: Prescription, exercise: Exercise, stepNumber?: number): string {
   const dose = prescription.dose.kind === 'reps' ? `${prescription.dose.value} reps` : `${prescription.dose.value} sec`;
-  const load = prescription.recommendedLoadKg === 0 ? 'Bodyweight' : prescription.recommendedLoadKg ? `${prescription.recommendedLoadKg} kg` : 'Choose a suitable load';
-  const rir = prescription.dose.kind === 'reps' ? `Target: ${prescription.targetRir ?? 2} RIR` : null;
+  const load = prescription.recommendedLoadKg === 0 ? 'Bodyweight' : prescription.recommendedLoadKg ? `${prescription.recommendedLoadKg} kg` : 'Choose a weight/resistance';
+  const rir = prescription.dose.kind === 'reps' ? `Target: ${prescription.targetRir ?? 2} RIR (reps in reserve)` : null;
 
   return [
     `*${stepNumber ? `Step ${stepNumber}: ` : ''}${exercise.name}*`,
     `Plan: ${prescription.sets} × ${dose}`,
-    `Load: ${load}`,
+    `Weight/resistance: ${load}`,
     `Rest: ${prescription.restSeconds} sec`,
     ...(rir ? [rir] : []),
     ...(prescription.notes ? [`Note: ${prescription.notes}`] : []),
@@ -18,7 +18,7 @@ export function formatWorkoutStepText(prescription: Prescription, exercise: Exer
   ].join('\n');
 }
 
-export function formatWorkoutPlanText(plan: WorkoutPlan, exercises: Exercise[]): string {
+export function formatWorkoutPlanText(plan: WorkoutPlan, exercises: Exercise[], includeSteps = false): string {
   const focus = plan.focus ?? plan.primaryTargetArea;
   const intensity = plan.intensity ?? 'moderate';
   const exerciseLines = plan.prescriptions.flatMap((prescription, index) => {
@@ -27,11 +27,15 @@ export function formatWorkoutPlanText(plan: WorkoutPlan, exercises: Exercise[]):
 
     const dose = prescription.dose.kind === 'reps' ? `${prescription.dose.value} reps` : `${prescription.dose.value} sec`;
     const load = prescription.recommendedLoadKg === 0 ? ' · Bodyweight' : prescription.recommendedLoadKg ? ` · ${prescription.recommendedLoadKg} kg` : '';
-    const rir = prescription.dose.kind === 'reps' ? ` · Target ${prescription.targetRir ?? 2} RIR` : '';
+    const rir = prescription.dose.kind === 'reps' ? ` · Target ${prescription.targetRir ?? 2} RIR (reps in reserve)` : '';
     const notes = prescription.notes ? ` · ${prescription.notes}` : '';
 
     return [`${index + 1}. ${exercise.name} — ${prescription.sets} × ${dose}${load}${rir}${notes}`, `   Rest ${prescription.restSeconds} sec`];
   });
+  const stepLines = includeSteps ? plan.prescriptions.flatMap((prescription, index) => {
+    const exercise = exercises.find((item) => item.id === prescription.exerciseId);
+    return exercise ? [formatWorkoutStepText(prescription, exercise, index + 1), ''] : [];
+  }) : [];
 
   return [
     `*${plan.name}*`,
@@ -41,8 +45,9 @@ export function formatWorkoutPlanText(plan: WorkoutPlan, exercises: Exercise[]):
     '',
     '*Workout*',
     ...exerciseLines,
+    ...(stepLines.length ? ['', '*Exercise steps*', ...stepLines] : []),
     '',
-    'After training: log actual reps or duration, load, and RIR in fitnessPal.',
+    'After training: log actual reps or duration, weight/resistance, and RIR (reps in reserve) in fitnessPal.',
   ].join('\n');
 }
 

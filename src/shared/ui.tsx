@@ -111,12 +111,23 @@ export function Field({ label, suffix, hint, error, children }: FieldProps) {
 export function Snackbar({ message, tone = 'success', onDismiss }: { message: string; tone?: 'success' | 'error'; onDismiss: () => void }) {
   useEffect(() => {
     if (!message) return;
-    const timeout = window.setTimeout(onDismiss, 2800);
+    const timeout = window.setTimeout(onDismiss, 4500);
     return () => window.clearTimeout(timeout);
   }, [message, onDismiss]);
 
   if (!message) return null;
-  return <div className={`snackbar ${tone}`} role={tone === 'error' ? 'alert' : 'status'} aria-live={tone === 'error' ? 'assertive' : 'polite'}><span>{message}</span><button type="button" className="snackbar-dismiss" onClick={onDismiss} aria-label="Dismiss notification"><X size={15} /></button></div>;
+  return (
+    <div
+      className={`snackbar ${tone}`}
+      role={tone === 'error' ? 'alert' : 'status'}
+      aria-live={tone === 'error' ? 'assertive' : 'polite'}
+    >
+      <span>{message}</span>
+      <button type="button" className="snackbar-dismiss" onClick={onDismiss} aria-label="Dismiss notification">
+        <X size={15} />
+      </button>
+    </div>
+  );
 }
 
 export function BodyGraphic({ area, compact = false }: { area: Area; compact?: boolean }) {

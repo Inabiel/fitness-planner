@@ -9,7 +9,7 @@ import { getProgressPoints } from '../../shared/progress';
 import { ProgressLineChart } from '../../shared/progressChart';
 import { EmptyState, Page, Snackbar } from '../../shared/ui';
 import { FocusIllustration } from './FocusIllustration';
-import { copyToClipboard, formatWorkoutPlanText, formatWorkoutStepText } from '../../shared/workoutExport';
+import { copyToClipboard, formatWorkoutPlanText } from '../../shared/workoutExport';
 import { assessPlanIntensity, assessPrescriptionEffort, type EffortAssessment, type IntensityAssessment } from './recommendations';
 
 export function PlanDetail({ data }: { data: AuthenticatedPlannerData }) {
@@ -18,6 +18,8 @@ export function PlanDetail({ data }: { data: AuthenticatedPlannerData }) {
   const selectedPlan = data.plans.find((item) => item.id === planId);
   const [showRecalc, setShowRecalc] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [copyOpen, setCopyOpen] = useState(false);
+  const [includeSteps, setIncludeSteps] = useState(false);
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
   const [snackbar, setSnackbar] = useState<{ message: string; tone: 'success' | 'error' } | null>(null);
@@ -25,13 +27,16 @@ export function PlanDetail({ data }: { data: AuthenticatedPlannerData }) {
   const dismissSnackbar = useCallback(() => setSnackbar(null), []);
 
   useEffect(() => {
-    if (!deleteOpen) return;
+    if (!deleteOpen && !copyOpen) return;
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape' && !saving) setDeleteOpen(false);
+      if (event.key === 'Escape' && !saving) {
+        setDeleteOpen(false);
+        setCopyOpen(false);
+      }
     }
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [deleteOpen, saving]);
+  }, [copyOpen, deleteOpen, saving]);
 
   if (!selectedPlan) {
     return <Page title="Plan not found" subtitle="This plan may have been deleted."><EmptyState icon={<Info size={22} />} title="No plan here" body="Historical workout records are kept separately from plans." action={<Link to="/plans" className="button secondary">Back to plans</Link>} /></Page>;
@@ -70,22 +75,23 @@ export function PlanDetail({ data }: { data: AuthenticatedPlannerData }) {
     }
   }
 
+  function openCopyModal() {
+    setCopied(false);
+    setIncludeSteps(false);
+    setCopyOpen(true);
+  }
+
   async function copyPlan() {
+    setSaving(true);
     try {
-      await copyToClipboard(formatWorkoutPlanText(plan, EXERCISES));
+      await copyToClipboard(formatWorkoutPlanText(plan, EXERCISES, includeSteps));
+      setCopyOpen(false);
       setCopied(true);
       setSnackbar({ message: 'Workout plan copied to clipboard.', tone: 'success' });
     } catch {
       setSnackbar({ message: 'The plan could not be copied. Try selecting the plan text manually.', tone: 'error' });
-    }
-  }
-
-  async function copyStep(prescription: Prescription, exercise: Exercise, index: number) {
-    try {
-      await copyToClipboard(formatWorkoutStepText(prescription, exercise, index + 1));
-      setSnackbar({ message: `${exercise.name} step copied to clipboard.`, tone: 'success' });
-    } catch {
-      setSnackbar({ message: 'The workout step could not be copied.', tone: 'error' });
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -94,7 +100,7 @@ export function PlanDetail({ data }: { data: AuthenticatedPlannerData }) {
       title={plan.name}
       subtitle={`${FOCUS_LABELS[focus]} focus · ${INTENSITY_LABELS[intensity]} intensity · ${formatSchedule(plan.schedule)}`}
       backTo="/plans"
-      action={<div className="page-actions"><Link className="button secondary" to={`/plans/${plan.id}/edit`}><Pencil size={16} /> Edit</Link><button className="button secondary" type="button" onClick={copyPlan}>{copied ? <Check size={16} /> : <Clipboard size={16} />}{copied ? 'Copied' : 'Copy plan text'}</button>{canStartToday && <Link className="button primary" to={`/sessions/${plan.id}/${today}`}><Dumbbell size={16} /> Start today</Link>}</div>}
+      action={<div className="page-actions"><Link className="button secondary" to={`/plans/${plan.id}/edit`}><Pencil size={16} /> Edit</Link><button className="button secondary" type="button" onClick={openCopyModal}>{copied ? <Check size={16} /> : <Clipboard size={16} />}{copied ? 'Copied' : 'Copy plan text'}</button>{canStartToday && <Link className="button primary" to={`/sessions/${plan.id}/${today}`}><Dumbbell size={16} /> Start today</Link>}</div>}
     >
       <div className="detail-layout">
         <div className="detail-main">
@@ -102,10 +108,10 @@ export function PlanDetail({ data }: { data: AuthenticatedPlannerData }) {
           {plan.schedule.kind === 'weekly' && <section className="detail-section progress-card"><div className="section-heading"><div><p className="eyebrow">Recurring progress</p><h2>Performance trend</h2></div><span className="unit-label">% of target</span></div>{progressPoints.length ? <ProgressLineChart points={progressPoints} ariaLabel={`${plan.name} performance trend`} /> : <EmptyState compact icon={<Flame size={21} />} title="Your trend starts after one completed session" body="Log actual reps or duration in a recurring session to see progress here." />}</section>}
           <section className="detail-section">
             <div className="section-heading"><div><p className="eyebrow">The sequence</p><h2>{plan.prescriptions.length} exercises</h2></div><span className="volume-badge"><Flame size={15} /> {plannedVolume(plan.prescriptions)} planned work sets</span></div>
-            <p className="section-explainer">Planned volume is a simple count of work sets for this session. It is guidance, not your actual workload.</p>
+            <p className="section-explainer">Planned volume means the total number of work sets in this session. It is guidance, not your actual workload.</p>
             <div className="detail-exercise-list">{plan.prescriptions.map((prescription, index) => {
               const exercise = EXERCISES.find((item) => item.id === prescription.exerciseId);
-              return exercise ? <ExerciseDetail key={prescription.id} prescription={prescription} exercise={exercise} index={index} effort={assessPrescriptionEffort(prescription, plan.id, data.records)} onCopy={() => copyStep(prescription, exercise, index)} /> : null;
+              return exercise ? <ExerciseDetail key={prescription.id} prescription={prescription} exercise={exercise} index={index} effort={assessPrescriptionEffort(prescription, plan.id, data.records)} /> : null;
             })}</div>
           </section>
         </div>
@@ -115,21 +121,43 @@ export function PlanDetail({ data }: { data: AuthenticatedPlannerData }) {
           <EffortSummary assessments={plan.prescriptions.map((prescription) => assessPrescriptionEffort(prescription, plan.id, data.records))} />
           <div className="side-card">
             <p className="eyebrow">Plan actions</p>
-            <Link className="side-action" to={`/sessions/${plan.id}/${canStartToday ? today : (plan.schedule.kind === 'date' ? plan.schedule.date : plan.schedule.startsOn)}`}><CircleCheck size={17} /><span><strong>Log workout result</strong><small>Record reps, duration, load, and RIR for effort guidance.</small></span><ArrowRight size={16} /></Link>
+            <Link className="side-action" to={`/sessions/${plan.id}/${canStartToday ? today : (plan.schedule.kind === 'date' ? plan.schedule.date : plan.schedule.startsOn)}`}><CircleCheck size={17} /><span><strong>Log workout result</strong><small>Record reps, duration, weight/resistance, and RIR (reps in reserve) for effort guidance.</small></span><ArrowRight size={16} /></Link>
             <button className="side-action" onClick={() => setDeleteOpen(true)}><Trash2 size={17} /><span><strong>Delete this plan</strong><small>Recorded history will stay safe.</small></span><ArrowRight size={16} /></button>
           </div>
         </aside>
       </div>
       {error && <p className="form-error global-error" role="alert">{error}</p>}
       {snackbar && <Snackbar message={snackbar.message} tone={snackbar.tone} onDismiss={dismissSnackbar} />}
+      {copyOpen && <CopyPlanModal includeSteps={includeSteps} saving={saving} onIncludeStepsChange={setIncludeSteps} onCancel={() => setCopyOpen(false)} onCopy={copyPlan} />}
       {showRecalc && <RecalculationModal estimate={plan.estimate} previewEstimate={previewEstimate} profileRevision={data.profile.revision} saving={saving} onCancel={() => setShowRecalc(false)} onSave={saveRecalculation} />}
       {deleteOpen && <DeleteModal planName={plan.name} saving={saving} onCancel={() => setDeleteOpen(false)} onDelete={deletePlan} />}
     </Page>
   );
 }
 
+function CopyPlanModal({ includeSteps, saving, onIncludeStepsChange, onCancel, onCopy }: { includeSteps: boolean; saving: boolean; onIncludeStepsChange: (value: boolean) => void; onCancel: () => void; onCopy: () => void }) {
+  return (
+    <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !saving) onCancel(); }}>
+      <div className="review-confirmation-modal" role="dialog" aria-modal="true" aria-labelledby="copy-plan-title">
+        <div className="confirmation-icon"><Clipboard size={20} /></div>
+        <p className="eyebrow">Copy workout plan</p>
+        <h2 id="copy-plan-title">Choose what to copy</h2>
+        <p className="muted">The plan summary is always included. Add exercise steps when you want the movement instructions in your message too.</p>
+        <label className="confirm-row">
+          <input type="checkbox" checked={includeSteps} onChange={(event) => onIncludeStepsChange(event.target.checked)} />
+          <span><strong>Include exercise steps</strong><small>Copies each exercise’s plan, rest, notes, and written instructions.</small></span>
+        </label>
+        <div className="modal-actions">
+          <button type="button" className="button ghost" onClick={onCancel} disabled={saving} autoFocus>Cancel</button>
+          <button type="button" className="button primary" onClick={onCopy} disabled={saving}>{saving ? 'Copying…' : 'Copy plan text'} <Clipboard size={16} /></button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function EstimateSnapshotCard({ estimate, onRecalculate }: { estimate?: EstimateSnapshot; onRecalculate: () => void }) {
-  return <div className="side-card saved-estimate"><div className="section-heading"><div><p className="eyebrow">Saved estimates</p><h3>{estimate ? `${estimate.dailyCalories.toLocaleString()} kcal` : 'Not available'}</h3></div><span className="target-icon"><Flame size={17} /></span></div>{estimate ? <><div className="saved-macros"><span>{estimate.proteinGrams}g protein</span><span>{estimate.carbohydrateGrams}g carbs</span><span>{estimate.fatGrams}g fat</span></div><p className="fine-print">Captured from profile revision {estimate.profileRevision} · {formatDateTime(estimate.calculatedAt)}</p></> : <p className="fine-print">This plan has no saved estimate yet.</p>}<button className="button small secondary full-width" onClick={onRecalculate}><RotateIcon /> Recalculate explicitly</button></div>;
+  return <div className="side-card saved-estimate"><div className="section-heading"><div><p className="eyebrow">Saved estimates</p><h3>{estimate ? `${estimate.dailyCalories.toLocaleString()} calories` : 'Not available'}</h3></div><span className="target-icon"><Flame size={17} /></span></div>{estimate ? <><div className="saved-macros"><span>{estimate.proteinGrams}g protein</span><span>{estimate.carbohydrateGrams}g carbohydrates</span><span>{estimate.fatGrams}g fat</span></div><p className="fine-print">Captured from profile revision {estimate.profileRevision} · {formatDateTime(estimate.calculatedAt)}</p></> : <p className="fine-print">This plan has no saved estimate yet.</p>}<button className="button small secondary full-width" onClick={onRecalculate}><RotateIcon /> Recalculate explicitly</button></div>;
 }
 
 function RecalculationModal({ estimate, previewEstimate, profileRevision, saving, onCancel, onSave }: { estimate?: EstimateSnapshot; previewEstimate: ReturnType<typeof calculateEstimates>; profileRevision: number; saving: boolean; onCancel: () => void; onSave: () => void }) {
@@ -142,7 +170,7 @@ function DeleteModal({ planName, saving, onCancel, onDelete }: { planName: strin
 }
 
 function EstimateCompare({ label, estimate }: { label: string; estimate?: EstimateSnapshot | (ReturnType<typeof calculateEstimates> & { calculatedAt: string; profileRevision: number }) }) {
-  return <div className="compare-card"><span className="eyebrow">{label}</span>{estimate ? <><strong>{estimate.dailyCalories.toLocaleString()} <small>kcal</small></strong><span>{estimate.proteinGrams}g protein · {estimate.carbohydrateGrams}g carbs · {estimate.fatGrams}g fat</span><span>BMI {estimate.bmi.toFixed(1)}</span></> : <span className="muted">No saved estimate</span>}</div>;
+  return <div className="compare-card"><span className="eyebrow">{label}</span>{estimate ? <><strong>{estimate.dailyCalories.toLocaleString()} <small>calories</small></strong><span>{estimate.proteinGrams}g protein · {estimate.carbohydrateGrams}g carbohydrates · {estimate.fatGrams}g fat</span><span>BMI (body mass index) {estimate.bmi.toFixed(1)}</span></> : <span className="muted">No saved estimate</span>}</div>;
 }
 
 function EffortSummary({ assessments }: { assessments: EffortAssessment[] }) {
@@ -158,16 +186,16 @@ function IntensityCard({ target, assessment }: { target: WorkoutIntensity; asses
   return <div className="side-card intensity-card"><div className="section-heading"><div><p className="eyebrow">Target intensity</p><h3>{INTENSITY_LABELS[target]}</h3></div><span className={`effort-pill ${pillClass}`}>{assessment.label}</span></div><p className="effort-detail">{assessment.detail}</p></div>;
 }
 
-function ExerciseDetail({ prescription, exercise, index, effort, onCopy }: { prescription: Prescription; exercise: Exercise; index: number; effort: EffortAssessment; onCopy: () => void }) {
+function ExerciseDetail({ prescription, exercise, index, effort }: { prescription: Prescription; exercise: Exercise; index: number; effort: EffortAssessment }) {
   const primaryAreas = exercise.primaryAreas.map((area) => AREA_LABELS[area]).join(', ');
   const secondaryAreas = exercise.secondaryAreas.length ? ` · Secondary: ${exercise.secondaryAreas.map((area) => AREA_LABELS[area]).join(', ')}` : '';
-  const rirLabel = prescription.dose.kind === 'reps' ? ` · Target ${prescription.targetRir ?? 2} RIR` : '';
-  return <article className="exercise-detail"><div className="exercise-detail-number">{String(index + 1).padStart(2, '0')}</div><div className="exercise-detail-content"><div className="exercise-detail-heading"><div><h3>{exercise.name}</h3><span className="worked-label">Primary: {primaryAreas}{secondaryAreas}</span></div><div className="exercise-detail-badges"><span className="dose-pill">{prescription.sets} × {prescription.dose.value}{prescription.dose.kind === 'reps' ? ' reps' : ' sec'}</span><span className={`effort-pill ${effort.direction}`}>{effort.label}</span><button className="button small ghost copy-step" type="button" onClick={onCopy}><Clipboard size={14} /> Copy step</button></div></div><div className="exercise-detail-grid"><div className="exercise-media unavailable"><Dumbbell size={20} /><span>{exercise.mediaLabel}</span><small>Written instructions remain available.</small></div><div><p className="eyebrow">How to move</p><ol className="instruction-list">{exercise.instructions.map((instruction) => <li key={instruction}>{instruction}</li>)}</ol><p className="rest-note"><Clock3 size={14} /> Start {formatLoad(prescription.recommendedLoadKg)} · Rest {prescription.restSeconds} sec{rirLabel}{prescription.notes ? ` · ${prescription.notes}` : ''}</p><p className="effort-detail">{effort.detail}</p></div></div></div></article>;
+  const rirLabel = prescription.dose.kind === 'reps' ? ` · Target ${prescription.targetRir ?? 2} RIR (reps left)` : '';
+  return <article className="exercise-detail"><div className="exercise-detail-number">{String(index + 1).padStart(2, '0')}</div><div className="exercise-detail-content"><div className="exercise-detail-heading"><div><h3>{exercise.name}</h3><span className="worked-label">Primary: {primaryAreas}{secondaryAreas}</span></div><div className="exercise-detail-badges"><span className="dose-pill">{prescription.sets} × {prescription.dose.value}{prescription.dose.kind === 'reps' ? ' reps' : ' sec'}</span><span className={`effort-pill ${effort.direction}`}>{effort.label}</span></div></div><div className="exercise-detail-grid"><div className="exercise-media unavailable"><Dumbbell size={20} /><span>{exercise.mediaLabel}</span><small>Written instructions remain available.</small></div><div><p className="eyebrow">How to move</p><ol className="instruction-list">{exercise.instructions.map((instruction) => <li key={instruction}>{instruction}</li>)}</ol><p className="rest-note"><Clock3 size={14} /> Weight/resistance: {formatLoad(prescription.recommendedLoadKg)} · Rest {prescription.restSeconds} sec{rirLabel}{prescription.notes ? ` · ${prescription.notes}` : ''}</p><p className="effort-detail">{effort.detail}</p></div></div></div></article>;
 }
 
 function formatLoad(load: number | null | undefined): string {
   if (load === 0) return 'Bodyweight';
-  if (load === null || load === undefined) return 'Choose a suitable load';
+  if (load === null || load === undefined) return 'Choose a weight/resistance';
   return `${load} kg`;
 }
 

@@ -36,5 +36,5 @@ function HistoryExercise({ prescription, index, record }: { prescription: Workou
   const doseLabel = prescription.dose.kind === 'reps' ? 'reps' : 'sec';
   const recordedSets = record.sets.filter((set) => set.prescriptionId === prescription.id);
 
-  return <div className="history-exercise"><div><span className="sequence-number">{String(index + 1).padStart(2, '0')}</span><strong>{exerciseName}</strong></div><span>{prescription.sets} × {prescription.dose.value} {doseLabel}</span><div className="history-set-list">{recordedSets.map((set) => <span key={set.setNumber}>Set {set.setNumber}: {set.actualReps ?? set.actualDurationSeconds ?? '—'} · {set.loadKg === null ? 'load unknown' : `${set.loadKg} kg`}{set.rir === null || set.rir === undefined ? '' : ` · ${set.rir} RIR`}</span>)}</div></div>;
+  return <div className="history-exercise"><div><span className="sequence-number">{String(index + 1).padStart(2, '0')}</span><strong>{exerciseName}</strong></div><span>{prescription.sets} × {prescription.dose.value} {doseLabel}</span><div className="history-set-list">{recordedSets.map((set) => <span key={set.setNumber}>Set {set.setNumber}: {set.actualReps ?? set.actualDurationSeconds ?? '—'} · {set.loadKg === null ? 'weight/resistance unknown' : `${set.loadKg} kg`}{set.rir === null || set.rir === undefined ? '' : ` · ${set.rir} RIR (reps left)`}</span>)}</div></div>;
 }
