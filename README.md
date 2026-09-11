@@ -21,8 +21,11 @@ It runs entirely in the browser. Profile data, plans, workout records, and body-
 - Dashboard schedule browsing for a selected date, nearby earlier workouts, and upcoming workouts.
 - Dated workout sessions with optional actual reps/duration, load, and reps in reserve (RIR).
 - Effort guidance that recommends increasing, decreasing, or holding effort from recent logged results.
+- Four target intensity levels that shape plan prescriptions and advance after repeated above-target recurring sessions.
 - Historical plan snapshots that remain available after a plan is edited or deleted.
-- Body-weight chart, workout history, and recorded performance table.
+- Copyable workout plans and individual workout steps for use in WhatsApp or elsewhere.
+- Body-weight chart, workout history, performance trend graph, and recorded performance table.
+- Snackbar confirmations for copy, save-progress, and session-completion actions.
 - Responsive desktop sidebar and mobile navigation drawer.
 - Modal confirmation for profile deletion and plan deletion.
 
@@ -53,7 +56,7 @@ The app uses hash routing so it can run on static hosting without server-side ro
 | #/ | Dashboard and schedule |
 | #/plans | View saved workout plans |
 | #/plans/new | Create a workout plan |
-| #/plans/:planId | View plan details and effort guidance |
+| #/plans/:planId | View plan details, progress, effort guidance, and copy actions |
 | #/plans/:planId/edit | Edit a workout plan |
 | #/sessions/:planId/:date | Log a dated workout session |
 | #/history/:recordId | View a historical session snapshot |
@@ -85,7 +88,7 @@ The Vite build uses relative asset paths and HashRouter, so it works at a reposi
     src/domain.ts        Domain types and pure fitness rules
     src/data             Dexie persistence and static exercises
     src/features         Dashboard, plans, sessions, progress, profile, and ordering
-    src/shared           App shell, fields, empty states, and formatters
+    src/shared           App shell, fields, empty states, snackbars, charts, export, and formatters
     src/styles.css       Shared visual and responsive styles
     public/assets        Local focus illustrations
     docs                 Product, technical, scope, context, and review documents
@@ -104,4 +107,4 @@ The Vite build uses relative asset paths and HashRouter, so it works at a reposi
 - Nutrition calculations and progression recommendations are transparent MVP heuristics, not clinical or medical guidance.
 - IndexedDB is currently schema version 1 without runtime data parsing, migration coverage, or stale-tab conflict detection.
 - Vitest covers pure domain, ordering, and recommendation rules. Browser-level Playwright journeys are not yet implemented.
-- Weekly multi-day programs, accounts, cloud sync, backup/export, and custom exercises are outside the current scope.
+- Weekly multi-day programs, accounts, cloud sync, file backup/import, and custom exercises are outside the current scope.

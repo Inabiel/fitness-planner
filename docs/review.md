@@ -72,7 +72,7 @@ The repository now includes:
 - whole-card plan navigation;
 - a mobile drawer with visible hamburger control and scrim;
 - reduced-motion overrides;
-- local SVG focus artwork in onboarding and plan surfaces;
+- optimized local WebP focus artwork in onboarding and plan surfaces;
 - an Exercise Order screen with drag/drop and arrow controls;
 - pagination and multiple library sort modes.
 
@@ -112,7 +112,7 @@ Recommendation: add small Zod parsers for each stored root entity, introduce exp
 
 ### 4. The test suite proves rules, not the application
 
-Evidence: the current suite has ten Vitest tests for estimates/scheduling/suggestions, ordering, presets, and progression. package.json includes a browser test command, but there are no Playwright spec files or Playwright configuration. There are no IndexedDB integration tests.
+Evidence: the current suite has 18 Vitest tests for estimates/scheduling/suggestions, ordering, presets, progression, export formatting, and progress metrics. package.json includes a browser test command, but there are no Playwright spec files or Playwright configuration. There are no IndexedDB integration tests.
 
 Impact: regressions in routes, forms, modals, snapshots, deletion, mobile navigation, and reload behavior can pass CI unnoticed.
 

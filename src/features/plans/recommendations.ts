@@ -194,6 +194,7 @@ export function assessPlanIntensity(plan: WorkoutPlan, records: WorkoutRecord[])
 
 export function recommendNextIntensity(plan: WorkoutPlan, records: WorkoutRecord[]): WorkoutIntensity {
   const current = plan.intensity ?? 'moderate';
+  if (plan.schedule.kind !== 'weekly') return current;
   const recent = completedPlanRecords(plan.id, records).slice(0, 2);
   if (recent.length < 2 || recent.some((record) => compareRecordIntensity(record, record.planSnapshot.intensity ?? current) !== 'above')) return current;
   return nextIntensity(current) ?? current;

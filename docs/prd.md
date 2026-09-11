@@ -26,8 +26,8 @@ The intended user has access to a standard gym and wants a low-friction personal
 3. The dashboard shows a selected calendar day, scheduled plans, nearest earlier and upcoming occurrences, daily nutrition estimates, BMI, quick log links, and recent context.
 4. Plan creation starts with a focus-aware recommendation and supports body-part, split, and aerobic focus.
 5. The person can apply a preset, edit the generated prescriptions, or add individual exercises from the library.
-6. Plan detail shows the focus illustration, sequence, planned volume, saved estimate, effort guidance, logging entry point, and delete action.
-7. A dated session accepts optional actual dose, load, and RIR per set. Completion is always possible without performance input.
+6. Plan detail shows the focus illustration, recurring performance trend, sequence, planned volume, saved estimate, effort guidance, logging entry point, copy actions, and delete action.
+7. A dated session accepts optional actual dose, load, and RIR per set, and can copy an individual workout step. Completion is always possible without performance input.
 8. Progress and history show weight observations, recorded sessions, snapshots, and entered exercise results.
 9. Profile settings allow profile edits and a modal-confirmed clear-all operation that returns to onboarding.
 
@@ -42,15 +42,15 @@ The intended user has access to a standard gym and wants a low-friction personal
 | P05 | Plan management | Implemented. Plans require a name, confirmed focus, valid schedule, and at least one prescription. Delete uses a custom modal and leaves history. |
 | P06 | Scheduling | Implemented. Plans are one date or recurring weekday from startsOn; the dashboard shows the selected date, up to three nearest earlier occurrences, and up to three nearest upcoming occurrences. Date controls open the exact matching session route. |
 | P07 | Focus and suggestions | Implemented. Supports eight areas, four splits, and Aerobic. Goal/experience suggestion is editable and confirmation is required. |
-| P08 | Focus graphics | Implemented with local SVG assets, labels, and alt text. The assets illustrate focus; they do not claim intensity or anatomical percentages. |
+| P08 | Focus graphics | Implemented with optimized local WebP assets, labels, and alt text. The assets illustrate focus; they do not claim intensity or anatomical percentages. |
 | P09 | Exercise library | Partially implemented. 32 static exercises support search, filters, popularity/name/area/custom sorting, pagination, equipment labels, and written instructions. GIF/video media, source metadata, and rights review are missing. |
-| P10 | Prescriptions | Implemented. Sets, reps/duration, load, rest, notes, ordering, removal, target RIR, and six presets are supported. |
+| P10 | Prescriptions | Implemented. Sets, reps/duration, load, rest, notes, ordering, removal, target RIR, six presets, and four target intensity levels are supported. |
 | P11 | Workout tracking | Implemented. In-progress and completed records accept optional actual reps/duration, load, and RIR for individual sets. |
 | P12 | History preservation | Implemented in the normal UI flow. Records store plan/exercise/prescription snapshots and remain accessible after source-plan deletion. |
-| P13 | Body weight and progress | Implemented. One dated weight record can be created, updated, or deleted; charts and tables show weight, history, and up to 12 performance rows. |
+| P13 | Body weight and progress | Implemented. One dated weight record can be created, updated, or deleted; body-weight and session-performance charts plus tables show progress and up to 12 performance rows. |
 | P14 | Profile updates and recalculation | Implemented. Profile saves increment revision; existing plan estimates stay unchanged until explicit plan-level recalculation. |
 | P15 | Local persistence | Implemented with Dexie/IndexedDB and live queries. Clear-all is transactional. Runtime shape validation, migrations, and stale-tab conflict handling remain absent. |
-| P16 | Effort adaptation | Implemented as a deterministic heuristic. Two recent completed sessions with recorded dose drive Increase, Decrease, Hold, or Trend building guidance and future prescription adjustment. |
+| P16 | Effort adaptation | Implemented as a deterministic heuristic. Two recent completed sessions with recorded dose drive Increase, Decrease, Hold, or Trend building guidance, target-intensity advancement for recurring plans, and future prescription adjustment. |
 
 ## Interaction and quality requirements
 
@@ -63,6 +63,7 @@ Implemented baseline:
 - Form controls have labels, inline errors, text-based explanations, visible focus, modal semantics, and graphic alt text.
 - Empty, loading, unavailable-media, and storage-error messages exist in the main flows.
 - Save/complete actions disable while their write is pending.
+- Copy actions use a local clipboard fallback and show auto-dismissing snackbar feedback; session save/complete actions use the same transient feedback.
 - Dashboard schedule cards show the occurrence date and link directly to that dated session.
 
 Still to verify or improve:
@@ -102,6 +103,10 @@ For the two most recent completed records with actual dose values:
 
 Missing observations are excluded. This is a conservative product heuristic, not a validated readiness or fatigue model.
 
+### Progress chart rule
+
+Completed-session progress is the average of each prescription’s actual reps or duration divided by its plan snapshot target, expressed as a percentage. The overall Progress chart and recurring plan charts show the latest eight sessions with positive dose data; 100% is the target line. Load and RIR are kept in the performance table rather than folded into this score.
+
 ### Dashboard schedule rule
 
 The selected date is the primary schedule query. The dashboard separately finds the nearest valid occurrence before and after that date for each plan, limits each side to three cards, and sorts earlier cards newest-first and upcoming cards oldest-first. Recurring occurrences are searched within a one-year window; one-time plans are returned only when their configured date is on the relevant side. Invalid dates return no occurrence.
@@ -121,7 +126,7 @@ The selected date is the primary schedule query. The dashboard separately finds 
 
 ## Deferred product scope
 
-Accounts, cloud synchronization, cross-device backup, custom exercises/media, weekly multi-day programs, social features, analytics, AI coaching, medical diagnosis, and automatic changes to historical records remain out of scope.
+Accounts, cloud synchronization, file backup/import, custom exercises/media, weekly multi-day programs, social features, analytics, AI coaching, medical diagnosis, and automatic changes to historical records remain out of scope.
 
 ## Roadmap
 

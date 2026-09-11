@@ -18,6 +18,8 @@ This file owns the project vocabulary. The current implementation snapshot below
 - Dated session logging with optional reps/duration, load, and RIR per set.
 - Dashboard schedule browsing for the selected date, nearest earlier occurrences, nearest upcoming occurrences, and direct specific-date navigation.
 - Simple two-session progression guidance that can adjust the next prescription.
+- Body-weight and session-performance trend graphs, with exact tables retained for detail.
+- WhatsApp-friendly plan/step text copy with snackbar feedback for transient actions.
 - Plan deletion preserves historical Workout Records. Profile settings can clear all local data and reload onboarding.
 
 ## Profile and goals
@@ -83,6 +85,9 @@ One optional actual observation tied to a snapshot prescription and set number. 
 
 **Body Weight Record**  
 A dated body-weight observation stored separately from the profile’s current weight. One record per date is supported; saving the same date updates it, and the Progress screen can delete it.
+
+**Session Progress**
+The rounded percentage of planned reps or duration completed in a completed session. 100% means the planned dose was completed. The Progress screen shows the overall latest-eight-session trend, and recurring plan detail shows the same metric for that plan; load and RIR remain separate recorded observations.
 
 ## Focus and areas
 

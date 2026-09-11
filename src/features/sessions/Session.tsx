@@ -1,12 +1,13 @@
-import { useState } from 'react';
-import { CalendarDays, Check, CircleCheck } from 'lucide-react';
+import { useCallback, useState } from 'react';
+import { CalendarDays, Check, CircleCheck, Clipboard } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { FOCUS_LABELS, INTENSITY_LABELS, dateIsValid, plannedVolume, type Exercise, type Prescription, type SetRecord, type WorkoutRecord } from '../../domain';
 import type { PlannerData } from '../../data/db';
 import { now, saveWorkoutRecord, uid, updatePlanPrescriptions } from '../../data/db';
 import { EXERCISES } from '../../data/exercises';
 import { formatLongDate } from '../../shared/formatters';
-import { EmptyState, Page } from '../../shared/ui';
+import { EmptyState, Page, Snackbar } from '../../shared/ui';
+import { copyToClipboard, formatWorkoutStepText } from '../../shared/workoutExport';
 import { assessPlanIntensity, adjustPrescriptionsForIntensity, recommendNextIntensity, recommendNextPrescriptions } from '../plans/recommendations';
 import { makePlanSnapshot } from './snapshot';
 
@@ -19,7 +20,8 @@ export function Session({ data }: { data: PlannerData }) {
   const existing = data.records.find((record) => record.sourcePlanId === planId && record.sessionDate === date);
   const [sets, setSets] = useState<SetRecord[]>(existing?.sets ?? []);
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState('');
+  const [snackbar, setSnackbar] = useState<{ message: string; tone: 'success' | 'error' } | null>(null);
+  const dismissSnackbar = useCallback(() => setSnackbar(null), []);
 
   if (!selectedPlan || !date || !dateIsValid(date)) {
     return <Page title="Session unavailable" subtitle="We couldn’t resolve this dated occurrence."><EmptyState icon={<CalendarDays size={22} />} title="Check the plan and date" body="This session may belong to a deleted plan or an invalid date." action={<Link className="button secondary" to="/plans">Back to plans</Link>} /></Page>;
@@ -55,7 +57,7 @@ export function Session({ data }: { data: PlannerData }) {
 
   async function save(status: WorkoutRecord['status']) {
     setSaving(true);
-    setMessage('');
+    setSnackbar(null);
     const record: WorkoutRecord = {
       id: existing?.id ?? uid(),
       sourcePlanId: plan.id,
@@ -82,27 +84,36 @@ export function Session({ data }: { data: PlannerData }) {
         if (changed || intensityChanged) {
           try {
             await updatePlanPrescriptions(plan.id, nextPrescriptions, plan.revision + 1, intensityChanged ? nextIntensity : undefined);
-            setMessage(intensityChanged
+            setSnackbar({ message: intensityChanged
               ? `Session complete. You exceeded the ${INTENSITY_LABELS[currentIntensity]} target twice, so this plan is now ${INTENSITY_LABELS[nextIntensity]}.`
-              : 'Session complete. Your next recommendation was adjusted from recent performance.');
+              : 'Session complete. Your next recommendation was adjusted from recent performance.', tone: 'success' });
           } catch {
-            setMessage('Session complete. Your next recommendation could not be updated.');
+            setSnackbar({ message: 'Session complete. Your next recommendation could not be updated.', tone: 'error' });
           }
         } else {
           const intensityResult = assessPlanIntensity(plan, recordsForRecommendation).result;
-          setMessage(intensityResult === 'above'
+          setSnackbar({ message: intensityResult === 'above'
             ? `Session complete. You exceeded the ${INTENSITY_LABELS[currentIntensity]} target.`
             : intensityResult === 'on-target'
               ? `Session complete. You achieved the ${INTENSITY_LABELS[currentIntensity]} target.`
-              : 'Session complete. Nice work.');
+              : 'Session complete. Nice work.', tone: 'success' });
         }
       } else {
-        setMessage('Progress saved.');
+        setSnackbar({ message: 'Progress saved.', tone: 'success' });
       }
     } catch {
-      setMessage('Could not save yet. Your entries are still on this screen—try again.');
+      setSnackbar({ message: 'Could not save yet. Your entries are still on this screen—try again.', tone: 'error' });
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function copyStep(prescription: Prescription, exercise: Exercise, index: number) {
+    try {
+      await copyToClipboard(formatWorkoutStepText(prescription, exercise, index + 1));
+      setSnackbar({ message: `${exercise.name} step copied to clipboard.`, tone: 'success' });
+    } catch {
+      setSnackbar({ message: 'The workout step could not be copied.', tone: 'error' });
     }
   }
 
@@ -113,10 +124,9 @@ export function Session({ data }: { data: PlannerData }) {
           <div className="session-intro"><span className="session-date"><CalendarDays size={16} /> {formatLongDate(date)}</span><span className="area-pill">{FOCUS_LABELS[focus]} focus</span><span className="area-pill intensity-pill">Target: {INTENSITY_LABELS[snapshot.intensity ?? plan.intensity ?? 'moderate']}</span><h2>{snapshot.name}</h2><p className="muted">Log actual reps, load, and optional RIR. Blank fields stay unknown, and completion never requires performance details.</p></div>
           {snapshot.prescriptions.map((prescription, index) => {
             const exercise = snapshot.exercises.find((item) => item.id === prescription.exerciseId) ?? EXERCISES.find((item) => item.id === prescription.exerciseId);
-            return exercise ? <SessionExercise key={prescription.id} prescription={prescription} exercise={exercise} index={index} getSet={getSet} updateSet={updateSet} /> : null;
+            return exercise ? <SessionExercise key={prescription.id} prescription={prescription} exercise={exercise} index={index} getSet={getSet} updateSet={updateSet} onCopy={() => copyStep(prescription, exercise, index)} /> : null;
           })}
           <div className="session-actions">
-            {message && <p className={`save-message ${message.startsWith('Could') ? 'error' : ''}`} role="status">{message}</p>}
             <button className="button ghost" onClick={() => navigate(-1)}>Exit</button>
             <button className="button secondary" onClick={() => save('in_progress')} disabled={saving}><Check size={16} /> {saving ? 'Saving…' : 'Save progress'}</button>
             <button className="button primary" onClick={() => save('completed')} disabled={saving}><CircleCheck size={16} /> Mark complete</button>
@@ -124,15 +134,16 @@ export function Session({ data }: { data: PlannerData }) {
         </div>
         <aside className="session-side"><div className="side-card"><p className="eyebrow">Session note</p><h3>Presence over perfection.</h3><p className="muted">You can finish a session without recording a single set. Actual performance is optional, not assumed.</p></div><div className="side-card"><p className="eyebrow">Planned volume</p><strong className="big-number">{plannedVolume(snapshot.prescriptions)}</strong><span className="muted">work sets planned</span></div></aside>
       </div>
+      {snackbar && <Snackbar message={snackbar.message} tone={snackbar.tone} onDismiss={dismissSnackbar} />}
     </Page>
   );
 }
 
-function SessionExercise({ prescription, exercise, index, getSet, updateSet }: { prescription: Prescription; exercise: Exercise; index: number; getSet: (prescriptionId: string, setNumber: number) => SetRecord; updateSet: (prescriptionId: string, setNumber: number, field: SetValueField, value: string) => void }) {
+function SessionExercise({ prescription, exercise, index, getSet, updateSet, onCopy }: { prescription: Prescription; exercise: Exercise; index: number; getSet: (prescriptionId: string, setNumber: number) => SetRecord; updateSet: (prescriptionId: string, setNumber: number, field: SetValueField, value: string) => void; onCopy: () => void }) {
   const doseLabel = prescription.dose.kind === 'reps' ? 'reps' : 'sec';
   const loadLabel = prescription.recommendedLoadKg === 0 ? 'bodyweight' : prescription.recommendedLoadKg ? `${prescription.recommendedLoadKg} kg` : 'choose a load';
   const effortLabel = prescription.targetRir === undefined ? '' : ` · target ${prescription.targetRir} RIR`;
-  return <section className="session-exercise"><div className="session-exercise-heading"><span className="sequence-number">{String(index + 1).padStart(2, '0')}</span><div><h3>{exercise.name}</h3><p className="worked-label">Planned: {prescription.sets} × {prescription.dose.value} {doseLabel} · {loadLabel} · {prescription.restSeconds}s rest{effortLabel}</p></div></div><div className={`set-table ${prescription.dose.kind}`}><div className="set-table-head"><span>Set</span><span>{prescription.dose.kind === 'reps' ? 'Actual reps' : 'Actual sec'}</span><span>Load <small>kg</small></span>{prescription.dose.kind === 'reps' && <span>RIR</span>}</div>{Array.from({ length: prescription.sets }, (_, index) => <SetRow key={index + 1} exercise={exercise} prescription={prescription} setNumber={index + 1} current={getSet(prescription.id, index + 1)} onChange={updateSet} />)}</div></section>;
+  return <section className="session-exercise"><div className="session-exercise-heading"><span className="sequence-number">{String(index + 1).padStart(2, '0')}</span><div><div className="session-exercise-title"><h3>{exercise.name}</h3><button className="button small ghost copy-step" type="button" onClick={onCopy}><Clipboard size={14} /> Copy step</button></div><p className="worked-label">Planned: {prescription.sets} × {prescription.dose.value} {doseLabel} · {loadLabel} · {prescription.restSeconds}s rest{effortLabel}</p></div></div><div className={`set-table ${prescription.dose.kind}`}><div className="set-table-head"><span>Set</span><span>{prescription.dose.kind === 'reps' ? 'Actual reps' : 'Actual sec'}</span><span>Load <small>kg</small></span>{prescription.dose.kind === 'reps' && <span>RIR</span>}</div>{Array.from({ length: prescription.sets }, (_, index) => <SetRow key={index + 1} exercise={exercise} prescription={prescription} setNumber={index + 1} current={getSet(prescription.id, index + 1)} onChange={updateSet} />)}</div></section>;
 }
 
 function SetRow({ exercise, prescription, setNumber, current, onChange }: { exercise: Exercise; prescription: Prescription; setNumber: number; current: SetRecord; onChange: (prescriptionId: string, setNumber: number, field: SetValueField, value: string) => void }) {

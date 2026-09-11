@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { ArrowLeft, Dumbbell, LayoutDashboard, ListOrdered, Settings2, TrendingUp, X } from 'lucide-react';
 import { Link, NavLink, Outlet } from 'react-router';
 import { AREA_LABELS, GOAL_LABELS, type Area, type Profile } from '../domain';
@@ -106,6 +106,17 @@ interface FieldProps {
 
 export function Field({ label, suffix, hint, error, children }: FieldProps) {
   return <label className="field"><span className="field-label">{label}{suffix && <em>{suffix}</em>}</span>{hint && <small className="field-hint">{hint}</small>}<span className="field-control">{children}</span>{error && <span className="form-error">{error}</span>}</label>;
+}
+
+export function Snackbar({ message, tone = 'success', onDismiss }: { message: string; tone?: 'success' | 'error'; onDismiss: () => void }) {
+  useEffect(() => {
+    if (!message) return;
+    const timeout = window.setTimeout(onDismiss, 2800);
+    return () => window.clearTimeout(timeout);
+  }, [message, onDismiss]);
+
+  if (!message) return null;
+  return <div className={`snackbar ${tone}`} role={tone === 'error' ? 'alert' : 'status'} aria-live={tone === 'error' ? 'assertive' : 'polite'}><span>{message}</span><button type="button" className="snackbar-dismiss" onClick={onDismiss} aria-label="Dismiss notification"><X size={15} /></button></div>;
 }
 
 export function BodyGraphic({ area, compact = false }: { area: Area; compact?: boolean }) {

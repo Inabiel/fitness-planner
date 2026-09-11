@@ -32,12 +32,14 @@ These values are implemented heuristics with rule version `MVP-2026.1`. They req
 
 - Create, view, edit, and delete one-workout Workout Plans.
 - Confirm one Workout Focus: eight body-part categories, four training splits, or Aerobic.
-- Show a local SVG focus illustration in intention preview, plan cards, and plan detail.
+- Show an optimized local focus illustration in intention preview, plan cards, and plan detail.
 - Suggest a focus from goal and experience, with an editable explanation and explicit confirmation.
 - Choose a recurring weekday or one calendar date.
 - Browse the selected date, nearest earlier occurrences, and nearest upcoming occurrences from the dashboard. Previous/next day controls, a date picker, and a Today shortcut support specific-date workout lookup.
 - Add at least one Exercise Prescription, reorder it, remove it, and edit sets, reps/duration, load, rest, and notes.
 - Apply six focus-aware presets: Easy One, Strength Base, Muscle Builder, Machine Circuit, Quick Sweat, and Aerobic Flow.
+- Choose Easy, Moderate, Hard, or Very hard target intensity; generated prescriptions adjust dose, rest, and target RIR.
+- Copy a complete plan or individual workout step as text for use outside the local site.
 - Entire plan cards navigate to plan details and include hover/focus treatment. Plan deletion confirms in a modal and leaves history intact.
 
 ## Exercise Library
@@ -62,12 +64,13 @@ Exercise demonstrations are not shipped yet. The UI displays a media placeholder
 - Preserve the plan and exercise snapshot inside the Workout Record.
 - Use the two most recent completed sessions with dose observations to show No result, Trend building, Increase effort, Decrease effort, or Hold effort on plan detail.
 - On completion, repeated increase/decrease signals adjust the next plan prescription while keeping historical records unchanged.
+- For recurring plans, two consecutive above-target sessions advance target intensity by one level, capped at Very hard.
 
 ## Progress and history
 
 - Add, update, and delete one dated body-weight record per date.
 - Display a simple SVG body-weight trend and accessible data table.
-- Display all workout history links and a performance table capped to the first 12 recorded entries for compactness.
+- Display a body-weight trend, an overall session-performance trend, and an accessible performance table capped to the first 12 recorded entries for compactness.
 - Open historical records by record ID even when the source plan has been deleted.
 
 ## Dashboard schedule browsing
@@ -84,7 +87,7 @@ Current hash routes:
 | `#/` | Dashboard, selected-date schedule, and nearby occurrences |
 | `#/plans` | Workout plan list |
 | `#/plans/new` | Plan editor |
-| `#/plans/:planId` | Plan detail, effort guidance, actions |
+| `#/plans/:planId` | Plan detail, progress, effort guidance, and copy actions |
 | `#/plans/:planId/edit` | Existing plan editor |
 | `#/sessions/:planId/:date` | Dated session logger |
 | `#/history/:recordId` | Historical session snapshot |
@@ -100,7 +103,7 @@ Dexie stores profiles, plans, workout records, and body-weight records in Indexe
 
 ## Out of scope or not release-ready
 
-- Accounts, cloud sync, backup/export/import, installable PWA behavior, and custom exercises/media.
+- Accounts, cloud sync, file backup/import, installable PWA behavior, and custom exercises/media.
 - Weekly program grouping and history-based exercise selection.
 - Reviewed GIF/video demonstrations, content rights, source attribution, and media retry behavior.
 - Runtime validation of arbitrary persisted IndexedDB data, schema migrations, and stale-tab revision conflicts.

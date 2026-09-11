@@ -111,6 +111,13 @@ describe('workout recommendations', () => {
     expect(recommendNextIntensity(plan, records)).toBe('hard');
   });
 
+  it('does not advance intensity for one-time plans', () => {
+    const oneTimePlan = { ...plan, schedule: { kind: 'date' as const, date: '2026-01-12' } };
+    const records = [record('2026-01-12', [11, 12, 11], [2, 2, 2]), record('2026-01-05', [11, 11, 12], [2, 2, 2])];
+
+    expect(recommendNextIntensity(oneTimePlan, records)).toBe('moderate');
+  });
+
   it('does not treat the planned very-hard RIR as a burden signal', () => {
     const veryHardPlan = { ...plan, intensity: 'very-hard' as const, prescriptions: [{ ...prescription, targetRir: 0 }] };
     const veryHardRecord = (date: string): WorkoutRecord => {

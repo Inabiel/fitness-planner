@@ -35,9 +35,9 @@ Exact package versions are governed by package.json and package-lock.json.
 | src/features/profile | Onboarding stepper, profile settings, form conversion, and validation guards. |
 | src/features/plans | Plan list/editor/detail, focus previews, illustration assets, presets, and progression heuristics. |
 | src/features/sessions | Dated session logger, plan snapshot creation, and historical record detail. |
-| src/features/progress | Body-weight entry/chart, workout history, and performance table. |
+| src/features/progress | Body-weight entry/chart, workout history, performance trend chart, and performance table. |
 | src/features/exercises | Persisted Custom Exercise Order with arrow and drag-and-drop reorder behavior. |
-| src/shared | App shell, page/field/empty-state primitives, formatters, and basic validation. |
+| src/shared | App shell, page/field/empty-state/snackbar primitives, formatters, progress metric/chart, workout text export, and basic validation. |
 | src/styles.css | Central visual system, responsive layout, hover states, focus states, modal styling, and reduced-motion rules. |
 
 Feature index files re-export screen entry points. They provide stable import boundaries without adding a state-management layer.
@@ -52,11 +52,11 @@ The application uses hash routes so a static host does not need to rewrite unkno
 | #/ | Dashboard | Selected-date schedule, earlier/upcoming occurrences, date navigation, estimates, BMI, quick links, and responsive shell. |
 | #/plans | Plans | Saved plan cards and empty state. |
 | #/plans/new | PlanEditor | New plan form, focus selection, presets, library, prescriptions, and save. |
-| #/plans/:planId | PlanDetail | Focus, sequence, effort guidance, estimate, logging action, recalculate, and delete. |
+| #/plans/:planId | PlanDetail | Focus, recurring progress trend, sequence, effort guidance, estimate, logging action, text export, recalculate, and delete. |
 | #/plans/:planId/edit | PlanEditor | Existing plan editing. |
-| #/sessions/:planId/:date | Session | Dated occurrence logger and completion action. |
+| #/sessions/:planId/:date | Session | Dated occurrence logger, step text export, and completion action. |
 | #/history/:recordId | HistoryDetail | Historical snapshot independent of a current plan. |
-| #/progress | Progress | Body weight, workout history, and performance observations. |
+| #/progress | Progress | Body-weight entry/trend, workout history, performance trend, and performance observations. |
 | #/exercise-order | ExerciseOrder | Profile-level custom ordering for future library browsing. |
 | #/profile | ProfileSettings | Profile updates and modal-confirmed clear-all. |
 
@@ -148,9 +148,15 @@ The two most recent completed records with actual dose entries are evaluated per
 
 Two repeated burden signals reduce load by roughly 10% or dose by one rep/five seconds and add 30 seconds rest, capped at 180 seconds. Two repeated overperformance signals increase load by roughly 5% or dose by one rep/five seconds. Plan detail exposes the assessment; session completion persists the next recommendation. This is deliberately simple and is not a validated fatigue model.
 
-## UI and assets
+### Progress charts
 
-FocusIllustration resolves the focus union to relative local SVG files so the same build works at the domain root and a repository Pages path. The HTML favicon uses Vite’s BASE_URL placeholder. SVG focus assets are used in onboarding intention preview, plan cards, and plan detail.
+sessionProgress compares each logged set’s actual reps or duration with its plan snapshot target, averages those ratios across prescriptions, and reports a rounded percentage. 100% means the planned dose was completed. Charts use the latest eight completed sessions with actual dose entries; they intentionally do not combine load or RIR into the percentage. The progress page shows the overall trend, while recurring plan detail shows the trend for that plan. Body-weight history remains a separate kilogram chart with an exact-value table.
+
+## UI, export, and assets
+
+FocusIllustration resolves the focus union to relative local WebP files so the same build works at the domain root and a repository Pages path. The HTML favicon uses Vite’s BASE_URL placeholder. Optimized focus assets are used in onboarding intention preview, plan cards, and plan detail.
+
+Plan detail and active sessions can copy a complete workout plan or an individual exercise step as WhatsApp-friendly text. Copying uses the Clipboard API with a local/older-browser textarea fallback. The shared Snackbar confirms copy, save-progress, and session-completion actions, auto-dismisses, and supports manual dismissal.
 
 Exercise entries currently render a written-instructions/media placeholder. No exercise GIF/video URL, source, attribution, or playback control exists yet.
 
@@ -173,11 +179,10 @@ Current automated checks:
 
 - npm run build: passes TypeScript checking and Vite production build.
 - npm run lint: passes ESLint.
-- npm test: passes 10 Vitest tests across domain rules, exercise ordering, and recommendations.
+- npm test: passes 18 Vitest tests across domain rules, exercise ordering, recommendations, text export, and progress metrics.
 
-The domain suite also covers nearest earlier and upcoming occurrences for recurring and one-time schedules, bringing the current total to 11 passing tests.
-
-The package includes npm run test:browser, but there are currently no Playwright test files or Playwright configuration. Browser, IndexedDB, mobile, modal, and real asset smoke tests remain to be added. The package also includes npm run media, but scripts/generate-media.mjs is not currently present.
+The domain suite also covers nearest earlier and upcoming occurrences for recurring and one-time schedules. Browser, IndexedDB, mobile, modal, and real asset smoke tests remain to be added.
+The package includes npm run test:browser, but there are currently no Playwright test files or Playwright configuration. The package also includes npm run media, but scripts/generate-media.mjs is not currently present.
 
 ## GitHub Pages deployment
 

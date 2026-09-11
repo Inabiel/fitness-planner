@@ -1,12 +1,15 @@
-import { useEffect, useState } from 'react';
-import { ArrowRight, CircleCheck, Clock3, Dumbbell, Flame, Info, Pencil, Trash2 } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { ArrowRight, Check, CircleCheck, Clipboard, Clock3, Dumbbell, Flame, Info, Pencil, Trash2 } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { AREA_LABELS, FOCUS_LABELS, INTENSITY_LABELS, calculateEstimates, formatSchedule, localDate, occursOn, plannedVolume, snapshotEstimate, type EstimateSnapshot, type Exercise, type Prescription, type WorkoutIntensity } from '../../domain';
 import { deletePlan as removePlan, now, updatePlanEstimate, type AuthenticatedPlannerData } from '../../data/db';
 import { EXERCISES } from '../../data/exercises';
 import { formatDateTime } from '../../shared/formatters';
-import { EmptyState, Page } from '../../shared/ui';
+import { getProgressPoints } from '../../shared/progress';
+import { ProgressLineChart } from '../../shared/progressChart';
+import { EmptyState, Page, Snackbar } from '../../shared/ui';
 import { FocusIllustration } from './FocusIllustration';
+import { copyToClipboard, formatWorkoutPlanText, formatWorkoutStepText } from '../../shared/workoutExport';
 import { assessPlanIntensity, assessPrescriptionEffort, type EffortAssessment, type IntensityAssessment } from './recommendations';
 
 export function PlanDetail({ data }: { data: AuthenticatedPlannerData }) {
@@ -16,7 +19,10 @@ export function PlanDetail({ data }: { data: AuthenticatedPlannerData }) {
   const [showRecalc, setShowRecalc] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [snackbar, setSnackbar] = useState<{ message: string; tone: 'success' | 'error' } | null>(null);
   const [error, setError] = useState('');
+  const dismissSnackbar = useCallback(() => setSnackbar(null), []);
 
   useEffect(() => {
     if (!deleteOpen) return;
@@ -37,6 +43,7 @@ export function PlanDetail({ data }: { data: AuthenticatedPlannerData }) {
   const today = localDate();
   const canStartToday = occursOn(plan, today);
   const previewEstimate = calculateEstimates(data.profile);
+  const progressPoints = plan.schedule.kind === 'weekly' ? getProgressPoints(data.records, plan.id) : [];
 
   async function deletePlan() {
     setSaving(true);
@@ -63,22 +70,42 @@ export function PlanDetail({ data }: { data: AuthenticatedPlannerData }) {
     }
   }
 
+  async function copyPlan() {
+    try {
+      await copyToClipboard(formatWorkoutPlanText(plan, EXERCISES));
+      setCopied(true);
+      setSnackbar({ message: 'Workout plan copied to clipboard.', tone: 'success' });
+    } catch {
+      setSnackbar({ message: 'The plan could not be copied. Try selecting the plan text manually.', tone: 'error' });
+    }
+  }
+
+  async function copyStep(prescription: Prescription, exercise: Exercise, index: number) {
+    try {
+      await copyToClipboard(formatWorkoutStepText(prescription, exercise, index + 1));
+      setSnackbar({ message: `${exercise.name} step copied to clipboard.`, tone: 'success' });
+    } catch {
+      setSnackbar({ message: 'The workout step could not be copied.', tone: 'error' });
+    }
+  }
+
   return (
     <Page
       title={plan.name}
       subtitle={`${FOCUS_LABELS[focus]} focus · ${INTENSITY_LABELS[intensity]} intensity · ${formatSchedule(plan.schedule)}`}
       backTo="/plans"
-      action={<div className="page-actions"><Link className="button secondary" to={`/plans/${plan.id}/edit`}><Pencil size={16} /> Edit</Link>{canStartToday && <Link className="button primary" to={`/sessions/${plan.id}/${today}`}><Dumbbell size={16} /> Start today</Link>}</div>}
+      action={<div className="page-actions"><Link className="button secondary" to={`/plans/${plan.id}/edit`}><Pencil size={16} /> Edit</Link><button className="button secondary" type="button" onClick={copyPlan}>{copied ? <Check size={16} /> : <Clipboard size={16} />}{copied ? 'Copied' : 'Copy plan text'}</button>{canStartToday && <Link className="button primary" to={`/sessions/${plan.id}/${today}`}><Dumbbell size={16} /> Start today</Link>}</div>}
     >
       <div className="detail-layout">
         <div className="detail-main">
           <section className="focus-hero"><div className="focus-copy"><p className="eyebrow on-dark">Workout focus</p><h2>{FOCUS_LABELS[focus]}</h2><p>This is the intention you confirmed for the plan. Your exercises can work other areas too.</p></div><FocusIllustration focus={focus} /></section>
+          {plan.schedule.kind === 'weekly' && <section className="detail-section progress-card"><div className="section-heading"><div><p className="eyebrow">Recurring progress</p><h2>Performance trend</h2></div><span className="unit-label">% of target</span></div>{progressPoints.length ? <ProgressLineChart points={progressPoints} ariaLabel={`${plan.name} performance trend`} /> : <EmptyState compact icon={<Flame size={21} />} title="Your trend starts after one completed session" body="Log actual reps or duration in a recurring session to see progress here." />}</section>}
           <section className="detail-section">
             <div className="section-heading"><div><p className="eyebrow">The sequence</p><h2>{plan.prescriptions.length} exercises</h2></div><span className="volume-badge"><Flame size={15} /> {plannedVolume(plan.prescriptions)} planned work sets</span></div>
             <p className="section-explainer">Planned volume is a simple count of work sets for this session. It is guidance, not your actual workload.</p>
             <div className="detail-exercise-list">{plan.prescriptions.map((prescription, index) => {
               const exercise = EXERCISES.find((item) => item.id === prescription.exerciseId);
-              return exercise ? <ExerciseDetail key={prescription.id} prescription={prescription} exercise={exercise} index={index} effort={assessPrescriptionEffort(prescription, plan.id, data.records)} /> : null;
+              return exercise ? <ExerciseDetail key={prescription.id} prescription={prescription} exercise={exercise} index={index} effort={assessPrescriptionEffort(prescription, plan.id, data.records)} onCopy={() => copyStep(prescription, exercise, index)} /> : null;
             })}</div>
           </section>
         </div>
@@ -94,6 +121,7 @@ export function PlanDetail({ data }: { data: AuthenticatedPlannerData }) {
         </aside>
       </div>
       {error && <p className="form-error global-error" role="alert">{error}</p>}
+      {snackbar && <Snackbar message={snackbar.message} tone={snackbar.tone} onDismiss={dismissSnackbar} />}
       {showRecalc && <RecalculationModal estimate={plan.estimate} previewEstimate={previewEstimate} profileRevision={data.profile.revision} saving={saving} onCancel={() => setShowRecalc(false)} onSave={saveRecalculation} />}
       {deleteOpen && <DeleteModal planName={plan.name} saving={saving} onCancel={() => setDeleteOpen(false)} onDelete={deletePlan} />}
     </Page>
@@ -130,11 +158,11 @@ function IntensityCard({ target, assessment }: { target: WorkoutIntensity; asses
   return <div className="side-card intensity-card"><div className="section-heading"><div><p className="eyebrow">Target intensity</p><h3>{INTENSITY_LABELS[target]}</h3></div><span className={`effort-pill ${pillClass}`}>{assessment.label}</span></div><p className="effort-detail">{assessment.detail}</p></div>;
 }
 
-function ExerciseDetail({ prescription, exercise, index, effort }: { prescription: Prescription; exercise: Exercise; index: number; effort: EffortAssessment }) {
+function ExerciseDetail({ prescription, exercise, index, effort, onCopy }: { prescription: Prescription; exercise: Exercise; index: number; effort: EffortAssessment; onCopy: () => void }) {
   const primaryAreas = exercise.primaryAreas.map((area) => AREA_LABELS[area]).join(', ');
   const secondaryAreas = exercise.secondaryAreas.length ? ` · Secondary: ${exercise.secondaryAreas.map((area) => AREA_LABELS[area]).join(', ')}` : '';
   const rirLabel = prescription.dose.kind === 'reps' ? ` · Target ${prescription.targetRir ?? 2} RIR` : '';
-  return <article className="exercise-detail"><div className="exercise-detail-number">{String(index + 1).padStart(2, '0')}</div><div className="exercise-detail-content"><div className="exercise-detail-heading"><div><h3>{exercise.name}</h3><span className="worked-label">Primary: {primaryAreas}{secondaryAreas}</span></div><div className="exercise-detail-badges"><span className="dose-pill">{prescription.sets} × {prescription.dose.value}{prescription.dose.kind === 'reps' ? ' reps' : ' sec'}</span><span className={`effort-pill ${effort.direction}`}>{effort.label}</span></div></div><div className="exercise-detail-grid"><div className="exercise-media unavailable"><Dumbbell size={20} /><span>{exercise.mediaLabel}</span><small>Written instructions remain available.</small></div><div><p className="eyebrow">How to move</p><ol className="instruction-list">{exercise.instructions.map((instruction) => <li key={instruction}>{instruction}</li>)}</ol><p className="rest-note"><Clock3 size={14} /> Start {formatLoad(prescription.recommendedLoadKg)} · Rest {prescription.restSeconds} sec{rirLabel}{prescription.notes ? ` · ${prescription.notes}` : ''}</p><p className="effort-detail">{effort.detail}</p></div></div></div></article>;
+  return <article className="exercise-detail"><div className="exercise-detail-number">{String(index + 1).padStart(2, '0')}</div><div className="exercise-detail-content"><div className="exercise-detail-heading"><div><h3>{exercise.name}</h3><span className="worked-label">Primary: {primaryAreas}{secondaryAreas}</span></div><div className="exercise-detail-badges"><span className="dose-pill">{prescription.sets} × {prescription.dose.value}{prescription.dose.kind === 'reps' ? ' reps' : ' sec'}</span><span className={`effort-pill ${effort.direction}`}>{effort.label}</span><button className="button small ghost copy-step" type="button" onClick={onCopy}><Clipboard size={14} /> Copy step</button></div></div><div className="exercise-detail-grid"><div className="exercise-media unavailable"><Dumbbell size={20} /><span>{exercise.mediaLabel}</span><small>Written instructions remain available.</small></div><div><p className="eyebrow">How to move</p><ol className="instruction-list">{exercise.instructions.map((instruction) => <li key={instruction}>{instruction}</li>)}</ol><p className="rest-note"><Clock3 size={14} /> Start {formatLoad(prescription.recommendedLoadKg)} · Rest {prescription.restSeconds} sec{rirLabel}{prescription.notes ? ` · ${prescription.notes}` : ''}</p><p className="effort-detail">{effort.detail}</p></div></div></div></article>;
 }
 
 function formatLoad(load: number | null | undefined): string {

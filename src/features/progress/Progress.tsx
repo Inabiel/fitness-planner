@@ -4,6 +4,8 @@ import { Link } from 'react-router';
 import { dateIsValid, localDate, type BodyWeightRecord, type WorkoutRecord } from '../../domain';
 import { deleteBodyWeight, now, saveBodyWeight, type PlannerData } from '../../data/db';
 import { formatShortDate } from '../../shared/formatters';
+import { getProgressPoints } from '../../shared/progress';
+import { ProgressLineChart } from '../../shared/progressChart';
 import { EmptyState, Field, Page } from '../../shared/ui';
 import { positiveNumber } from '../../shared/validation';
 
@@ -12,6 +14,7 @@ export function Progress({ data }: { data: PlannerData }) {
   const [weight, setWeight] = useState('');
   const [message, setMessage] = useState('');
   const weights = [...data.weights].sort((a, b) => a.date.localeCompare(b.date));
+  const performancePoints = getProgressPoints(data.records);
 
   async function saveWeight(event: FormEvent) {
     event.preventDefault();
@@ -71,6 +74,7 @@ export function Progress({ data }: { data: PlannerData }) {
       </section>
       <section className="performance-section">
         <div className="section-heading"><div><p className="eyebrow">Performance</p><h2>Recorded exercise details</h2></div><BarChart3 size={19} /></div>
+        {performancePoints.length ? <div className="performance-chart"><div className="section-heading"><div><p className="eyebrow">Session trend</p><h3>Progress toward each target</h3></div><span className="unit-label">%</span></div><ProgressLineChart points={performancePoints} ariaLabel="Workout performance trend" /></div> : null}
         <PerformanceTable records={data.records} />
       </section>
     </Page>
