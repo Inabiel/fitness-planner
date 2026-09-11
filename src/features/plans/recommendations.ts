@@ -1,0 +1,249 @@
+import type { Area, Experience, Exercise, Goal, Prescription, SetRecord, WorkoutFocus, WorkoutPlan, WorkoutRecord } from '../../domain';
+
+const FOCUS_AREAS: Record<WorkoutFocus, readonly Area[]> = {
+  chest: ['chest'],
+  back: ['back'],
+  shoulders: ['shoulders'],
+  arms: ['arms'],
+  legs: ['legs'],
+  glutes: ['glutes'],
+  core: ['core'],
+  'full-body': ['chest', 'back', 'shoulders', 'arms', 'legs', 'glutes', 'core'],
+  push: ['chest', 'shoulders', 'arms'],
+  pull: ['back', 'arms', 'glutes'],
+  'upper-body': ['chest', 'back', 'shoulders', 'arms'],
+  'lower-body': ['legs', 'glutes', 'core'],
+  aerobic: ['legs', 'glutes', 'core', 'shoulders', 'back'],
+};
+
+const STARTING_LOADS: Record<string, Record<Experience, number>> = {
+  'barbell-back-squat': { beginner: 20, intermediate: 40, advanced: 60 },
+  'barbell-bench-press': { beginner: 15, intermediate: 30, advanced: 45 },
+  'conventional-deadlift': { beginner: 25, intermediate: 50, advanced: 75 },
+  'pull-up': { beginner: 0, intermediate: 0, advanced: 0 },
+  'dumbbell-bench-press': { beginner: 5, intermediate: 10, advanced: 16 },
+  'chest-press-machine': { beginner: 20, intermediate: 35, advanced: 50 },
+  'seated-machine-row': { beginner: 20, intermediate: 35, advanced: 50 },
+  'butterfly-machine': { beginner: 15, intermediate: 25, advanced: 35 },
+  'cable-crossover': { beginner: 10, intermediate: 20, advanced: 30 },
+  'push-up': { beginner: 0, intermediate: 0, advanced: 0 },
+  'seated-cable-row': { beginner: 20, intermediate: 30, advanced: 40 },
+  'goblet-squat': { beginner: 12, intermediate: 16, advanced: 20 },
+  'romanian-deadlift': { beginner: 16, intermediate: 24, advanced: 32 },
+  'lat-pulldown': { beginner: 20, intermediate: 30, advanced: 40 },
+  'leg-press': { beginner: 40, intermediate: 80, advanced: 120 },
+  'hack-squat-machine': { beginner: 30, intermediate: 60, advanced: 90 },
+  'dumbbell-shoulder-press': { beginner: 5, intermediate: 8, advanced: 12 },
+  'machine-shoulder-press': { beginner: 15, intermediate: 25, advanced: 40 },
+  'bulgarian-split-squat': { beginner: 6, intermediate: 10, advanced: 14 },
+  'leg-extension-machine': { beginner: 15, intermediate: 30, advanced: 45 },
+  'seated-leg-curl-machine': { beginner: 15, intermediate: 30, advanced: 45 },
+  'calf-raise-machine': { beginner: 25, intermediate: 50, advanced: 75 },
+  'hip-thrust': { beginner: 20, intermediate: 40, advanced: 60 },
+  'one-arm-dumbbell-row': { beginner: 8, intermediate: 14, advanced: 20 },
+  'lateral-raise': { beginner: 3, intermediate: 5, advanced: 8 },
+  'face-pull': { beginner: 10, intermediate: 15, advanced: 20 },
+  'hip-abduction-machine': { beginner: 20, intermediate: 35, advanced: 50 },
+  'reverse-pec-deck': { beginner: 10, intermediate: 20, advanced: 30 },
+  'triceps-pushdown': { beginner: 10, intermediate: 20, advanced: 30 },
+  'preacher-curl-machine': { beginner: 10, intermediate: 20, advanced: 30 },
+  'smith-machine-squat': { beginner: 20, intermediate: 40, advanced: 60 },
+  'dead-bug': { beginner: 0, intermediate: 0, advanced: 0 },
+  'farmer-carry': { beginner: 10, intermediate: 16, advanced: 22 },
+  'reverse-lunge': { beginner: 8, intermediate: 12, advanced: 16 },
+  'kettlebell-swing': { beginner: 8, intermediate: 12, advanced: 16 },
+  'plank': { beginner: 0, intermediate: 0, advanced: 0 },
+  'side-plank': { beginner: 0, intermediate: 0, advanced: 0 },
+};
+
+export const WORKOUT_PRESETS = [
+  { id: 'easy-one', name: 'Easy One', description: 'Low-pressure version of your focus' },
+  { id: 'strength-base', name: 'Strength Base', description: 'Big movements with longer rests' },
+  { id: 'muscle-builder', name: 'Muscle Builder', description: 'Balanced growth-focused session' },
+  { id: 'machine-circuit', name: 'Machine Circuit', description: 'Simple machines for your focus' },
+  { id: 'quick-sweat', name: 'Quick Sweat', description: 'Fast circuit built around your focus' },
+  { id: 'aerobic-flow', name: 'Aerobic Flow', description: 'Steady cardio without max effort' },
+] as const;
+
+export type WorkoutPreset = (typeof WORKOUT_PRESETS)[number]['id'];
+
+export function selectRecommendedExercises(focus: WorkoutFocus, exercises: Exercise[]): Exercise[] {
+  const targetAreas = FOCUS_AREAS[focus];
+  const candidates = focus === 'aerobic' ? exercises.filter((exercise) => exercise.exerciseType === 'aerobic') : exercises;
+  return candidates
+    .map((exercise, index) => ({ exercise, index, score: focusScore(exercise, targetAreas) }))
+    .filter((item) => item.score > 0)
+    .sort((a, b) => b.score - a.score || a.exercise.popularityRank - b.exercise.popularityRank || a.index - b.index)
+    .slice(0, 4)
+    .map((item) => item.exercise);
+}
+
+export function createRecommendedPrescriptions(focus: WorkoutFocus, experience: Experience, goal: Goal, exercises: Exercise[], createId: () => string): Prescription[] {
+  return selectRecommendedExercises(focus, exercises).map((exercise) => createPrescription(exercise, experience, goal, createId));
+}
+
+export function createPresetPrescriptions(presetId: WorkoutPreset, focus: WorkoutFocus, experience: Experience, goal: Goal, exercises: Exercise[], createId: () => string): Prescription[] {
+  if (presetId === 'aerobic-flow' && focus !== 'aerobic') return [];
+
+  const machineExercises = exercises.filter((exercise) => Boolean(exercise.equipment));
+  const sourceExercises = presetId === 'machine-circuit' ? machineExercises : exercises;
+  const presetExercises = selectRecommendedExercises(focus, sourceExercises);
+  const fallbackExercises = presetId === 'machine-circuit' && presetExercises.length === 0 ? selectRecommendedExercises(focus, exercises) : presetExercises;
+
+  return fallbackExercises.map((exercise) => applyPreset(presetId, exercise, createPrescription(exercise, experience, goal, createId), experience));
+}
+
+function applyPreset(presetId: WorkoutPreset, exercise: Exercise, prescription: Prescription, experience: Experience): Prescription {
+  const aerobic = exercise.exerciseType === 'aerobic';
+  if (presetId === 'easy-one') return { ...prescription, sets: aerobic ? 1 : 2, dose: { ...prescription.dose, value: aerobic ? 600 : Math.max(6, Math.round(prescription.dose.value * 0.8)) }, restSeconds: 60, notes: 'Keep this easy and controlled. Finish with about 3 reps in reserve.', recommendedLoadKg: reduceStartingLoad(prescription.recommendedLoadKg), targetRir: aerobic ? undefined : 3 };
+  if (presetId === 'strength-base') return { ...prescription, sets: aerobic ? 1 : experience === 'beginner' ? 3 : 4, dose: { ...prescription.dose, value: aerobic ? 600 : 5 }, restSeconds: 120, notes: 'Use a controlled load and stop with about 2 reps in reserve.', targetRir: aerobic ? undefined : 2 };
+  if (presetId === 'muscle-builder') return { ...prescription, sets: aerobic ? 1 : 3, dose: { ...prescription.dose, value: aerobic ? 900 : 10 }, restSeconds: 90, notes: 'Use a full range of motion and finish with about 2 reps in reserve.', targetRir: aerobic ? undefined : 2 };
+  if (presetId === 'machine-circuit') return { ...prescription, sets: aerobic ? 1 : 3, dose: { ...prescription.dose, value: aerobic ? 600 : 12 }, restSeconds: 60, notes: 'Set the station up carefully and keep the movement controlled.', targetRir: aerobic ? undefined : 2 };
+  if (presetId === 'quick-sweat') return { ...prescription, sets: aerobic ? 3 : 2, dose: { ...prescription.dose, value: aerobic ? 120 : 12 }, restSeconds: 30, notes: 'Move steadily and keep the effort challenging but repeatable.', recommendedLoadKg: reduceStartingLoad(prescription.recommendedLoadKg), targetRir: aerobic ? undefined : 3 };
+  return { ...prescription, sets: 1, dose: { ...prescription.dose, value: 600 }, restSeconds: 60, notes: 'Hold a steady, conversational pace rather than sprinting.', targetRir: undefined };
+}
+
+function createPrescription(exercise: Exercise, experience: Experience, goal: Goal, createId: () => string): Prescription {
+  return {
+    id: createId(),
+    exerciseId: exercise.id,
+    sets: exercise.exerciseType === 'aerobic' ? 1 : recommendedSets(experience, goal),
+    dose: { kind: exercise.doseKind, value: recommendedDose(exercise, goal) },
+    restSeconds: recommendedRest(exercise),
+    notes: 'Aim to finish with about 2 reps in reserve.',
+    recommendedLoadKg: STARTING_LOADS[exercise.id]?.[experience] ?? null,
+    targetRir: exercise.doseKind === 'reps' ? 2 : undefined,
+  };
+}
+
+function reduceStartingLoad(load: number | null | undefined): number | null | undefined {
+  return load && load > 0 ? roundLoad(load * 0.8) : load;
+}
+
+export function recommendNextPrescriptions(plan: WorkoutPlan, records: WorkoutRecord[]): Prescription[] {
+  return plan.prescriptions.map((prescription) => recommendNextPrescription(prescription, plan.id, records));
+}
+
+export type EffortDirection = 'increase' | 'decrease' | 'hold' | 'insufficient-data';
+
+export interface EffortAssessment {
+  direction: EffortDirection;
+  label: string;
+  detail: string;
+  completedSessions: number;
+}
+
+export function assessPrescriptionEffort(prescription: Prescription, planId: string, records: WorkoutRecord[]): EffortAssessment {
+  const recent = recentPerformances(prescription, planId, records);
+  if (!recent.length) return { direction: 'insufficient-data', label: 'No result yet', detail: 'Log a completed session to start the comparison.', completedSessions: 0 };
+  if (recent.length < 2) return { direction: 'insufficient-data', label: 'Trend building', detail: 'Complete one more session to calculate a change.', completedSessions: recent.length };
+
+  const signals = recent.map(performanceSignal);
+  if (signals.every((signal) => signal.burden)) return { direction: 'decrease', label: 'Decrease effort', detail: 'Recent results show below-target work, drop-off, or very low RIR.', completedSessions: recent.length };
+  if (signals.every((signal) => signal.overperformed)) return { direction: 'increase', label: 'Increase effort', detail: 'Recent results exceeded the planned target in every logged set.', completedSessions: recent.length };
+  return { direction: 'hold', label: 'Hold effort', detail: 'Recent results are within a repeatable range.', completedSessions: recent.length };
+}
+
+function recommendNextPrescription(prescription: Prescription, planId: string, records: WorkoutRecord[]): Prescription {
+  const recent = recentPerformances(prescription, planId, records);
+  if (recent.length < 2) return prescription;
+
+  const signals = recent.map(performanceSignal);
+  if (signals.every((signal) => signal.burden)) return reducePrescription(prescription, recent[0]);
+  if (signals.every((signal) => signal.overperformed)) return increasePrescription(prescription, recent[0]);
+  return prescription;
+}
+
+function recentPerformances(prescription: Prescription, planId: string, records: WorkoutRecord[]): { prescription: Prescription; sets: SetRecord[] }[] {
+  return records
+    .filter((record) => record.sourcePlanId === planId && record.status === 'completed')
+    .sort((a, b) => b.sessionDate.localeCompare(a.sessionDate))
+    .map((record) => {
+      const snapshotPrescription = record.planSnapshot.prescriptions.find((item) => item.exerciseId === prescription.exerciseId);
+      if (!snapshotPrescription) return null;
+      const sets = record.sets
+        .filter((set) => set.prescriptionId === snapshotPrescription.id && actualValue(set, snapshotPrescription.dose.kind) !== null)
+        .sort((a, b) => a.setNumber - b.setNumber);
+      return sets.length ? { prescription: snapshotPrescription, sets } : null;
+    })
+    .filter((performance): performance is { prescription: Prescription; sets: SetRecord[] } => Boolean(performance))
+    .slice(0, 2);
+}
+
+function performanceSignal(performance: { prescription: Prescription; sets: SetRecord[] }): { burden: boolean; overperformed: boolean } {
+  const target = performance.prescription.dose.value;
+  const values = performance.sets.map((set) => actualValue(set, performance.prescription.dose.kind)).filter((value): value is number => value !== null);
+  const dropOff = values.length > 1 && values[0] - values[values.length - 1] >= Math.max(2, target * 0.25);
+  const lowReps = values.some((value) => value <= target * 0.8);
+  const lowReserve = performance.sets.some((set) => set.rir !== null && set.rir !== undefined && set.rir <= 1);
+
+  return {
+    burden: lowReps || dropOff || lowReserve,
+    overperformed: values.every((value) => value > target),
+  };
+}
+
+function reducePrescription(prescription: Prescription, latest: { prescription: Prescription; sets: SetRecord[] }): Prescription {
+  const observedLoad = latest.sets.map((set) => set.loadKg).find((load): load is number => load !== null && load > 0);
+  const currentLoad = prescription.recommendedLoadKg ?? observedLoad ?? null;
+  const nextLoad = currentLoad && currentLoad > 0 ? roundLoad(currentLoad * 0.9) : currentLoad;
+  const nextDose = currentLoad && currentLoad > 0 ? prescription.dose.value : adjustDose(prescription, -1);
+
+  return {
+    ...prescription,
+    dose: { ...prescription.dose, value: nextDose },
+    restSeconds: Math.min(180, prescription.restSeconds + 30),
+    recommendedLoadKg: nextLoad,
+  };
+}
+
+function increasePrescription(prescription: Prescription, latest: { prescription: Prescription; sets: SetRecord[] }): Prescription {
+  const observedLoad = latest.sets.map((set) => set.loadKg).find((load): load is number => load !== null && load > 0);
+  const currentLoad = prescription.recommendedLoadKg ?? observedLoad ?? null;
+  const nextLoad = currentLoad && currentLoad > 0 ? roundLoad(currentLoad * 1.05) : currentLoad;
+  const nextDose = currentLoad && currentLoad > 0 ? prescription.dose.value : adjustDose(prescription, 1);
+
+  return {
+    ...prescription,
+    dose: { ...prescription.dose, value: nextDose },
+    recommendedLoadKg: nextLoad,
+  };
+}
+
+function focusScore(exercise: Exercise, targetAreas: readonly string[]): number {
+  const primaryMatches = exercise.primaryAreas.filter((area) => targetAreas.includes(area)).length;
+  const secondaryMatches = exercise.secondaryAreas.filter((area) => targetAreas.includes(area)).length;
+  return primaryMatches * 3 + secondaryMatches;
+}
+
+function recommendedSets(experience: Experience, goal: Goal): number {
+  const base = experience === 'beginner' ? 2 : experience === 'advanced' ? 4 : 3;
+  return goal === 'lose-fat' ? Math.max(2, base - 1) : goal === 'build-muscle' ? Math.max(3, base) : base;
+}
+
+function recommendedDose(exercise: Exercise, goal: Goal): number {
+  if (exercise.exerciseType === 'aerobic') return 600;
+  if (exercise.doseKind === 'duration') return 30;
+  if (goal === 'lose-fat') return 12;
+  if (goal === 'build-muscle') return 8;
+  return 10;
+}
+
+function recommendedRest(exercise: Exercise): number {
+  if (exercise.exerciseType === 'aerobic') return 60;
+  const compoundAreas = ['chest', 'back', 'legs', 'glutes'];
+  return exercise.primaryAreas.some((area) => compoundAreas.includes(area)) ? 90 : 60;
+}
+
+function actualValue(set: SetRecord, kind: 'reps' | 'duration'): number | null {
+  return kind === 'reps' ? set.actualReps : set.actualDurationSeconds;
+}
+
+function adjustDose(prescription: Prescription, amount: number): number {
+  const step = prescription.dose.kind === 'reps' ? 1 : 5;
+  return Math.max(1, prescription.dose.value + amount * step);
+}
+
+function roundLoad(value: number): number {
+  return Math.max(0.5, Math.round(value * 2) / 2);
+}
