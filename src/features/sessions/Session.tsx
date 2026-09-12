@@ -1,14 +1,15 @@
 import { useCallback, useState } from 'react';
-import { CalendarDays, Check, CircleCheck } from 'lucide-react';
+import { CalendarDays, Check, CircleCheck, Trash2 } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { FOCUS_LABELS, INTENSITY_LABELS, dateIsValid, plannedVolume, type Exercise, type Prescription, type SetRecord, type WorkoutRecord } from '../../domain';
 import type { PlannerData } from '../../data/db';
-import { now, saveWorkoutRecord, uid, updatePlanPrescriptions } from '../../data/db';
+import { deleteWorkoutRecord, now, saveWorkoutRecord, uid, updatePlanPrescriptions } from '../../data/db';
 import { EXERCISES } from '../../data/exercises';
 import { formatLongDate } from '../../shared/formatters';
 import { EmptyState, Page, Snackbar } from '../../shared/ui';
 import { assessPlanIntensity, adjustPrescriptionsForIntensity, recommendNextIntensity, recommendNextPrescriptions } from '../plans/recommendations';
 import { makePlanSnapshot } from './snapshot';
+import { DeleteRecordModal } from './HistoryDetail';
 
 type SetValueField = 'actualReps' | 'actualDurationSeconds' | 'loadKg' | 'rir';
 
@@ -19,6 +20,7 @@ export function Session({ data }: { data: PlannerData }) {
   const existing = data.records.find((record) => record.sourcePlanId === planId && record.sessionDate === date);
   const [sets, setSets] = useState<SetRecord[]>(existing?.sets ?? []);
   const [saving, setSaving] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [snackbar, setSnackbar] = useState<{ message: string; tone: 'success' | 'error' } | null>(null);
   const dismissSnackbar = useCallback(() => setSnackbar(null), []);
 
@@ -107,6 +109,18 @@ export function Session({ data }: { data: PlannerData }) {
     }
   }
 
+  async function deleteRecord() {
+    if (!existing) return;
+    setSaving(true);
+    try {
+      await deleteWorkoutRecord(existing.id);
+      navigate('/progress');
+    } catch {
+      setSnackbar({ message: 'Could not delete this saved session. Try again.', tone: 'error' });
+      setSaving(false);
+    }
+  }
+
   return (
     <Page title={existing?.status === 'completed' ? 'Completed session' : 'Follow your session'} subtitle={`${snapshot.name} · ${formatLongDate(date)}`} backTo={`/plans/${plan.id}`}>
       <div className="session-layout">
@@ -120,11 +134,13 @@ export function Session({ data }: { data: PlannerData }) {
             <button className="button ghost" onClick={() => navigate(-1)}>Exit</button>
             <button className="button secondary" onClick={() => save('in_progress')} disabled={saving}><Check size={16} /> {saving ? 'Saving…' : 'Save progress'}</button>
             <button className="button primary" onClick={() => save('completed')} disabled={saving}><CircleCheck size={16} /> Mark complete</button>
+            {existing && <button className="button danger-button" onClick={() => setDeleteOpen(true)} disabled={saving}><Trash2 size={16} /> Delete saved session</button>}
           </div>
         </div>
         <aside className="session-side"><div className="side-card"><p className="eyebrow">Session note</p><h3>Presence over perfection.</h3><p className="muted">You can finish a session without recording a single set. Actual performance is optional, not assumed.</p></div><div className="side-card"><p className="eyebrow">Planned work sets</p><strong className="big-number">{plannedVolume(snapshot.prescriptions)}</strong><span className="muted">sets scheduled in this session</span></div></aside>
       </div>
       {snackbar && <Snackbar message={snackbar.message} tone={snackbar.tone} onDismiss={dismissSnackbar} />}
+      {deleteOpen && <DeleteRecordModal recordName={snapshot.name} deleting={saving} onCancel={() => setDeleteOpen(false)} onDelete={deleteRecord} />}
     </Page>
   );
 }

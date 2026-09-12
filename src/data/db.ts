@@ -47,6 +47,10 @@ export function saveWorkoutRecord(record: WorkoutRecord) {
   return db.records.put(record);
 }
 
+export function deleteWorkoutRecord(recordId: string) {
+  return db.records.delete(recordId);
+}
+
 export function saveBodyWeight(record: BodyWeightRecord) {
   return db.weights.put(record);
 }
