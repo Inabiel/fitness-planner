@@ -10,7 +10,8 @@ This file owns the project vocabulary. The current implementation snapshot below
 - React Router `HashRouter`; routes work from a static host without server rewrites.
 - Dexie-backed IndexedDB database named `form-fitness-planner`.
 - One singleton profile, saved plans, workout records, and body-weight records.
-- 32 built-in Exercises: 24 strength-oriented entries and 8 aerobic entries.
+- 46 built-in Exercises: 38 strength-oriented entries and 8 aerobic entries.
+- Local four-frame looping GIF demonstrations for every Exercise, using grayscale anatomy with warm working-muscle accents.
 - Local focus illustrations for body areas, splits, and aerobic focus.
 - Four-step onboarding and profile editing with a final confirmation modal.
 - Six Workout Presets, paginated/searchable/filterable Exercise Library, and persisted Custom Exercise Order.
@@ -51,7 +52,7 @@ A temporary, authenticated calculator for trying age, sex, height, weight, activ
 A static entry in the Exercise Library with a stable ID, name, written instructions, `doseKind` (`reps` or `duration`), primary and optional secondary Worked Areas, optional equipment, optional aerobic classification, curated popularity rank, and a media placeholder label.
 
 **Exercise Media**  
-The intended demonstration slot for an Exercise. The current library does not ship GIF/video demonstrations; the UI deliberately shows a reviewed-content placeholder while written instructions remain available.
+The demonstration slot for an Exercise. The current library ships a local four-frame GIF for every entry; written instructions remain available as the source of coaching guidance. The generated visuals still need movement/content review before being treated as authoritative.
 
 **Exercise Library**  
 The read-only built-in collection in `src/data/exercises.ts`. It is not a user-editable catalog. The plan editor supports search, area/aerobic filtering, pagination of six entries per page, popularity/name/area sorting, and the persisted custom order.
@@ -130,6 +131,6 @@ After two comparable completed sessions, repeated burden signals reduce the next
 
 - There are no accounts, authentication, server APIs, cloud sync, or cross-device recovery.
 - Custom exercises and custom media are not supported.
-- The app does not yet ship reviewed GIF/video demonstrations or attribution metadata.
+- The app ships generated GIF demonstrations, but they are not expert-reviewed and do not include formal attribution/content-approval metadata.
 - Weekly multi-day program grouping is not modeled; a plan is one repeatable workout.
 - The current local database has one schema version and does not yet perform runtime validation or stale-tab conflict detection.

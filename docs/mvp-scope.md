@@ -44,7 +44,7 @@ These values are implemented heuristics with rule version `MVP-2026.1`. The How 
 
 ## Exercise Library
 
-The static library currently contains 32 entries: 24 strength-oriented entries and 8 aerobic entries. Entries cover free weights, bodyweight, cable/machine movements, and common cardio equipment such as treadmill, bike, elliptical, rower, stair climber, jump rope, and swimming.
+The static library currently contains 46 entries: 38 strength-oriented entries and 8 aerobic entries. Entries cover free weights, bodyweight, cable/machine movements, and common cardio equipment such as treadmill, bike, elliptical, rower, stair climber, jump rope, and swimming.
 
 The plan editor provides:
 
@@ -54,7 +54,7 @@ The plan editor provides:
 - Most popular, name A–Z, name Z–A, body-part, and Custom order sorting.
 - A visible equipment label for machine-specific exercises.
 
-Exercise demonstrations are not shipped yet. The UI displays a media placeholder and preserves written instructions.
+Every exercise includes a local four-frame looping GIF demonstration using the grayscale-and-orange visual language of the body-area artwork. Written instructions remain available; the generated visuals are not expert-reviewed movement guidance.
 
 ## Sessions, logging, and progression
 
@@ -109,7 +109,7 @@ Dexie stores profiles, plans, workout records, and body-weight records in Indexe
 
 - Accounts, cloud sync, file backup/import, installable PWA behavior, and custom exercises/media.
 - Weekly program grouping and history-based exercise selection.
-- Reviewed GIF/video demonstrations, content rights, source attribution, and media retry behavior.
+- Expert-reviewed exercise demonstrations, formal content approval/attribution metadata, and media retry behavior.
 - Runtime validation of arbitrary persisted IndexedDB data, schema migrations, and stale-tab revision conflicts.
 - Browser-level automated journeys and a complete mobile/accessibility audit.
 - Clinically reviewed nutrition rules or individualized health guidance.

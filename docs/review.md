@@ -7,7 +7,7 @@ Review scope: current source, product documents, tests, static assets, and deplo
 
 Form Fitness Planner is a focused local-first fitness planning prototype with a surprisingly complete end-to-end loop: profile → plan → dated session → optional result logging → history/progress. The implementation has good domain instincts around snapshots, explicit confirmation, optional measurements, and preserving historical data when plans change.
 
-The repository is closer to a strong MVP prototype than a production-ready fitness product. The largest gaps are not missing screens; they are trust and operational gaps: exercise demonstrations are placeholders, nutrition logic is unreviewed, IndexedDB data is not runtime-validated or migrated, browser coverage is absent, and a few domain invariants are only enforced by UI behavior. The new GitHub Pages workflow removes the deployment gap, but repository settings still need to select GitHub Actions as the Pages source.
+The repository is closer to a strong MVP prototype than a production-ready fitness product. The largest gaps are not missing screens; they are trust and operational gaps: generated exercise demonstrations need content review, nutrition logic is unreviewed, IndexedDB data is not runtime-validated or migrated, browser coverage is absent, and a few domain invariants are only enforced by UI behavior. The new GitHub Pages workflow removes the deployment gap, but repository settings still need to select GitHub Actions as the Pages source.
 
 ## Score
 
@@ -21,7 +21,7 @@ Overall score: 7.0 / 10
 | UX and accessibility baseline | 7.5 | Clear flows, custom modals, labels, focus, responsive drawer, hover motion, and reduced-motion support. |
 | Data integrity | 6.5 | History snapshots and clear-all transaction are good; runtime validation, migrations, uniqueness, and conflict handling are missing. |
 | Test confidence | 5.0 | Twenty pure-logic tests pass, but there are no browser journeys or persistence integration tests. |
-| Content readiness | 5.0 | The static library is broad, but every exercise demonstration is still a placeholder. |
+| Content readiness | 5.0 | The static library is broad and now has local GIF demonstrations, but generated output still needs movement/content review. |
 | Deployment readiness | 6.5 | A Pages workflow and relative asset paths now exist; branch/settings assumptions remain. |
 
 The score is limited by release risk, not by the amount of UI already built. A small amount of hardening could raise the project significantly without adding many new features.
@@ -87,13 +87,13 @@ The adjustment is also conservative and editable: roughly 5% load increase, 10% 
 
 ## What needs improvement
 
-### 1. Exercise media is not actually implemented
+### 1. Generated exercise media needs content review
 
-Evidence: src/data/exercises.ts gives every entry a mediaLabel such as “media review pending”; the plan editor and plan detail render unavailable placeholders; there is no media URL, source, attribution, license, playback control, or failure-retry path.
+Evidence: public/assets/exercises contains one local four-frame GIF for each of the 46 catalog entries, and the plan editor and plan detail render those GIFs. The assets are generated educational visuals without expert movement review, formal content approval, attribution metadata, or failure-retry path.
 
-Impact: P09 in the product requirements is only partial. A person can read instructions, but the product promise of learning movements through demonstrations is not met.
+Impact: P09 now has a working demonstration surface, but an incorrect generated pose could create trust or safety risk. Written instructions remain the authoritative coaching text until the visuals are reviewed.
 
-Recommendation: treat content sourcing as a release dependency. Add a typed media object with kind, source, attribution, and usage status only when real assets are available. Do not silently substitute arbitrary remote URLs.
+Recommendation: review every generated demonstration for exercise identity and safe form, replace unsuitable output, and add explicit approval/attribution metadata if the media pipeline becomes a release feature. Do not silently substitute arbitrary remote URLs.
 
 ### 2. Nutrition guidance needs health and product review
 
@@ -215,7 +215,7 @@ Exit condition: critical flows work after reload, history remains intact across 
 
 ### Phase 1 — Complete the promised content
 
-1. Source and review demonstrations for the 32 exercises.
+1. Review demonstrations for all 46 exercises and replace unsuitable output.
 2. Add media metadata, rights/attribution, fallback, and user-controlled playback.
 3. Add content validation for focus coverage, dose kind, instructions, and media status.
 4. Test focus artwork and asset paths on the deployed Pages origin.

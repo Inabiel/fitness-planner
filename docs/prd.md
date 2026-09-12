@@ -6,7 +6,7 @@ Status: implemented MVP baseline with explicit release gaps. Last reconciled: 20
 
 Help one person create repeatable gym workouts, understand the intended focus, follow a dated session, optionally record what actually happened, and notice progress without an account or cloud service.
 
-The current product is a local-first prototype. It is useful for planning and journaling, but nutrition calculations remain heuristics awaiting qualified health review and exercise demonstrations are not yet production-complete.
+The current product is a local-first prototype. It is useful for planning and journaling, but nutrition calculations remain heuristics awaiting qualified health review and generated exercise demonstrations still need movement/content review.
 
 ## Intended user and outcome
 
@@ -17,7 +17,7 @@ The intended user has access to a standard gym and wants a low-friction personal
 3. choose from a searchable, sortable, paginated exercise library;
 4. follow and log a dated workout session;
 5. see historical snapshots survive plan changes;
-6. track body weight and exercise observations locally after reload.
+6. track body weight and exercise observations locally after reload;
 7. inspect how estimates are calculated or try a temporary estimate without changing saved data.
 
 ## Current user journey
@@ -45,7 +45,7 @@ The intended user has access to a standard gym and wants a low-friction personal
 | P06 | Scheduling | Implemented. Plans are one date or recurring weekday from startsOn; the dashboard shows the selected date, up to three nearest earlier occurrences, and up to three nearest upcoming occurrences. Date controls open the exact matching session route. |
 | P07 | Focus and suggestions | Implemented. Supports eight areas, four splits, and Aerobic. Goal/experience suggestion is editable and confirmation is required. |
 | P08 | Focus graphics | Implemented with optimized local WebP assets, labels, and alt text. The assets illustrate focus; they do not claim intensity or anatomical percentages. |
-| P09 | Exercise library | Partially implemented. 32 static exercises support search, filters, popularity/name/area/custom sorting, pagination, equipment labels, and written instructions. GIF/video media, source metadata, and rights review are missing. |
+| P09 | Exercise library | Implemented for the MVP. 46 static exercises support search, filters, popularity/name/area/custom sorting, pagination, equipment labels, written instructions, and local four-frame GIF demonstrations. Expert movement review and formal content metadata remain missing. |
 | P10 | Prescriptions | Implemented. Sets, reps/duration, load, rest, notes, ordering, removal, target RIR, six presets, and four target intensity levels are supported. |
 | P11 | Workout tracking | Implemented. In-progress and completed records accept optional actual reps/duration, load, and RIR for individual sets. Saved records can be deleted from session and history detail views. |
 | P12 | History preservation | Implemented in the normal UI flow. Records store plan/exercise/prescription snapshots and remain accessible after source-plan deletion. |
@@ -117,7 +117,7 @@ The selected date is the primary schedule query. The dashboard separately finds 
 
 | ID | Gap | Why it matters |
 | --- | --- | --- |
-| R01 | Exercise media is still a placeholder | The product promise includes demonstrations, but users currently receive written instructions only. |
+| R01 | Generated exercise media needs content review | Every exercise now has a local demonstration, but incorrect movement depiction could create trust or safety risk without expert review. |
 | R02 | Nutrition rules remain product heuristics awaiting qualified health review | Incorrect personalized guidance can create health and trust risk even with documented sources and safety boundaries. |
 | R04 | IndexedDB is version 1 with no runtime schema validation or migration tests | Future model changes can threaten stored user history. |
 | R05 | No browser test suite is present | Core route, IndexedDB, modal, mobile, and snapshot behavior are not regression-protected in a real browser. |
@@ -133,7 +133,7 @@ Accounts, cloud synchronization, file backup/import, custom exercises/media, wee
 
 ### Release hardening
 
-1. Replace media placeholders with reviewed, licensed demonstrations and attribution metadata.
+1. Review the generated demonstrations, then add licensed/approved media and attribution metadata where required.
 2. Have nutrition constants and copy reviewed by a qualified health professional before release.
 3. Add IndexedDB runtime validation, schema migrations, unique occurrence enforcement, and persistence-failure tests.
 4. Add Playwright journeys for onboarding, plan CRUD, session logging, history preservation, clear-all, mobile navigation, and Pages preview.

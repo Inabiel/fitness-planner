@@ -16,7 +16,8 @@ It runs entirely in the browser. Profile data, plans, workout records, and body-
   - Machine Circuit
   - Quick Sweat
   - Aerobic Flow
-- Exercise library with 32 built-in movements, including machine-specific and aerobic exercises.
+- Exercise library with 46 built-in movements, including machine-specific and aerobic exercises.
+- Local four-frame looping GIF demonstrations for every exercise, styled with grayscale anatomy and warm muscle accents.
 - Exercise search, area/type filters, pagination, popularity/name/area sorting, and custom ordering.
 - Dashboard schedule browsing for a selected date, nearby earlier workouts, and upcoming workouts.
 - Dated workout sessions with optional actual reps/duration, load, and reps in reserve (RIR).
@@ -108,7 +109,7 @@ The Vite build uses relative asset paths and HashRouter, so it works at a reposi
 
 ## Current limitations
 
-- Exercise demonstrations are currently written-instruction placeholders; reviewed GIF/video media and attribution are not shipped.
+- Exercise GIFs are generated educational aids; movement review, attribution metadata, and a formal content-approval workflow are not shipped.
 - Nutrition calculations and progression recommendations are transparent MVP heuristics with documented sources and safety boundaries, not clinical or medical guidance.
 - IndexedDB is currently schema version 1 without runtime data parsing, migration coverage, or stale-tab conflict detection.
 - Vitest covers pure domain, ordering, and recommendation rules. Browser-level Playwright journeys are not yet implemented.

@@ -164,7 +164,7 @@ FocusIllustration resolves the focus union to relative local WebP files so the s
 
 Plan detail can copy a complete workout plan as WhatsApp-friendly text, with an optional checkbox to include every exercise step and its written instructions. Copying uses the Clipboard API with a local/older-browser textarea fallback. The shared Snackbar confirms copy, save-progress, and session-completion actions, auto-dismisses, and supports manual dismissal.
 
-Exercise entries currently render a written-instructions/media placeholder. No exercise GIF/video URL, source, attribution, or playback control exists yet.
+Exercise entries render local four-frame GIF demonstrations at `public/assets/exercises/<exercise-id>.gif` alongside written instructions. The GIFs use full opaque 512×512 frames, one-second delays, and `Dispose: None` so each frame replaces the prior frame without shadowing. The generated visuals have no external media URL, formal attribution metadata, or expert content-review status.
 
 The shared AppShell contains a fixed desktop sidebar and a mobile drawer. At widths up to 720px, the drawer is hidden off-canvas until the visible hamburger control opens it; the header is sticky, the drawer scrolls independently, and a scrim closes it. CSS includes visible focus, action hover motion, and reduced-motion overrides.
 
@@ -214,7 +214,7 @@ References: [GitHub custom Pages workflows](https://docs.github.com/en/pages/get
 - Add runtime validation and Dexie migrations without deleting user data.
 - Enforce one source-plan/date occurrence at the database layer.
 - Add revision conflict handling for multiple tabs.
-- Replace placeholder exercise media with reviewed local or licensed assets and attribution.
+- Review the generated exercise GIFs and replace unsuitable output with approved local or licensed assets and attribution.
 - Add Playwright coverage and run mobile/accessibility checks on real browsers.
 
 ### Next product increment

@@ -278,7 +278,7 @@ function ExerciseLibrary({ search, filterArea, sort, filteredExercises, totalExe
     <p className="library-results">{totalExercises} {totalExercises === 1 ? 'exercise' : 'exercises'} · {sortLabel(sort)}</p>
     {filteredExercises.length ? <div className="library-list">{filteredExercises.map((exercise) => <ExerciseLibraryItem key={exercise.id} exercise={exercise} onAdd={() => onAdd(exercise)} />)}</div> : <div className="inline-empty library-empty"><Dumbbell size={19} /><span>No exercises match this search.</span></div>}
     {pageCount > 1 && <nav className="library-pagination" aria-label="Exercise library pages"><button className="icon-button" type="button" onClick={() => onPageChange(page - 1)} disabled={page === 1} aria-label="Previous exercise page"><ChevronLeft size={17} /></button><span>Page {page} of {pageCount}</span><button className="icon-button" type="button" onClick={() => onPageChange(page + 1)} disabled={page === pageCount} aria-label="Next exercise page"><ChevronRight size={17} /></button></nav>}
-    <p className="fine-print library-footnote">Exercise demonstrations are represented as reviewed-content placeholders until licensed local media is supplied.</p>
+    <p className="fine-print library-footnote">GIF demonstrations are generated educational aids; follow the written instructions and use safe, controlled form.</p>
   </aside>;
 }
 
@@ -296,5 +296,5 @@ function ExerciseLibraryItem({ exercise, onAdd }: { exercise: Exercise; onAdd: (
   const secondaryAreas = exercise.secondaryAreas.length ? ` · + ${exercise.secondaryAreas.map((area) => AREA_LABELS[area]).join(', ')}` : '';
   const equipmentLabel = exercise.equipment ? ` · ${exercise.equipment}` : '';
   const typeLabel = exercise.exerciseType === 'aerobic' ? ' · Cardio (aerobic)' : '';
-  return <article className="library-item"><div className="exercise-media unavailable"><Dumbbell size={19} /><span>Demo preview</span><small>Media pending</small></div><div className="library-item-body"><strong>{exercise.name}</strong><span className="worked-label">{workedAreas}{secondaryAreas}{equipmentLabel}{typeLabel}</span><button className="button small secondary full-width" type="button" onClick={onAdd}><Plus size={15} /> Add to plan</button></div></article>;
+  return <article className="library-item"><div className="exercise-media gif-media"><img src={`assets/exercises/${exercise.id}.gif?v=2`} alt={`${exercise.name} movement demonstration`} loading="lazy" /></div><div className="library-item-body"><strong>{exercise.name}</strong><span className="worked-label">{workedAreas}{secondaryAreas}{equipmentLabel}{typeLabel}</span><button className="button small secondary full-width" type="button" onClick={onAdd}><Plus size={15} /> Add to plan</button></div></article>;
 }
