@@ -31,7 +31,7 @@ export function ProgressLineChart({
         >
           <path className="chart-gridline" d="M8 24 H92 M8 55 H92 M8 86 H92" />
           <path className="progress-target-line" d={`M8 ${targetY} H92`} />
-          <polyline className="progress-chart-line" points={chartPoints.join(' ')} />
+          <polyline className="progress-chart-line" pathLength="1" points={chartPoints.join(' ')} />
         </svg>
         <div className="chart-markers">
           {points.map((point, index) => {
