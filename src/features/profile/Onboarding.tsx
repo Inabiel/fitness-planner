@@ -7,9 +7,10 @@ import {
   GOALS,
   GOAL_LABELS,
   calculateEstimates,
+  localDate,
   type Profile,
 } from '../../domain';
-import { now, saveProfile as saveProfileRecord } from '../../data/db';
+import { now, saveBodyWeight, saveProfile as saveProfileRecord } from '../../data/db';
 import { Field } from '../../shared/ui';
 import {
   emptyProfileForm,
@@ -113,17 +114,27 @@ export function Onboarding({ existing }: OnboardingProps) {
 
     setSaving(true);
     setError('');
+    const timestamp = now();
     const profile: Profile = {
       id: 'profile',
       ...formToCalculationProfile(form),
       secondaryGoals: form.secondaryGoals,
       exerciseOrder: existing?.exerciseOrder,
-      updatedAt: now(),
+      updatedAt: timestamp,
       revision: existing ? existing.revision + 1 : 1,
     };
 
     try {
       await saveProfileRecord(profile);
+      if (!existing) {
+        await saveBodyWeight({
+          date: localDate(),
+          weightKg: profile.weightKg,
+          createdAt: timestamp,
+          updatedAt: timestamp,
+          revision: 1,
+        });
+      }
       navigate('/');
     } catch {
       setError('Your profile could not be saved. Your entries are still here—try again.');
