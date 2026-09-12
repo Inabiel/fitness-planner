@@ -20,7 +20,7 @@ This file owns the project vocabulary. The current implementation snapshot below
 - Dashboard schedule browsing for the selected date, nearest earlier occurrences, nearest upcoming occurrences, and direct specific-date navigation.
 - Simple two-session progression guidance that can adjust the next prescription.
 - Body-weight and session-performance trend graphs, with exact tables retained for detail.
-- WhatsApp-friendly plan text copy with optional exercise steps and snackbar feedback for transient actions.
+- WhatsApp-friendly plan text copy with optional exercise steps and snackbar feedback for transient actions; meaningful streak and badge events use a celebration modal.
 - How it works documentation covers estimate formulas, terms, sources, supported inputs, and safety boundaries.
 - A standalone calculator estimates calories, macros, and BMI without changing saved planner data.
 - Saved Workout Records can be deleted from session or history detail. Plan deletion preserves remaining historical records; Profile settings can clear all local data and reload onboarding.

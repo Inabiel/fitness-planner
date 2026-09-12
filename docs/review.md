@@ -3,26 +3,26 @@
 Review date: 2026-09-13
 Review scope: current source, product documents, tests, static assets, and deployment setup.
 
-This review includes the organization-only Workout Program capability: Programs group ordered references to existing plans, while plan scheduling, sessions, and history remain unchanged. Program-level scheduling and progression remain roadmap work.
+This review includes the current organization-only Workout Program capability, Live Tracking, streak/badge gamification, celebration feedback, and derived workout-energy summaries. Programs group ordered references to existing plans; program-level scheduling and progression remain roadmap work.
 
 ## Executive summary
 
-Form Fitness Planner is a focused local-first fitness planning prototype with a surprisingly complete end-to-end loop: profile → plan → dated session → optional result logging → history/progress. The implementation has good domain instincts around snapshots, explicit confirmation, optional measurements, and preserving historical data when plans change.
+Form Fitness Planner is a focused local-first fitness planning prototype with a complete end-to-end loop: profile → plan/program → dated session or Live Tracking → optional result logging → history/progress. It now adds derived weekly consistency, milestone celebrations, and estimated workout-energy totals without introducing a backend or stored reward counters. The implementation has good domain instincts around snapshots, explicit confirmation, optional measurements, and preserving historical data when plans change.
 
-The repository is closer to a strong MVP prototype than a production-ready fitness product. The largest gaps are not missing screens; they are trust and operational gaps: generated exercise demonstrations need content review, nutrition logic is unreviewed, IndexedDB data is not runtime-validated or migrated, browser coverage is absent, and a few domain invariants are only enforced by UI behavior. The new GitHub Pages workflow removes the deployment gap, but repository settings still need to select GitHub Actions as the Pages source.
+The repository is closer to a strong MVP prototype than a production-ready fitness product. The largest gaps are trust and operational gaps: generated exercise demonstrations and nutrition/energy heuristics need review, IndexedDB data is not runtime-validated or migrated, browser coverage is absent, and a few domain invariants are only enforced by UI behavior. The new GitHub Pages workflow removes most deployment code risk, but repository settings still need to select GitHub Actions as the Pages source.
 
 ## Score
 
-Overall score: 7.0 / 10
+Overall score: 7.2 / 10
 
 | Dimension | Score | Assessment |
 | --- | ---: | --- |
-| Product coverage | 8.0 | The main planning, logging, history, progress, onboarding, and deletion flows exist. |
+| Product coverage | 8.5 | The main planning, Program, Live Tracking, logging, history, progress, gamification, energy-summary, onboarding, and deletion flows exist. |
 | Domain modeling | 7.5 | Strong unions and snapshots; some compatibility fields and duplicate-ID edge cases remain. |
 | Architecture | 7.5 | Appropriate React/Vite/Dexie split with modest feature boundaries and no unnecessary backend. |
-| UX and accessibility baseline | 7.5 | Clear flows, custom modals, labels, focus, responsive drawer, hover motion, and reduced-motion support. |
+| UX and accessibility baseline | 8.0 | Clear flows, custom modals, celebration feedback, labels, focus, responsive drawer, hover motion, and reduced-motion support; real-browser verification is still missing. |
 | Data integrity | 6.5 | History snapshots and clear-all transaction are good; runtime validation, migrations, uniqueness, and conflict handling are missing. |
-| Test confidence | 5.0 | Twenty-four pure-logic tests pass, but there are no browser journeys or persistence integration tests. |
+| Test confidence | 5.5 | Twenty-seven pure-logic tests pass, but there are no browser journeys or persistence integration tests. |
 | Content readiness | 5.0 | The static library is broad and now has local GIF demonstrations, but generated output still needs movement/content review. |
 | Deployment readiness | 6.5 | A Pages workflow and relative asset paths now exist; branch/settings assumptions remain. |
 
@@ -43,6 +43,7 @@ The implementation is not a collection of disconnected screens. A person can:
 - browse a selected dashboard date, nearby earlier/upcoming occurrences, or a specific calendar date;
 - inspect historical snapshots;
 - see plan recommendations react to repeated logged performance.
+- see weekly consistency, milestone badges, completion celebrations, and estimated calories burned across useful calendar periods.
 
 That coherence is the strongest product quality in the repository.
 
@@ -78,6 +79,9 @@ The repository now includes:
 - an Exercise Order screen with drag/drop and arrow controls;
 - pagination and multiple library sort modes.
 - independent deletion for saved workout records from session and history detail.
+- Live Tracking with exercise progression, rest countdowns, automatic advance, and completion handling;
+- weekly streaks, derived milestone badges, 12-week history, and a celebration modal only for newly activated streaks or earned badges;
+- Dashboard energy totals for today, this week, this month, this year, and all retained history, clearly labeled as estimates.
 
 These are good usability investments because they reduce friction in the primary flows rather than adding unrelated features.
 
@@ -99,11 +103,11 @@ Recommendation: review every generated demonstration for exercise identity and s
 
 ### 2. Nutrition guidance needs health and product review
 
-Evidence: src/domain.ts implements a BMR-style formula, activity multipliers, goal calorie adjustments, a calorie floor, and macro ratios. The How it works and Calculate pages now document the formulas, constants, supported inputs, source links, and “not medical advice” boundaries; the rules are still product heuristics without a qualified health review or uncertainty model.
+Evidence: src/domain.ts implements a BMR-style formula, activity multipliers, goal calorie adjustments, a calorie floor, and macro ratios. `src/shared/calorieBurn.ts` also estimates active calories from plan duration, target intensity, and body weight. The How it works and Calculate pages document the nutrition formulas and safety boundaries, while the energy card labels its output as an estimate; neither set of rules has qualified health review or an uncertainty model.
 
-Impact: numeric output can look authoritative even when it is only a rough heuristic. This is the highest trust risk in the current product.
+Impact: numeric output can look authoritative even when it is only a rough heuristic. This remains the highest trust risk in the current product, and workout-energy totals may be mistaken for wearable measurements or a dietary allowance.
 
-Recommendation: keep the source, rationale, supported-input behavior, and safety copy current; have the rules reviewed by a qualified health professional before public release; and keep the rule version in saved snapshots when the rules change.
+Recommendation: keep the source, rationale, supported-input behavior, and safety copy current; have the nutrition and energy rules reviewed by a qualified health professional before public release; and keep rule versions in saved snapshots or a documented calculation contract when the rules change.
 
 ### 3. Persistence has a good shape but weak protection at the storage boundary
 
@@ -115,7 +119,7 @@ Recommendation: add small Zod parsers for each stored root entity, introduce exp
 
 ### 4. The test suite proves rules, not the application
 
-Evidence: the current suite has 24 Vitest tests for estimates/scheduling/suggestions, ordering, presets, progression, export formatting, progress metrics, gamification, and shared profile bounds. package.json includes a browser test command, but there are no Playwright spec files or Playwright configuration. There are no IndexedDB integration tests.
+Evidence: the current suite has 27 Vitest tests for estimates/scheduling/suggestions, ordering, presets, progression, export formatting, progress metrics, gamification, calorie aggregation, and shared profile bounds. package.json includes a browser test command, but there are no Playwright spec files or Playwright configuration. There are no IndexedDB integration tests.
 
 Impact: regressions in routes, forms, modals, snapshots, deletion, mobile navigation, and reload behavior can pass CI unnoticed.
 
@@ -210,7 +214,7 @@ Copy should continue to distinguish recommendation from fact, and planned work f
 1. Add runtime IndexedDB validation and a migration test harness.
 2. Enforce one plan/date occurrence and fix duplicate-exercise recommendation matching.
 3. Add Playwright smoke journeys and at least one real IndexedDB reload test.
-4. Have nutrition rules and copy reviewed by a qualified health professional.
+4. Have nutrition and workout-energy rules and copy reviewed by a qualified health professional.
 5. Decide whether to remove or implement the missing media script.
 
 Exit condition: critical flows work after reload, history remains intact across plan deletion/editing, malformed/stale data fails safely, and the main browser journeys are automated.
@@ -240,4 +244,4 @@ Consider accounts, sync, backup, multi-device recovery, and server-owned data on
 
 ## Final assessment
 
-This repository has a solid product spine and an appropriately restrained architecture. It should continue as a local-first MVP while hardening trust boundaries and completing content. The best next work is not another dashboard feature; it is validation, browser coverage, content rights, and fixing the few invariants that currently depend on UI discipline.
+This repository has a solid product spine and an appropriately restrained architecture. It should continue as a local-first MVP while hardening trust boundaries and completing content. The best next work is not another engagement feature; it is validation, browser coverage, content rights, and fixing the few invariants that currently depend on UI discipline. The new energy tracker is useful as a transparent progress signal, but its heuristic status must remain prominent until reviewed.

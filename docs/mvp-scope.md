@@ -89,7 +89,7 @@ Every exercise includes a local four-frame looping GIF demonstration using the g
 - Delete an individual saved workout record without deleting its source plan or other records.
 - Show weekly consistency streaks, best streak, current-week workout markers, and encouraging weekly copy on Today.
 - Derive workout-day milestone badges and a 12-week activity history on Progress from completed Workout Records.
-- Show one completion celebration after a newly qualifying standard or Live Tracking workout save.
+- Show one celebration modal after a completed standard or Live Tracking save activates a weekly streak or earns a new badge; routine completions use a snackbar.
 
 ## Dashboard schedule browsing
 

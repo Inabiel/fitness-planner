@@ -59,7 +59,7 @@ The intended user has access to a standard gym and wants a low-friction personal
 | P15 | Local persistence | Implemented with Dexie/IndexedDB and live queries. Clear-all is transactional. Runtime shape validation, migrations, and stale-tab conflict handling remain absent. |
 | P16 | Effort adaptation | Implemented as a deterministic heuristic. Two recent completed sessions with recorded dose drive Increase, Decrease, Hold, or Trend building guidance, target-intensity advancement for recurring plans, and future prescription adjustment. |
 | P17 | Calculation transparency and temporary calculator | Implemented. How it works documents estimate formulas, terms, sources, supported inputs, and safety boundaries; Calculator runs the same rules locally without persisting inputs or changing planner data. |
-| P18 | Gamification and streaks | Implemented. Completed records derive distinct workout days, Monday-based weekly streaks, milestone badges, weekly dashboard markers, 12-week Progress history, and one-time completion feedback for both logging paths. |
+| P18 | Gamification and streaks | Implemented. Completed records derive distinct workout days, Monday-based weekly streaks, milestone badges, weekly dashboard markers, 12-week Progress history, and a celebration modal for newly activated streaks or earned badges in both logging paths; routine completion uses a snackbar. |
 | P19 | Workout energy tracking | Implemented. The Dashboard derives estimated calories burned from completed records and shows today, current week, month, year, and all-history totals using saved plan duration, target intensity, and body weight. The values are explicitly estimates, not wearable or medical measurements. |
 
 ## Interaction and quality requirements
@@ -73,7 +73,7 @@ Implemented baseline:
 - Form controls have labels, inline errors, text-based explanations, visible focus, modal semantics, and graphic alt text.
 - Empty, loading, unavailable-media, and storage-error messages exist in the main flows.
 - Save/complete actions disable while their write is pending.
-- Copy actions use a local clipboard fallback and show auto-dismissing snackbar feedback; session save/complete actions use the same transient feedback.
+- Copy actions use a local clipboard fallback and show auto-dismissing snackbar feedback; routine session saves/completions use the same transient feedback, while newly activated streaks and earned badges use a celebration modal.
 - Dashboard schedule cards show the occurrence date and link directly to that dated session.
 
 Still to verify or improve:

@@ -34,7 +34,7 @@ It runs entirely in the browser. Profile data, plans, programs, workout records,
 - Body-weight chart, workout history, performance trend graph, and recorded performance table.
 - Weekly consistency streaks with fire styling, workout-day milestone badges, a 12-week activity history, and completion celebrations derived from saved workouts.
 - Estimated calories burned from completed workouts, summarized for today, this week, this month, this year, and all retained history.
-- Snackbar confirmations for copy, save-progress, and session-completion actions.
+- Snackbar confirmations for transient actions and routine completion; newly activated streaks and earned badges use a celebratory modal.
 - Responsive desktop sidebar and mobile navigation drawer.
 - Modal confirmation for profile deletion, plan deletion, and workout-record deletion.
 
@@ -98,8 +98,8 @@ The Vite build uses relative asset paths and HashRouter, so it works at a reposi
     src/app              Route composition
     src/domain.ts        Domain types and pure fitness rules
     src/data             Dexie persistence and static exercises
-    src/features         Dashboard, plans, sessions, progress, profile, about, calculator, and ordering
-    src/shared           App shell, fields, empty states, snackbars, charts, export, and formatters
+    src/features         Dashboard, plans, sessions, progress, profile, calories, gamification, about, and calculator
+    src/shared           App shell, fields, empty states, snackbars, charts, calculations, export, and formatters
     src/styles.css       Shared visual and responsive styles
     public/assets        Local focus illustrations
     docs                 Product, technical, scope, context, and review documents
@@ -116,7 +116,7 @@ The Vite build uses relative asset paths and HashRouter, so it works at a reposi
 ## Current limitations
 
 - Exercise GIFs are generated educational aids; movement review, attribution metadata, and a formal content-approval workflow are not shipped.
-- Nutrition calculations and progression recommendations are transparent MVP heuristics with documented sources and safety boundaries, not clinical or medical guidance.
+- Nutrition calculations, workout-energy totals, and progression recommendations are transparent MVP heuristics with documented boundaries, not clinical or medical guidance.
 - IndexedDB is currently schema version 2 without runtime data parsing, complete migration coverage, or stale-tab conflict detection.
-- Vitest covers pure domain, ordering, and recommendation rules. Browser-level Playwright journeys are not yet implemented.
+- Vitest covers 27 pure domain, ordering, recommendation, gamification, and calorie-aggregation tests. Browser-level Playwright journeys are not yet implemented.
 - Program-level scheduling, rest-day rules, next-workout recommendations, accounts, cloud sync, file backup/import, and custom exercises are outside the current scope.

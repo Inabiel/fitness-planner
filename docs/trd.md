@@ -35,12 +35,13 @@ Exact package versions are governed by package.json and package-lock.json.
 | src/features/profile | Onboarding stepper, profile settings, form conversion, and validation guards. |
 | src/features/about | Formula, terminology, source, supported-input, and safety-boundary documentation. |
 | src/features/calculate | Temporary estimate calculator with no persistence side effects. |
+| src/features/calories | Dashboard estimated workout-energy summary card. |
 | src/features/plans | Plan list/editor/detail, focus previews, illustration assets, presets, and progression heuristics. |
 | src/features/sessions | Dated session logger, plan snapshot creation, and historical record detail. |
 | src/features/progress | Body-weight entry/chart, workout history, performance trend chart, and performance table. |
 | src/features/gamification | Shared Today consistency card and Progress milestone/history surfaces. |
 | src/features/exercises | Persisted Custom Exercise Order with arrow and drag-and-drop reorder behavior. |
-| src/shared | App shell, page/field/empty-state/snackbar primitives, formatters, progress and gamification calculations/charts, workout text export, and basic validation. |
+| src/shared | App shell, page/field/empty-state/snackbar primitives, formatters, progress/gamification/calorie calculations/charts, workout text export, and basic validation. |
 | src/styles.css | Central visual system, responsive layout, hover states, focus states, modal styling, and reduced-motion rules. |
 
 Feature index files re-export screen entry points. They provide stable import boundaries without adding a state-management layer.
@@ -126,7 +127,7 @@ Important current limitations:
 10. Program editing stores an ordered list of existing plan IDs. Program detail resolves those IDs against current plans; missing plans are skipped, and plan deletion cleans up references.
 11. The Program editor excludes plans already assigned to any program. “Create a new plan here” saves the program draft, opens PlanEditor with `programId`, and attaches the saved plan after creation. A new plan can save and reopen PlanEditor with the same `programId` for repeated creation; the normal save returns to Program detail.
 12. Live Tracking reuses the WorkoutRecord set model. It starts from the current local date, saves in-progress or completed records, uses the active prescription’s rest seconds for the countdown, and advances to the next known exercise when rest ends.
-13. After a completed save, standard Session and Live Tracking compare the derived gamification summary before and after persistence and show feedback only for newly crossed rewards. Dashboard and Progress recalculate the summary from live records and the current local date.
+13. After a completed save, standard Session and Live Tracking compare the derived gamification summary before and after persistence. Newly activated streaks or earned badges use one celebration modal; routine completion uses a snackbar. Dashboard and Progress recalculate the summary from live records and the current local date.
 
 The dashboard resolves the selected date directly from the current local calendar. occurrenceBefore and occurrenceAfter search for the closest valid occurrence on each side, inspect up to 366 days for recurring plans, and return a one-time plan only when its configured date is on that side. The UI caps each side at three occurrences and links each card to the exact plan/date session route.
 
@@ -178,7 +179,7 @@ sessionProgress compares each logged set’s actual reps or duration with its pl
 
 FocusIllustration resolves the focus union to relative local WebP files so the same build works at the domain root and a repository Pages path. The HTML favicon uses Vite’s BASE_URL placeholder. Optimized focus assets are used in onboarding intention preview, plan cards, and plan detail.
 
-Plan detail can copy a complete workout plan as WhatsApp-friendly text, with an optional checkbox to include every exercise step and its written instructions. Copying uses the Clipboard API with a local/older-browser textarea fallback. The shared Snackbar confirms copy, save-progress, and session-completion actions, auto-dismisses, and supports manual dismissal.
+Plan detail can copy a complete workout plan as WhatsApp-friendly text, with an optional checkbox to include every exercise step and its written instructions. Copying uses the Clipboard API with a local/older-browser textarea fallback. The shared Snackbar confirms copy, save-progress, and routine completion actions, auto-dismisses, and supports manual dismissal; newly activated streaks and earned badges use a celebration modal.
 
 Exercise entries render local four-frame GIF demonstrations at `public/assets/exercises/<exercise-id>.gif` alongside written instructions. The GIFs use full opaque 512×512 frames, one-second delays, and `Dispose: None` so each frame replaces the prior frame without shadowing. The generated visuals have no external media URL, formal attribution metadata, or expert content-review status.
 
@@ -202,7 +203,7 @@ Current automated checks:
 
 - npm run build: passes TypeScript checking and Vite production build.
 - npm run lint: passes ESLint.
-- npm test: passes 20 Vitest tests across domain rules, exercise ordering, recommendations, text export, progress metrics, and shared profile bounds.
+- npm test: passes 27 Vitest tests across domain rules, exercise ordering, recommendations, text export, progress metrics, gamification, calorie aggregation, and shared profile bounds.
 
 The domain suite also covers nearest earlier and upcoming occurrences for recurring and one-time schedules. Browser, IndexedDB, mobile, modal, and real asset smoke tests remain to be added.
 The package includes npm run test:browser, but there are currently no Playwright test files or Playwright configuration. The package also includes npm run media, but scripts/generate-media.mjs is not currently present.
