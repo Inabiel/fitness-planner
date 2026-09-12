@@ -63,6 +63,7 @@ The app uses hash routing so it can run on static hosting without server-side ro
 | #/progress | Track body weight and performance |
 | #/exercise-order | Customize exercise ordering |
 | #/about | Read calculation formulas, terms, sources, and safety boundaries |
+| #/calculate | Try a temporary estimate without changing saved data |
 | #/profile | Edit profile or delete all local data |
 
 ## Data and privacy

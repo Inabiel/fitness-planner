@@ -1,10 +1,11 @@
 import { BarChart3, Calculator, Dumbbell, Info, ShieldAlert } from 'lucide-react';
+import { Link } from 'react-router';
 import { PROFILE_LIMITS } from '../profile/form';
 import { Page } from '../../shared/ui';
 
 export function AboutPage() {
   return (
-    <Page title="How it works" subtitle="See the formulas, assumptions, and terms behind your planner.">
+    <Page title="How it works" subtitle="See the formulas, assumptions, and terms behind your planner." action={<Link className="button secondary" to="/calculate"><Calculator size={16} /> Open calculator</Link>}>
       <div className="about-layout">
         <main className="about-main">
           <section className="about-card about-notice" aria-labelledby="about-safety-title">
