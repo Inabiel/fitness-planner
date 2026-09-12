@@ -20,7 +20,9 @@ This file owns the project vocabulary. The current implementation snapshot below
 - Simple two-session progression guidance that can adjust the next prescription.
 - Body-weight and session-performance trend graphs, with exact tables retained for detail.
 - WhatsApp-friendly plan text copy with optional exercise steps and snackbar feedback for transient actions.
-- Plan deletion preserves historical Workout Records. Profile settings can clear all local data and reload onboarding.
+- How it works documentation covers estimate formulas, terms, sources, supported inputs, and safety boundaries.
+- A standalone calculator estimates calories, macros, and BMI without changing saved planner data.
+- Saved Workout Records can be deleted from session or history detail. Plan deletion preserves remaining historical records; Profile settings can clear all local data and reload onboarding.
 
 ## Profile and goals
 
@@ -37,7 +39,11 @@ The single goal used by the current nutrition estimate. Secondary goals are supp
 Body weight divided by height squared in metres. It is displayed separately from nutrition targets and is not treated as a goal or diagnosis.
 
 **Daily Nutrition Targets**  
-Estimated calories and protein, carbohydrate, and fat grams for a day. The current implementation uses a Mifflin–St Jeor-style BMR, activity multipliers, fixed goal adjustments, and macro heuristics. These are product heuristics, not medical advice.
+Estimated calories and protein, carbohydrate, and fat grams for a day. The current implementation uses a Mifflin–St Jeor-style BMR, activity multipliers, fixed goal adjustments, and macro heuristics under rule version `MVP-2026.1`. The How it works page documents sources and safety boundaries; these are product heuristics, not medical advice.
+
+**Estimate Calculator**
+
+A temporary, authenticated calculator for trying age, sex, height, weight, activity, and goal inputs. It reuses the planner’s estimate rules but does not persist inputs or change the profile, plans, or records.
 
 ## Workouts
 
@@ -78,7 +84,7 @@ The latest logged recurring session’s measured result against the plan’s Tar
 A dated use of a Workout Plan. The current implementation stores the first explicit save or completion as a Workout Record rather than materializing an infinite recurrence series.
 
 **Workout Record**  
-The persisted record for a dated session. It stores status (`in_progress` or `completed`), completion time, revision, actual Set Records, and a snapshot of the plan and exercise metadata used at that time.
+The persisted record for a dated session. It stores status (`in_progress` or `completed`), completion time, revision, actual Set Records, and a snapshot of the plan and exercise metadata used at that time. A record can be deleted independently from session or history detail.
 
 **Set Record**  
 One optional actual observation tied to a snapshot prescription and set number. Reps or duration, load in kilograms, and RIR are independent fields. Blank values remain unknown; they are not copied from the prescription or converted to zero.

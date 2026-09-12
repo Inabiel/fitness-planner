@@ -6,7 +6,7 @@ Status: implemented MVP baseline with explicit release gaps. Last reconciled: 20
 
 Help one person create repeatable gym workouts, understand the intended focus, follow a dated session, optionally record what actually happened, and notice progress without an account or cloud service.
 
-The current product is a local-first prototype. It is useful for planning and journaling, but nutrition calculations and exercise demonstrations are not yet ready to be treated as clinically reviewed or production-complete guidance.
+The current product is a local-first prototype. It is useful for planning and journaling, but nutrition calculations remain heuristics awaiting qualified health review and exercise demonstrations are not yet production-complete.
 
 ## Intended user and outcome
 
@@ -18,6 +18,7 @@ The intended user has access to a standard gym and wants a low-friction personal
 4. follow and log a dated workout session;
 5. see historical snapshots survive plan changes;
 6. track body weight and exercise observations locally after reload.
+7. inspect how estimates are calculated or try a temporary estimate without changing saved data.
 
 ## Current user journey
 
@@ -30,6 +31,7 @@ The intended user has access to a standard gym and wants a low-friction personal
 7. A dated session accepts optional actual dose, load, and RIR per set. Completion is always possible without performance input.
 8. Progress and history show weight observations, recorded sessions, snapshots, and entered exercise results.
 9. Profile settings allow profile edits and a modal-confirmed clear-all operation that returns to onboarding.
+10. The How it works page explains formulas, terms, sources, supported inputs, and safety boundaries; the Calculator page estimates locally without saving or changing planner data.
 
 ## Functional requirements and implementation status
 
@@ -37,7 +39,7 @@ The intended user has access to a standard gym and wants a low-friction personal
 | --- | --- | --- |
 | P01 | Profile stepper | Implemented. Four steps preserve in-memory entries, show field errors, require baseline/context/primary goal data, and require final confirmation. |
 | P02 | Goals and units | Implemented. Four goals, optional non-duplicate secondary goals, kg/cm inputs, female/male values, five activity levels, and three experience levels. |
-| P03 | Estimates | Implemented as MVP-2026.1 heuristics. BMI is separate; calories and macros are daily values. The rules still need expert/health review and sourced examples. |
+| P03 | Estimates | Implemented as MVP-2026.1 heuristics. BMI is separate; calories and macros are daily values. Formulas, constants, terms, sources, supported inputs, and safety boundaries are documented in How it works; qualified health review remains required. |
 | P04 | Workout volume | Implemented as planned work-set count per displayed session. It is clearly separated from actual logged workload; weekly volume and a clinical guidance model are not implemented. |
 | P05 | Plan management | Implemented. Plans require a name, confirmed focus, valid schedule, and at least one prescription. Delete uses a custom modal and leaves history. |
 | P06 | Scheduling | Implemented. Plans are one date or recurring weekday from startsOn; the dashboard shows the selected date, up to three nearest earlier occurrences, and up to three nearest upcoming occurrences. Date controls open the exact matching session route. |
@@ -45,12 +47,13 @@ The intended user has access to a standard gym and wants a low-friction personal
 | P08 | Focus graphics | Implemented with optimized local WebP assets, labels, and alt text. The assets illustrate focus; they do not claim intensity or anatomical percentages. |
 | P09 | Exercise library | Partially implemented. 32 static exercises support search, filters, popularity/name/area/custom sorting, pagination, equipment labels, and written instructions. GIF/video media, source metadata, and rights review are missing. |
 | P10 | Prescriptions | Implemented. Sets, reps/duration, load, rest, notes, ordering, removal, target RIR, six presets, and four target intensity levels are supported. |
-| P11 | Workout tracking | Implemented. In-progress and completed records accept optional actual reps/duration, load, and RIR for individual sets. |
+| P11 | Workout tracking | Implemented. In-progress and completed records accept optional actual reps/duration, load, and RIR for individual sets. Saved records can be deleted from session and history detail views. |
 | P12 | History preservation | Implemented in the normal UI flow. Records store plan/exercise/prescription snapshots and remain accessible after source-plan deletion. |
 | P13 | Body weight and progress | Implemented. One dated weight record can be created, updated, or deleted; body-weight and session-performance charts plus tables show progress and up to 12 performance rows. |
 | P14 | Profile updates and recalculation | Implemented. Profile saves increment revision; existing plan estimates stay unchanged until explicit plan-level recalculation. |
 | P15 | Local persistence | Implemented with Dexie/IndexedDB and live queries. Clear-all is transactional. Runtime shape validation, migrations, and stale-tab conflict handling remain absent. |
 | P16 | Effort adaptation | Implemented as a deterministic heuristic. Two recent completed sessions with recorded dose drive Increase, Decrease, Hold, or Trend building guidance, target-intensity advancement for recurring plans, and future prescription adjustment. |
+| P17 | Calculation transparency and temporary calculator | Implemented. How it works documents estimate formulas, terms, sources, supported inputs, and safety boundaries; Calculator runs the same rules locally without persisting inputs or changing planner data. |
 
 ## Interaction and quality requirements
 
@@ -72,13 +75,12 @@ Still to verify or improve:
 - browser journeys on Chromium, Firefox, and WebKit;
 - modal focus trapping and focus restoration;
 - touch-friendly drag-and-drop behavior for Custom Exercise Order;
-- validation parity between onboarding and Profile Settings.
 
 ## Current rules
 
 ### Estimate rule
 
-The implementation uses BMR, activity factors, goal adjustments, a calorie floor/rounding step, weight-based protein/fat, and carbohydrate remainder. The exact constants are recorded in [MVP scope](mvp-scope.md) and src/domain.ts. No medical or dietary safety claim is made.
+The implementation uses BMR, activity factors, goal adjustments, a calorie floor/rounding step, weight-based protein/fat, and carbohydrate remainder. The exact constants, source links, supported inputs, and safety boundaries are recorded in [MVP scope](mvp-scope.md), the How it works page, and src/domain.ts. These are estimates, not medical or dietary prescriptions.
 
 ### Focus suggestion rule
 
@@ -116,8 +118,7 @@ The selected date is the primary schedule query. The dashboard separately finds 
 | ID | Gap | Why it matters |
 | --- | --- | --- |
 | R01 | Exercise media is still a placeholder | The product promise includes demonstrations, but users currently receive written instructions only. |
-| R02 | Nutrition rules are unsourced heuristics | Incorrect personalized guidance can create health and trust risk. |
-| R03 | Profile Settings lacks onboarding’s range validation | Invalid persisted profile inputs can reach estimate calculations. |
+| R02 | Nutrition rules remain product heuristics awaiting qualified health review | Incorrect personalized guidance can create health and trust risk even with documented sources and safety boundaries. |
 | R04 | IndexedDB is version 1 with no runtime schema validation or migration tests | Future model changes can threaten stored user history. |
 | R05 | No browser test suite is present | Core route, IndexedDB, modal, mobile, and snapshot behavior are not regression-protected in a real browser. |
 | R06 | Recommendation matching is exercise-ID based | A plan containing the same exercise twice can conflate prescription history. |
@@ -133,10 +134,9 @@ Accounts, cloud synchronization, file backup/import, custom exercises/media, wee
 ### Release hardening
 
 1. Replace media placeholders with reviewed, licensed demonstrations and attribution metadata.
-2. Have nutrition constants and copy reviewed, add safety boundaries, and document sourced examples.
-3. Share one validated profile input path between onboarding and settings.
-4. Add IndexedDB runtime validation, schema migrations, unique occurrence enforcement, and persistence-failure tests.
-5. Add Playwright journeys for onboarding, plan CRUD, session logging, history preservation, clear-all, mobile navigation, and Pages preview.
+2. Have nutrition constants and copy reviewed by a qualified health professional before release.
+3. Add IndexedDB runtime validation, schema migrations, unique occurrence enforcement, and persistence-failure tests.
+4. Add Playwright journeys for onboarding, plan CRUD, session logging, history preservation, clear-all, mobile navigation, and Pages preview.
 
 ### Product depth
 

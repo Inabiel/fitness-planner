@@ -324,3 +324,11 @@ select { appearance: auto; }
 @media (max-width: 1050px) { .about-layout { grid-template-columns: minmax(0, 1fr); }.about-side { position: static; } }
 @media (max-width: 720px) { .about-card { padding: 18px; }.about-notice { gap: 10px; } }
 .calculator-empty { min-height: 190px; }.calculator-empty > svg { color: #69946e; }.calculator-empty h3 { margin-top: 13px; }.calculator-empty p { color: #7b857b; font-size: 0.75rem; line-height: 1.55; margin-top: 9px; }.calculator-result .saved-macros { margin-bottom: 17px; }.calculator-result .bmi-row { border-top: 1px solid rgba(88, 125, 91, 0.18); padding-top: 14px; }
+.calculator-layout { align-items: start; display: grid; gap: 23px; grid-template-columns: minmax(0, 1.3fr) minmax(260px, 0.7fr); }
+.calculator-form { padding: 26px; }
+.calculator-form .field-grid { margin-top: 20px; }
+.calculator-form .settings-split { margin-top: 20px; }
+.calculator-form .settings-actions { margin-top: 22px; }
+.calculator-form > .fine-print { margin-top: 14px; }
+@media (max-width: 1050px) { .calculator-layout { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 720px) { .calculator-form { padding: 20px 18px; } }

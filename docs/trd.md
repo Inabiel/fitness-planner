@@ -33,6 +33,8 @@ Exact package versions are governed by package.json and package-lock.json.
 | src/data/db.ts | Dexie database, CRUD helpers, clear-all transaction, and usePlanner live query. |
 | src/data/exercises.ts | Static Exercise Library and curated popularity ranks. |
 | src/features/profile | Onboarding stepper, profile settings, form conversion, and validation guards. |
+| src/features/about | Formula, terminology, source, supported-input, and safety-boundary documentation. |
+| src/features/calculate | Temporary estimate calculator with no persistence side effects. |
 | src/features/plans | Plan list/editor/detail, focus previews, illustration assets, presets, and progression heuristics. |
 | src/features/sessions | Dated session logger, plan snapshot creation, and historical record detail. |
 | src/features/progress | Body-weight entry/chart, workout history, performance trend chart, and performance table. |
@@ -58,6 +60,8 @@ The application uses hash routes so a static host does not need to rewrite unkno
 | #/history/:recordId | HistoryDetail | Historical snapshot independent of a current plan. |
 | #/progress | Progress | Body-weight entry/trend, workout history, performance trend, and performance observations. |
 | #/exercise-order | ExerciseOrder | Profile-level custom ordering for future library browsing. |
+| #/about | AboutPage | Calculation formulas, terms, sources, supported inputs, and safety boundaries. |
+| #/calculate | CalculatePage | Temporary calorie, macro, and BMI estimate calculator. |
 | #/profile | ProfileSettings | Profile updates and modal-confirmed clear-all. |
 
 Unknown routes redirect to onboarding when no profile exists and to the dashboard otherwise. Unknown plan/record IDs render explicit empty states.
@@ -91,7 +95,7 @@ FitnessDatabase uses Dexie database name form-fitness-planner and schema version
 
 usePlanner reads the four stores with Promise.all and returns a live-query value. Plans, records, and weights are ordered in the query for recent-first display.
 
-CRUD helpers use put/update/delete. clearAllData uses one read-write transaction to clear profiles, plans, records, and weights together. The UI reports failures in the main write paths and keeps active form state in React memory.
+CRUD helpers use put/update/delete, including deleting an individual WorkoutRecord by ID. clearAllData uses one read-write transaction to clear profiles, plans, records, and weights together. The UI reports failures in the main write paths and keeps active form state in React memory.
 
 Important current limitations:
 
@@ -100,6 +104,7 @@ Important current limitations:
 - Stored values are trusted as TypeScript objects; no runtime schema validation currently protects reads.
 - Revision fields are incremented but stale-tab writes are not rejected.
 - Plan deletion is intentionally non-cascading so records remain available.
+- Workout records can be deleted deliberately from session or history detail without deleting the source plan or other records.
 
 ## Lifecycle and history
 
@@ -110,7 +115,8 @@ Important current limitations:
 5. Editing a plan affects the current plan and future unrecorded use; the snapshot in an existing record is unchanged.
 6. Deleting a plan deletes only the plan store entry.
 7. History detail resolves by record ID and does not require the source plan to exist.
-8. Explicit plan recalculation updates only the selected plan estimate.
+8. Deleting a record removes only that saved WorkoutRecord and returns to Progress.
+9. Explicit plan recalculation updates only the selected plan estimate.
 
 The dashboard resolves the selected date directly from the current local calendar. occurrenceBefore and occurrenceAfter search for the closest valid occurrence on each side, inspect up to 366 days for recurring plans, and return a one-time plan only when its configured date is on that side. The UI caps each side at three occurrences and links each card to the exact plan/date session route.
 
@@ -128,7 +134,7 @@ calculateEstimates uses:
 - fat at 0.8 g/kg;
 - carbohydrate as the remaining calories.
 
-The result carries rule version MVP-2026.1. These are implementation heuristics and need health review before release.
+The result carries rule version MVP-2026.1. How it works documents the formulas, source links, supported inputs, and safety boundaries; these remain implementation heuristics and need qualified health review before release. CalculatePage runs the same rules in temporary React state and does not write to IndexedDB.
 
 ### Focus and prescription selection
 
@@ -162,6 +168,8 @@ Exercise entries currently render a written-instructions/media placeholder. No e
 
 The shared AppShell contains a fixed desktop sidebar and a mobile drawer. At widths up to 720px, the drawer is hidden off-canvas until the visible hamburger control opens it; the header is sticky, the drawer scrolls independently, and a scrim closes it. CSS includes visible focus, action hover motion, and reduced-motion overrides.
 
+AboutPage and CalculatePage are authenticated, shell-level routes. CalculatePage reuses the domain estimate function and shared profile bounds, but its inputs and output remain local to the page and do not alter the saved profile, plans, or records.
+
 ## Code guide
 
 The compiler is strict, uses isolated modules, checks unused locals/parameters, and does not emit files. Feature code is TypeScript/TSX. Pure rules are kept outside React where practical. Database writes are isolated in data/db.ts. Feature index files expose stable imports for route composition.
@@ -171,7 +179,6 @@ Known maintainability debt:
 - Several screen JSX expressions and CSS blocks are compressed into long lines, which increases review and change cost.
 - Static EXERCISES data is coupled directly to recommendations and views instead of being validated at a content boundary.
 - Zod is installed but not used.
-- Profile Settings and onboarding do not share one complete range-validation function.
 
 ## Verification status
 
@@ -179,7 +186,7 @@ Current automated checks:
 
 - npm run build: passes TypeScript checking and Vite production build.
 - npm run lint: passes ESLint.
-- npm test: passes 19 Vitest tests across domain rules, exercise ordering, recommendations, text export, and progress metrics.
+- npm test: passes 20 Vitest tests across domain rules, exercise ordering, recommendations, text export, progress metrics, and shared profile bounds.
 
 The domain suite also covers nearest earlier and upcoming occurrences for recurring and one-time schedules. Browser, IndexedDB, mobile, modal, and real asset smoke tests remain to be added.
 The package includes npm run test:browser, but there are currently no Playwright test files or Playwright configuration. The package also includes npm run media, but scripts/generate-media.mjs is not currently present.
@@ -207,7 +214,6 @@ References: [GitHub custom Pages workflows](https://docs.github.com/en/pages/get
 - Add runtime validation and Dexie migrations without deleting user data.
 - Enforce one source-plan/date occurrence at the database layer.
 - Add revision conflict handling for multiple tabs.
-- Share validated profile bounds between onboarding and settings.
 - Replace placeholder exercise media with reviewed local or licensed assets and attribution.
 - Add Playwright coverage and run mobile/accessibility checks on real browsers.
 

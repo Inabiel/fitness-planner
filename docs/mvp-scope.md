@@ -11,7 +11,7 @@ An individual can complete onboarding, create a focused workout plan, schedule i
 - Four-step onboarding UI: Baseline, Context, Goals, and Review.
 - Required fields: name, age, sex, height in cm, body weight in kg, activity level, training experience, and one Primary Fitness Goal.
 - Optional Secondary Goals cannot duplicate the primary goal.
-- Current onboarding validation accepts ages 13–100, height 100–250 cm, and weight 30–300 kg. Profile settings use the same form shape but currently have looser field-level range enforcement.
+- Onboarding and profile settings share the same supported ranges: ages 13–100, height 100–250 cm, and weight 30–300 kg.
 - Review has a final custom modal confirmation. Existing-profile edits preserve the profile’s exercise order and explicitly leave saved plan estimates unchanged.
 - Profile settings include an explicit Delete all local data action. Confirmation uses a modal; successful deletion clears all four stores and reloads onboarding.
 
@@ -26,7 +26,7 @@ The app shows BMI separately from daily calorie and macro estimates. Current rul
 - Protein at 1.8 g/kg for muscle gain and 1.6 g/kg otherwise.
 - Fat at 0.8 g/kg; carbohydrate fills remaining calories.
 
-These values are implemented heuristics with rule version `MVP-2026.1`. They require expert/health review before being presented as production-grade personalized guidance.
+These values are implemented heuristics with rule version `MVP-2026.1`. The How it works page documents the formulas, constants, terms, source links, and safety boundaries; the standalone calculator exposes the same estimate rules without saving data. They still require qualified health review before being presented as production-grade personalized guidance.
 
 ## Shipped workout planning
 
@@ -60,6 +60,7 @@ Exercise demonstrations are not shipped yet. The UI displays a media placeholder
 
 - Open a dated session from the dashboard, plan detail, or history flow.
 - Save an in-progress session or mark it complete without entering performance details.
+- Delete a saved workout record from the session or history detail view.
 - Log actual reps or duration, load in kg, and optional RIR for each set.
 - Preserve the plan and exercise snapshot inside the Workout Record.
 - Use the two most recent completed sessions with dose observations to show No result, Trend building, Increase effort, Decrease effort, or Hold effort on plan detail.
@@ -72,6 +73,7 @@ Exercise demonstrations are not shipped yet. The UI displays a media placeholder
 - Display a simple SVG body-weight trend and accessible data table.
 - Display a body-weight trend, an overall session-performance trend, and an accessible performance table capped to the first 12 recorded entries for compactness.
 - Open historical records by record ID even when the source plan has been deleted.
+- Delete an individual saved workout record without deleting its source plan or other records.
 
 ## Dashboard schedule browsing
 
@@ -93,6 +95,8 @@ Current hash routes:
 | `#/history/:recordId` | Historical session snapshot |
 | `#/progress` | Weight, history, and performance |
 | `#/exercise-order` | Custom exercise ordering |
+| `#/about` | Calculation formulas, terms, sources, and safety boundaries |
+| `#/calculate` | Temporary estimate calculator that does not change saved data |
 | `#/profile` | Profile settings and data deletion |
 
 Desktop uses a fixed sidebar. At widths up to 720px the sidebar becomes a slide-out drawer with a visible hamburger button, sticky mobile header, independent drawer scrolling, close button, and scrim. Hover transitions are reduced when the person prefers reduced motion.
@@ -108,4 +112,4 @@ Dexie stores profiles, plans, workout records, and body-weight records in Indexe
 - Reviewed GIF/video demonstrations, content rights, source attribution, and media retry behavior.
 - Runtime validation of arbitrary persisted IndexedDB data, schema migrations, and stale-tab revision conflicts.
 - Browser-level automated journeys and a complete mobile/accessibility audit.
-- Clinically reviewed nutrition rules or an explicit health/safety disclaimer.
+- Clinically reviewed nutrition rules or individualized health guidance.

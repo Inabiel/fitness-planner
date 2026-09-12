@@ -20,7 +20,7 @@ Overall score: 7.0 / 10
 | Architecture | 7.5 | Appropriate React/Vite/Dexie split with modest feature boundaries and no unnecessary backend. |
 | UX and accessibility baseline | 7.5 | Clear flows, custom modals, labels, focus, responsive drawer, hover motion, and reduced-motion support. |
 | Data integrity | 6.5 | History snapshots and clear-all transaction are good; runtime validation, migrations, uniqueness, and conflict handling are missing. |
-| Test confidence | 5.0 | Ten pure-logic tests pass, but there are no browser journeys or persistence integration tests. |
+| Test confidence | 5.0 | Twenty pure-logic tests pass, but there are no browser journeys or persistence integration tests. |
 | Content readiness | 5.0 | The static library is broad, but every exercise demonstration is still a placeholder. |
 | Deployment readiness | 6.5 | A Pages workflow and relative asset paths now exist; branch/settings assumptions remain. |
 
@@ -75,6 +75,7 @@ The repository now includes:
 - optimized local WebP focus artwork in onboarding and plan surfaces;
 - an Exercise Order screen with drag/drop and arrow controls;
 - pagination and multiple library sort modes.
+- independent deletion for saved workout records from session and history detail.
 
 These are good usability investments because they reduce friction in the primary flows rather than adding unrelated features.
 
@@ -96,11 +97,11 @@ Recommendation: treat content sourcing as a release dependency. Add a typed medi
 
 ### 2. Nutrition guidance needs health and product review
 
-Evidence: src/domain.ts implements a BMR-style formula, activity multipliers, goal calorie adjustments, a calorie floor, and macro ratios. The output is labeled as an estimate, but the repository has no source citations, safety copy, uncertainty handling, or review record.
+Evidence: src/domain.ts implements a BMR-style formula, activity multipliers, goal calorie adjustments, a calorie floor, and macro ratios. The How it works and Calculate pages now document the formulas, constants, supported inputs, source links, and “not medical advice” boundaries; the rules are still product heuristics without a qualified health review or uncertainty model.
 
 Impact: numeric output can look authoritative even when it is only a rough heuristic. This is the highest trust risk in the current product.
 
-Recommendation: document the source and rationale for every constant, add supported-input and boundary behavior, include a clear “estimate, not medical advice” explanation, and have the rules reviewed before public release. Keep the rule version in saved snapshots when the rules change.
+Recommendation: keep the source, rationale, supported-input behavior, and safety copy current; have the rules reviewed by a qualified health professional before public release; and keep the rule version in saved snapshots when the rules change.
 
 ### 3. Persistence has a good shape but weak protection at the storage boundary
 
@@ -112,7 +113,7 @@ Recommendation: add small Zod parsers for each stored root entity, introduce exp
 
 ### 4. The test suite proves rules, not the application
 
-Evidence: the current suite has 19 Vitest tests for estimates/scheduling/suggestions, ordering, presets, progression, export formatting, and progress metrics. package.json includes a browser test command, but there are no Playwright spec files or Playwright configuration. There are no IndexedDB integration tests.
+Evidence: the current suite has 20 Vitest tests for estimates/scheduling/suggestions, ordering, presets, progression, export formatting, progress metrics, and shared profile bounds. package.json includes a browser test command, but there are no Playwright spec files or Playwright configuration. There are no IndexedDB integration tests.
 
 Impact: regressions in routes, forms, modals, snapshots, deletion, mobile navigation, and reload behavior can pass CI unnoticed.
 
@@ -126,13 +127,13 @@ Impact: duplicate exercises can cause results to be attributed to the wrong pres
 
 Recommendation: match recommendation history by prescription identity and add a stable occurrence key. Preserve support for repeated exercises by ensuring every set and snapshot lookup remains prescription-ID based.
 
-### 6. Profile validation is inconsistent
+### 6. Profile validation now shares supported bounds
 
-Evidence: onboarding validates age 13–100, height 100–250 cm, and weight 30–300 kg. Profile Settings checks completeness and positivity but does not apply those same ranges.
+Evidence: onboarding and Profile Settings both use the shared `PROFILE_LIMITS` for age 13–100, height 100–250 cm, and weight 30–300 kg. A focused form test covers out-of-range age, height, and weight.
 
-Impact: a profile edited after onboarding can hold values that onboarding would reject and pass them into estimates.
+Impact: the two profile entry flows now present consistent supported bounds; arbitrary persisted IndexedDB values still lack runtime parsing.
 
-Recommendation: move bounds into one shared validation function used by both flows. Keep parsing and user-facing error messages separate from the domain calculator.
+Recommendation: keep the shared bounds synchronized with the calculator and add runtime persistence validation at the IndexedDB boundary.
 
 ### 7. The repository has maintainability debt despite good boundaries
 
@@ -204,12 +205,11 @@ Copy should continue to distinguish recommendation from fact, and planned work f
 
 ### Phase 0 — Make the current MVP trustworthy
 
-1. Validate Profile Settings with the same bounds as onboarding.
-2. Add runtime IndexedDB validation and a migration test harness.
-3. Enforce one plan/date occurrence and fix duplicate-exercise recommendation matching.
-4. Add Playwright smoke journeys and at least one real IndexedDB reload test.
-5. Review nutrition rules and add safety/uncertainty copy.
-6. Decide whether to remove or implement the missing media script.
+1. Add runtime IndexedDB validation and a migration test harness.
+2. Enforce one plan/date occurrence and fix duplicate-exercise recommendation matching.
+3. Add Playwright smoke journeys and at least one real IndexedDB reload test.
+4. Have nutrition rules and copy reviewed by a qualified health professional.
+5. Decide whether to remove or implement the missing media script.
 
 Exit condition: critical flows work after reload, history remains intact across plan deletion/editing, malformed/stale data fails safely, and the main browser journeys are automated.
 

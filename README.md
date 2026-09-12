@@ -23,11 +23,14 @@ It runs entirely in the browser. Profile data, plans, workout records, and body-
 - Effort guidance that recommends increasing, decreasing, or holding effort from recent logged results.
 - Four target intensity levels that shape plan prescriptions and advance after repeated above-target recurring sessions.
 - Historical plan snapshots that remain available after a plan is edited or deleted.
+- Saved workout records can be deleted from the session and history detail views.
+- A How it works page explains formulas, terms, sources, and safety boundaries.
+- A standalone calculator estimates calories, macros, and BMI without changing saved data.
 - Copyable workout plans with optional exercise steps for use in WhatsApp or elsewhere.
 - Body-weight chart, workout history, performance trend graph, and recorded performance table.
 - Snackbar confirmations for copy, save-progress, and session-completion actions.
 - Responsive desktop sidebar and mobile navigation drawer.
-- Modal confirmation for profile deletion and plan deletion.
+- Modal confirmation for profile deletion, plan deletion, and workout-record deletion.
 
 ## Quick start
 
@@ -89,7 +92,7 @@ The Vite build uses relative asset paths and HashRouter, so it works at a reposi
     src/app              Route composition
     src/domain.ts        Domain types and pure fitness rules
     src/data             Dexie persistence and static exercises
-    src/features         Dashboard, plans, sessions, progress, profile, and ordering
+    src/features         Dashboard, plans, sessions, progress, profile, about, calculator, and ordering
     src/shared           App shell, fields, empty states, snackbars, charts, export, and formatters
     src/styles.css       Shared visual and responsive styles
     public/assets        Local focus illustrations
@@ -106,7 +109,7 @@ The Vite build uses relative asset paths and HashRouter, so it works at a reposi
 ## Current limitations
 
 - Exercise demonstrations are currently written-instruction placeholders; reviewed GIF/video media and attribution are not shipped.
-- Nutrition calculations and progression recommendations are transparent MVP heuristics, not clinical or medical guidance.
+- Nutrition calculations and progression recommendations are transparent MVP heuristics with documented sources and safety boundaries, not clinical or medical guidance.
 - IndexedDB is currently schema version 1 without runtime data parsing, migration coverage, or stale-tab conflict detection.
 - Vitest covers pure domain, ordering, and recommendation rules. Browser-level Playwright journeys are not yet implemented.
 - Weekly multi-day programs, accounts, cloud sync, file backup/import, and custom exercises are outside the current scope.
