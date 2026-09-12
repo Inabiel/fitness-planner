@@ -16,6 +16,7 @@ import {
   formToCalculationProfile,
   isCompleteProfileForm,
   profileToForm,
+  PROFILE_LIMITS,
   type ProfileForm,
   type ProfileFormValue,
   positiveInteger,
@@ -64,10 +65,10 @@ export function Onboarding({ existing }: OnboardingProps) {
 
     if (step === 0) {
       if (!form.name.trim()) next.name = 'Add your name.';
-      if (!positiveInteger(form.age) || Number(form.age) < 13 || Number(form.age) > 100) next.age = 'Enter an age from 13 to 100.';
+      if (!positiveInteger(form.age) || Number(form.age) < PROFILE_LIMITS.age.min || Number(form.age) > PROFILE_LIMITS.age.max) next.age = `Enter an age from ${PROFILE_LIMITS.age.min} to ${PROFILE_LIMITS.age.max}.`;
       if (!form.sex) next.sex = 'Choose an option.';
-      if (!positiveNumber(form.heightCm) || Number(form.heightCm) < 100 || Number(form.heightCm) > 250) next.heightCm = 'Enter height from 100–250 cm.';
-      if (!positiveNumber(form.weightKg) || Number(form.weightKg) < 30 || Number(form.weightKg) > 300) next.weightKg = 'Enter weight from 30–300 kg.';
+      if (!positiveNumber(form.heightCm) || Number(form.heightCm) < PROFILE_LIMITS.heightCm.min || Number(form.heightCm) > PROFILE_LIMITS.heightCm.max) next.heightCm = `Enter height from ${PROFILE_LIMITS.heightCm.min}–${PROFILE_LIMITS.heightCm.max} cm.`;
+      if (!positiveNumber(form.weightKg) || Number(form.weightKg) < PROFILE_LIMITS.weightKg.min || Number(form.weightKg) > PROFILE_LIMITS.weightKg.max) next.weightKg = `Enter weight from ${PROFILE_LIMITS.weightKg.min}–${PROFILE_LIMITS.weightKg.max} kg.`;
     }
 
     if (step === 1) {
@@ -234,10 +235,10 @@ function PersonalStep({ form, errors, update }: StepProps) {
   return (
     <div className="field-grid">
       <Field label="Name" error={errors.name}><input autoFocus value={form.name} onChange={(event) => update('name', event.target.value)} placeholder="e.g. Alex" /></Field>
-      <Field label="Age" suffix="years" error={errors.age}><input type="number" min="13" max="100" value={form.age} onChange={(event) => update('age', event.target.value)} placeholder="28" /></Field>
+      <Field label="Age" suffix="years" error={errors.age}><input type="number" min={PROFILE_LIMITS.age.min} max={PROFILE_LIMITS.age.max} value={form.age} onChange={(event) => update('age', event.target.value)} placeholder="28" /></Field>
       <Field label="Sex" error={errors.sex}><select value={form.sex} onChange={(event) => update('sex', event.target.value)}><option value="">Choose an option</option><option value="female">Female</option><option value="male">Male</option></select></Field>
-      <Field label="Height" suffix="cm" error={errors.heightCm}><input type="number" min="100" max="250" value={form.heightCm} onChange={(event) => update('heightCm', event.target.value)} placeholder="172" /></Field>
-      <Field label="Body weight" suffix="kg" error={errors.weightKg}><input type="number" min="30" max="300" step="0.1" value={form.weightKg} onChange={(event) => update('weightKg', event.target.value)} placeholder="70" /></Field>
+      <Field label="Height" suffix="cm" error={errors.heightCm}><input type="number" min={PROFILE_LIMITS.heightCm.min} max={PROFILE_LIMITS.heightCm.max} value={form.heightCm} onChange={(event) => update('heightCm', event.target.value)} placeholder="172" /></Field>
+      <Field label="Body weight" suffix="kg" error={errors.weightKg}><input type="number" min={PROFILE_LIMITS.weightKg.min} max={PROFILE_LIMITS.weightKg.max} step="0.1" value={form.weightKg} onChange={(event) => update('weightKg', event.target.value)} placeholder="70" /></Field>
     </div>
   );
 }

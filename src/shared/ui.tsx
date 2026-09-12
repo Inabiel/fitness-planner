@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { ArrowLeft, Dumbbell, LayoutDashboard, ListOrdered, Settings2, TrendingUp, X } from 'lucide-react';
+import { ArrowLeft, Dumbbell, Info, LayoutDashboard, ListOrdered, Settings2, TrendingUp, X } from 'lucide-react';
 import { Link, NavLink, Outlet } from 'react-router';
 import { AREA_LABELS, GOAL_LABELS, type Area, type Profile } from '../domain';
 
@@ -29,6 +29,7 @@ export function AppShell({ profile }: { profile: Profile }) {
           <NavItem to="/plans" icon={<Dumbbell size={18} />} label="Workout plans" onClick={closeMenu} />
           <NavItem to="/progress" icon={<TrendingUp size={18} />} label="Progress" onClick={closeMenu} />
           <NavItem to="/exercise-order" icon={<ListOrdered size={18} />} label="Exercise order" onClick={closeMenu} />
+          <NavItem to="/about" icon={<Info size={18} />} label="How it works" onClick={closeMenu} />
         </nav>
         <div className="sidebar-bottom">
           <NavItem to="/profile" icon={<Settings2 size={18} />} label="Profile settings" onClick={closeMenu} />

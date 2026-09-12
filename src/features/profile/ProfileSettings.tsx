@@ -10,7 +10,7 @@ import {
 } from '../../domain';
 import { clearAllData, now, saveProfile } from '../../data/db';
 import { Field, Page } from '../../shared/ui';
-import { formToCalculationProfile, isActivityLevel, isCompleteProfileForm, isExperience, isGoal, isSex, profileToForm } from './form';
+import { formToCalculationProfile, isActivityLevel, isCompleteProfileForm, isExperience, isGoal, isSex, PROFILE_LIMITS, profileToForm } from './form';
 
 export function ProfileSettings({ profile }: { profile: Profile }) {
   const [form, setForm] = useState(profileToForm(profile));
@@ -35,7 +35,7 @@ export function ProfileSettings({ profile }: { profile: Profile }) {
   async function save(event: FormEvent) {
     event.preventDefault();
     if (!isCompleteProfileForm(form)) {
-      setMessage('Complete every field before saving.');
+      setMessage('Use supported values before saving.');
       return;
     }
 
@@ -84,10 +84,10 @@ export function ProfileSettings({ profile }: { profile: Profile }) {
             <div className="section-heading"><div><p className="eyebrow">Fitness profile</p><h2>Your baseline</h2></div><UserRound size={19} /></div>
             <div className="field-grid">
               <Field label="Name"><input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /></Field>
-              <Field label="Age"><input type="number" value={form.age} onChange={(event) => setForm({ ...form, age: event.target.value })} /></Field>
+              <Field label="Age"><input type="number" min={PROFILE_LIMITS.age.min} max={PROFILE_LIMITS.age.max} value={form.age} onChange={(event) => setForm({ ...form, age: event.target.value })} /></Field>
               <Field label="Sex"><select value={form.sex} onChange={(event) => { if (isSex(event.target.value)) setForm({ ...form, sex: event.target.value }); }}><option value="female">Female</option><option value="male">Male</option></select></Field>
-              <Field label="Height" suffix="cm"><input type="number" value={form.heightCm} onChange={(event) => setForm({ ...form, heightCm: event.target.value })} /></Field>
-              <Field label="Body weight" suffix="kg"><input type="number" step="0.1" value={form.weightKg} onChange={(event) => setForm({ ...form, weightKg: event.target.value })} /></Field>
+              <Field label="Height" suffix="cm"><input type="number" min={PROFILE_LIMITS.heightCm.min} max={PROFILE_LIMITS.heightCm.max} value={form.heightCm} onChange={(event) => setForm({ ...form, heightCm: event.target.value })} /></Field>
+              <Field label="Body weight" suffix="kg"><input type="number" min={PROFILE_LIMITS.weightKg.min} max={PROFILE_LIMITS.weightKg.max} step="0.1" value={form.weightKg} onChange={(event) => setForm({ ...form, weightKg: event.target.value })} /></Field>
               <Field label="Activity"><select value={form.activityLevel} onChange={(event) => { if (isActivityLevel(event.target.value)) setForm({ ...form, activityLevel: event.target.value }); }}>{Object.entries(ACTIVITY_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></Field>
             </div>
             <div className="settings-split">
@@ -103,7 +103,7 @@ export function ProfileSettings({ profile }: { profile: Profile }) {
         <aside className="settings-side">
           <div className="side-card">
             <p className="eyebrow">Current estimate</p>
-            {estimate && <><strong className="settings-calories">{estimate.dailyCalories.toLocaleString()} <small>calories/day</small></strong><div className="saved-macros"><span>{estimate.proteinGrams}g protein</span><span>{estimate.carbohydrateGrams}g carbohydrates</span><span>{estimate.fatGrams}g fat</span></div><p className="fine-print">BMI (body mass index): {estimate.bmi.toFixed(1)}. This is a height-to-weight screening number, not a diagnosis.</p></>}
+            {estimate && <><strong className="settings-calories">{estimate.dailyCalories.toLocaleString()} <small>calories/day</small></strong><div className="saved-macros"><span>{estimate.proteinGrams}g protein</span><span>{estimate.carbohydrateGrams}g carbohydrates</span><span>{estimate.fatGrams}g fat</span></div><p className="fine-print">BMI (body mass index): {estimate.bmi.toFixed(1)}. This is a height-to-weight screening number, not a diagnosis. Nutrition estimates are starting points, not medical advice.</p></>}
           </div>
           <div className="side-card privacy-card"><Info size={18} /><h3>Local by default</h3><p>Your profile, plans, measurements, and workout records stay in this browser on this device. Clearing browser data may remove them. No account or sync is involved.</p></div>
           <div className="side-card danger-zone">

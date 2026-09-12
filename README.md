@@ -62,6 +62,7 @@ The app uses hash routing so it can run on static hosting without server-side ro
 | #/history/:recordId | View a historical session snapshot |
 | #/progress | Track body weight and performance |
 | #/exercise-order | Customize exercise ordering |
+| #/about | Read calculation formulas, terms, sources, and safety boundaries |
 | #/profile | Edit profile or delete all local data |
 
 ## Data and privacy

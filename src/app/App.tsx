@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router';
 import { usePlanner, type AuthenticatedPlannerData } from '../data/db';
 import { Dashboard } from '../features/dashboard';
+import { AboutPage } from '../features/about';
 import { ExerciseOrder } from '../features/exercises';
 import { HistoryDetail, Session } from '../features/sessions';
 import { Onboarding, ProfileSettings } from '../features/profile';
@@ -38,6 +39,7 @@ function AuthenticatedApp({ data }: { data: AuthenticatedPlannerData }) {
         <Route path="/history/:recordId" element={<HistoryDetail data={data} />} />
         <Route path="/progress" element={<Progress data={data} />} />
         <Route path="/exercise-order" element={<ExerciseOrder profile={data.profile} />} />
+        <Route path="/about" element={<AboutPage />} />
         <Route path="/profile" element={<ProfileSettings profile={data.profile} />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

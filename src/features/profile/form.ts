@@ -22,6 +22,12 @@ export type CompleteProfileForm = Omit<ProfileForm, 'sex' | 'activityLevel' | 'e
 
 export type ProfileFormValue = ProfileForm[keyof ProfileForm];
 
+export const PROFILE_LIMITS = {
+  age: { min: 13, max: 100 },
+  heightCm: { min: 100, max: 250 },
+  weightKg: { min: 30, max: 300 },
+} as const;
+
 export function emptyProfileForm(): ProfileForm {
   return {
     name: '',
@@ -53,10 +59,11 @@ export function profileToForm(profile: Profile): ProfileForm {
 export function isCompleteProfileForm(form: ProfileForm): form is CompleteProfileForm {
   return Boolean(
     form.name.trim()
-      && positiveNumber(form.age)
+      && positiveInteger(form.age)
+      && withinRange(form.age, PROFILE_LIMITS.age.min, PROFILE_LIMITS.age.max)
       && isSex(form.sex)
-      && positiveNumber(form.heightCm)
-      && positiveNumber(form.weightKg)
+      && withinRange(form.heightCm, PROFILE_LIMITS.heightCm.min, PROFILE_LIMITS.heightCm.max)
+      && withinRange(form.weightKg, PROFILE_LIMITS.weightKg.min, PROFILE_LIMITS.weightKg.max)
       && isActivityLevel(form.activityLevel)
       && isExperience(form.experience)
       && isGoal(form.primaryGoal),
@@ -77,6 +84,11 @@ export function formToCalculationProfile(form: CompleteProfileForm): Omit<Profil
 }
 
 export { positiveInteger, positiveNumber };
+
+function withinRange(value: string, min: number, max: number): boolean {
+  const number = Number(value);
+  return Number.isFinite(number) && number >= min && number <= max;
+}
 
 export function isSex(value: string): value is Sex {
   return value === 'female' || value === 'male';

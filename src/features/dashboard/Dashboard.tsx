@@ -105,7 +105,8 @@ function EstimateCard({ estimate, profile }: { estimate: ReturnType<typeof calcu
         <MacroBar label="Fat" value={`${estimate.fatGrams}g`} width={Math.min(100, estimate.fatGrams * 1.2)} tone="peach" />
       </div>
       <div className="bmi-row"><span><HeartPulse size={16} /> BMI estimate <small>body mass index</small></span><strong>{estimate.bmi.toFixed(1)}</strong></div>
-      <p className="fine-print">A daily estimate based on your profile and primary goal. BMI is a height-to-weight screening number, not a diagnosis. It isn’t a per-workout allowance.</p>
+      <p className="fine-print">A daily estimate based on your profile and primary goal. BMI is a height-to-weight screening number, not a diagnosis. These are starting points, not medical advice or a per-workout allowance.</p>
+      <Link className="text-link estimate-about-link" to="/about">How this is calculated <ArrowRight size={15} /></Link>
     </div>
   );
 }
