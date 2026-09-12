@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ArrowRight, Check, CircleCheck, Clipboard, Clock3, Dumbbell, Flame, Info, Pencil, Trash2 } from 'lucide-react';
+import { ArrowRight, Check, CircleCheck, Clipboard, Clock3, Dumbbell, Flame, Info, Pencil, Timer, Trash2 } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { AREA_LABELS, FOCUS_LABELS, INTENSITY_LABELS, calculateEstimates, formatSchedule, localDate, occursOn, plannedVolume, snapshotEstimate, type EstimateSnapshot, type Exercise, type Prescription, type WorkoutIntensity } from '../../domain';
 import { deletePlan as removePlan, now, updatePlanEstimate, type AuthenticatedPlannerData } from '../../data/db';
@@ -8,7 +8,10 @@ import { formatDateTime } from '../../shared/formatters';
 import { getProgressPoints } from '../../shared/progress';
 import { ProgressLineChart } from '../../shared/progressChart';
 import { EmptyState, Page, Snackbar } from '../../shared/ui';
+import type { GamificationCelebration } from '../../shared/gamification';
+import { GamificationCelebrationModal } from '../gamification';
 import { FocusIllustration } from './FocusIllustration';
+import { LiveTrackingModal } from './LiveTrackingModal';
 import { copyToClipboard, formatWorkoutPlanText } from '../../shared/workoutExport';
 import { assessPlanIntensity, assessPrescriptionEffort, type EffortAssessment, type IntensityAssessment } from './recommendations';
 
@@ -19,10 +22,13 @@ export function PlanDetail({ data }: { data: AuthenticatedPlannerData }) {
   const [showRecalc, setShowRecalc] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [copyOpen, setCopyOpen] = useState(false);
+  const [liveTrackingOpen, setLiveTrackingOpen] = useState(false);
   const [includeSteps, setIncludeSteps] = useState(false);
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
   const [snackbar, setSnackbar] = useState<{ message: string; tone: 'success' | 'error' } | null>(null);
+  const [celebration, setCelebration] = useState<GamificationCelebration | null>(null);
+  const [celebrationDetail, setCelebrationDetail] = useState('');
   const [error, setError] = useState('');
   const dismissSnackbar = useCallback(() => setSnackbar(null), []);
 
@@ -121,6 +127,7 @@ export function PlanDetail({ data }: { data: AuthenticatedPlannerData }) {
           <EffortSummary assessments={plan.prescriptions.map((prescription) => assessPrescriptionEffort(prescription, plan.id, data.records))} />
           <div className="side-card">
             <p className="eyebrow">Plan actions</p>
+            <button className="side-action" type="button" onClick={() => setLiveTrackingOpen(true)}><Timer size={17} /><span><strong>Live tracking</strong><small>Track each exercise in a focused modal with rest countdowns between movements.</small></span><ArrowRight size={16} /></button>
             <Link className="side-action" to={`/sessions/${plan.id}/${canStartToday ? today : (plan.schedule.kind === 'date' ? plan.schedule.date : plan.schedule.startsOn)}`}><CircleCheck size={17} /><span><strong>Log workout result</strong><small>Record reps, duration, weight/resistance, and RIR (reps in reserve) for effort guidance.</small></span><ArrowRight size={16} /></Link>
             <button className="side-action" onClick={() => setDeleteOpen(true)}><Trash2 size={17} /><span><strong>Delete this plan</strong><small>Recorded history will stay safe.</small></span><ArrowRight size={16} /></button>
           </div>
@@ -129,8 +136,10 @@ export function PlanDetail({ data }: { data: AuthenticatedPlannerData }) {
       {error && <p className="form-error global-error" role="alert">{error}</p>}
       {snackbar && <Snackbar message={snackbar.message} tone={snackbar.tone} onDismiss={dismissSnackbar} />}
       {copyOpen && <CopyPlanModal includeSteps={includeSteps} saving={saving} onIncludeStepsChange={setIncludeSteps} onCancel={() => setCopyOpen(false)} onCopy={copyPlan} />}
+      {liveTrackingOpen && <LiveTrackingModal plan={plan} records={data.records} onClose={() => setLiveTrackingOpen(false)} onSaved={(message, nextCelebration) => { if (nextCelebration) { setCelebration(nextCelebration); setCelebrationDetail(message); } else { setSnackbar({ message, tone: 'success' }); } }} />}
+      {celebration && <GamificationCelebrationModal celebration={celebration} detail={celebrationDetail} onClose={() => { setCelebration(null); setCelebrationDetail(''); }} />}
       {showRecalc && <RecalculationModal estimate={plan.estimate} previewEstimate={previewEstimate} profileRevision={data.profile.revision} saving={saving} onCancel={() => setShowRecalc(false)} onSave={saveRecalculation} />}
-      {deleteOpen && <DeleteModal planName={plan.name} saving={saving} onCancel={() => setDeleteOpen(false)} onDelete={deletePlan} />}
+      {deleteOpen && <DeleteModal planName={plan.name} error={error} saving={saving} onCancel={() => setDeleteOpen(false)} onDelete={deletePlan} />}
     </Page>
   );
 }
@@ -165,8 +174,8 @@ function RecalculationModal({ estimate, previewEstimate, profileRevision, saving
   return <div className="inline-modal"><div><p className="eyebrow">Explicit recalculation</p><h2>Preview replacement estimates</h2><p className="muted">Your profile may have changed. This only updates the saved estimate on this plan; history stays unchanged.</p></div><div className="compare-grid"><EstimateCompare label="Saved" estimate={estimate} /><EstimateCompare label="New preview" estimate={newEstimate} /></div><div className="modal-actions"><button className="button ghost" onClick={onCancel}>Keep current</button><button className="button primary" onClick={onSave} disabled={saving}>{saving ? 'Saving…' : 'Save replacement'}</button></div></div>;
 }
 
-function DeleteModal({ planName, saving, onCancel, onDelete }: { planName: string; saving: boolean; onCancel: () => void; onDelete: () => void }) {
-  return <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !saving) onCancel(); }}><div className="delete-data-modal" role="dialog" aria-modal="true" aria-labelledby="delete-plan-title"><div className="warning-icon"><Trash2 size={20} /></div><p className="eyebrow">Delete workout plan</p><h2 id="delete-plan-title">Delete {planName}?</h2><p>Future sessions will disappear, but recorded history will be retained.</p><div className="modal-actions"><button type="button" className="button ghost" onClick={onCancel} disabled={saving}>Cancel</button><button type="button" className="button danger-button" onClick={onDelete} disabled={saving}>{saving ? 'Deleting…' : 'Delete plan'}</button></div></div></div>;
+function DeleteModal({ planName, error, saving, onCancel, onDelete }: { planName: string; error: string; saving: boolean; onCancel: () => void; onDelete: () => void }) {
+  return <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !saving) onCancel(); }}><div className="delete-data-modal" role="dialog" aria-modal="true" aria-labelledby="delete-plan-title"><div className="warning-icon"><Trash2 size={20} /></div><p className="eyebrow">Delete workout plan</p><h2 id="delete-plan-title">Delete {planName}?</h2><p>Future sessions will disappear, but recorded history will be retained.</p>{error && <p className="form-error" role="alert">{error}</p>}<div className="modal-actions"><button type="button" className="button ghost" onClick={onCancel} disabled={saving} autoFocus>Cancel</button><button type="button" className="button danger-button" onClick={onDelete} disabled={saving}>{saving ? 'Deleting…' : 'Delete plan'}</button></div></div></div>;
 }
 
 function EstimateCompare({ label, estimate }: { label: string; estimate?: EstimateSnapshot | (ReturnType<typeof calculateEstimates> & { calculatedAt: string; profileRevision: number }) }) {

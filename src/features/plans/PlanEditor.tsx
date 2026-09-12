@@ -1,6 +1,6 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
 import { ArrowRight, CalendarDays, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Dumbbell, Info, Plus, Search, Sparkles, Target, Trash2 } from 'lucide-react';
-import { Link, useNavigate, useParams } from 'react-router';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import {
   AREA_LABELS,
   AREAS,
@@ -22,7 +22,7 @@ import {
   type WorkoutIntensity,
   type WorkoutPlan,
 } from '../../domain';
-import { now, savePlan as savePlanRecord, uid, type AuthenticatedPlannerData } from '../../data/db';
+import { addPlanToProgram, now, savePlan as savePlanRecord, uid, type AuthenticatedPlannerData } from '../../data/db';
 import { EXERCISES } from '../../data/exercises';
 import { normalizeExerciseOrder } from '../exercises/order';
 import { weekdayLabel } from '../../shared/formatters';
@@ -35,7 +35,10 @@ type ExerciseSort = 'popularity' | 'name-asc' | 'name-desc' | 'area' | 'custom';
 
 export function PlanEditor({ data }: { data: AuthenticatedPlannerData }) {
   const { planId } = useParams();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const programId = searchParams.get('programId');
+  const returnTo = programId ? `/programs/${programId}` : '/plans';
   const editing = Boolean(planId);
   const source = data.plans.find((plan) => plan.id === planId);
   const [name, setName] = useState(source?.name ?? '');
@@ -157,9 +160,11 @@ export function PlanEditor({ data }: { data: AuthenticatedPlannerData }) {
 
     setSaving(true);
     setError('');
+    const createAnother = programId && !editing && (event.nativeEvent as SubmitEvent).submitter?.getAttribute('data-save-action') === 'another';
     try {
       await savePlanRecord(plan);
-      navigate(`/plans/${plan.id}`);
+      if (programId) await addPlanToProgram(programId, plan.id);
+      navigate(createAnother ? `/plans/new?programId=${programId}` : programId ? `/programs/${programId}` : `/plans/${plan.id}`);
     } catch {
       setError('The plan could not be saved. Your draft is still here—try again.');
     } finally {
@@ -168,7 +173,7 @@ export function PlanEditor({ data }: { data: AuthenticatedPlannerData }) {
   }
 
   return (
-    <Page title={editing ? 'Edit workout plan' : 'Build a workout plan'} subtitle="One focused session. Enough detail to follow it, not enough to overthink it." backTo="/plans">
+    <Page title={editing ? 'Edit workout plan' : 'Build a workout plan'} subtitle="One focused session. Enough detail to follow it, not enough to overthink it." backTo={returnTo}>
       <form onSubmit={savePlan} className="editor-layout">
         <div className="editor-main">
           <section className="editor-section">
@@ -212,7 +217,7 @@ export function PlanEditor({ data }: { data: AuthenticatedPlannerData }) {
             })}</div>}
           </section>
           {error && <p className="form-error global-error" role="alert">{error}</p>}
-          <div className="sticky-save"><button type="button" className="button ghost" onClick={() => navigate('/plans')}>Cancel</button><button className="button primary" disabled={saving}>{saving ? 'Saving…' : editing ? 'Save changes' : 'Save workout plan'} <ArrowRight size={16} /></button></div>
+          <div className="sticky-save"><button type="button" className="button ghost" onClick={() => navigate(returnTo)}>Cancel</button>{programId && !editing && <button type="submit" className="button secondary" data-save-action="another" disabled={saving}>{saving ? 'Saving…' : 'Save & add another'} <Plus size={16} /></button>}<button type="submit" className="button primary" disabled={saving}>{saving ? 'Saving…' : editing ? 'Save changes' : 'Save workout plan'} <ArrowRight size={16} /></button></div>
         </div>
         <ExerciseLibrary search={search} filterArea={filterArea} sort={exerciseSort} filteredExercises={pageExercises} totalExercises={filteredExercises.length} page={currentPage} pageCount={pageCount} onSearch={updateLibrarySearch} onFilter={updateLibraryFilter} onSort={updateExerciseSort} onPageChange={setLibraryPage} onAdd={addExercise} />
       </form>

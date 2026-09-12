@@ -1,6 +1,6 @@
 # Form Fitness Planner — Implemented MVP Scope
 
-Status: current implementation baseline, 2026-09-12. Vocabulary is defined in [CONTEXT.md](../CONTEXT.md); technical details are in [TRD](trd.md).
+Status: current implementation baseline, 2026-09-13. Vocabulary is defined in [CONTEXT.md](../CONTEXT.md); technical details are in [TRD](trd.md).
 
 ## Product promise
 
@@ -13,7 +13,7 @@ An individual can complete onboarding, create a focused workout plan, schedule i
 - Optional Secondary Goals cannot duplicate the primary goal.
 - Onboarding and profile settings share the same supported ranges: ages 13–100, height 100–250 cm, and weight 30–300 kg.
 - Review has a final custom modal confirmation. Existing-profile edits preserve the profile’s exercise order and explicitly leave saved plan estimates unchanged.
-- Profile settings include an explicit Delete all local data action. Confirmation uses a modal; successful deletion clears all four stores and reloads onboarding.
+- Profile settings include an explicit Delete all local data action. Confirmation uses a modal; successful deletion clears all five stores and reloads onboarding.
 
 ## Estimates
 
@@ -28,9 +28,21 @@ The app shows BMI separately from daily calorie and macro estimates. Current rul
 
 These values are implemented heuristics with rule version `MVP-2026.1`. The How it works page documents the formulas, constants, terms, source links, and safety boundaries; the standalone calculator exposes the same estimate rules without saving data. They still require qualified health review before being presented as production-grade personalized guidance.
 
+## Workout energy tracking
+
+The Dashboard shows estimated active calories from completed Workout Records for today, the current Monday–Sunday week, the current calendar month, the current calendar year, and all retained history. The estimate uses the saved plan snapshot’s work/rest duration, target intensity, and the latest body-weight record on or before each session date, falling back to the current profile weight. In-progress records and future-dated records are excluded. These are transparent product heuristics, not wearable measurements, medical guidance, or a calorie allowance.
+
 ## Shipped workout planning
 
 - Create, view, edit, and delete one-workout Workout Plans.
+- Create, view, edit, and delete Programs that contain an ordered list of existing Workout Plans.
+- Select only unassigned plans when building a Program, remove or reorder selected plans, and create new plans from the Program flow with automatic assignment.
+- Save a new plan and immediately start another one without leaving its Program context; the normal save returns to Program detail.
+- The Program editor keeps already assigned plans out of the existing-plan chooser and offers a “Create a new plan here” action that returns to the Program after automatic assignment.
+- The main New program action opens a modal for quick setup; creating a new plan from that modal hands off to the full plan editor.
+- Plan detail offers Live Tracking in a modal with overall exercise progress, actual-set inputs, a rest countdown, automatic advance to the next exercise, save-progress, and completion actions.
+- Browse Plans and Programs separately on the Workout plans page; open a Program to reach each member plan’s existing detail screen.
+- Deleting a Program keeps its Workout Plans and history; deleting a Workout Plan removes it from any Programs while preserving history.
 - Confirm one Workout Focus: eight body-part categories, four training splits, or Aerobic.
 - Show an optimized local focus illustration in intention preview, plan cards, and plan detail.
 - Suggest a focus from goal and experience, with an editable explanation and explicit confirmation.
@@ -41,6 +53,7 @@ These values are implemented heuristics with rule version `MVP-2026.1`. The How 
 - Choose Easy, Moderate, Hard, or Very hard target intensity; generated prescriptions adjust dose, rest, and target RIR.
 - Copy a complete plan as text, with optional exercise steps, for use outside the local site.
 - Entire plan cards navigate to plan details and include hover/focus treatment. Plan deletion confirms in a modal and leaves history intact.
+- Plan cards show their assigned Program(s), or explicitly show when a plan is not assigned to a Program.
 
 ## Exercise Library
 
@@ -74,6 +87,9 @@ Every exercise includes a local four-frame looping GIF demonstration using the g
 - Display a body-weight trend, an overall session-performance trend, and an accessible performance table capped to the first 12 recorded entries for compactness.
 - Open historical records by record ID even when the source plan has been deleted.
 - Delete an individual saved workout record without deleting its source plan or other records.
+- Show weekly consistency streaks, best streak, current-week workout markers, and encouraging weekly copy on Today.
+- Derive workout-day milestone badges and a 12-week activity history on Progress from completed Workout Records.
+- Show one completion celebration after a newly qualifying standard or Live Tracking workout save.
 
 ## Dashboard schedule browsing
 
@@ -87,10 +103,13 @@ Current hash routes:
 | --- | --- |
 | `#/onboarding` | New or existing profile stepper |
 | `#/` | Dashboard, selected-date schedule, and nearby occurrences |
-| `#/plans` | Workout plan list |
+| `#/plans` | Workout plan list and quick-create program modal |
 | `#/plans/new` | Plan editor |
 | `#/plans/:planId` | Plan detail, progress, effort guidance, and copy actions |
 | `#/plans/:planId/edit` | Existing plan editor |
+| `#/programs/new` | Program editor for naming and selecting existing plans |
+| `#/programs/:programId` | Program detail with ordered member-plan cards |
+| `#/programs/:programId/edit` | Existing program editor |
 | `#/sessions/:planId/:date` | Dated session logger |
 | `#/history/:recordId` | Historical session snapshot |
 | `#/progress` | Weight, history, and performance |
@@ -103,12 +122,12 @@ Desktop uses a fixed sidebar. At widths up to 720px the sidebar becomes a slide-
 
 ## Local persistence
 
-Dexie stores profiles, plans, workout records, and body-weight records in IndexedDB. Live queries refresh the UI after writes. The current database is schema version 1. Clear-all-data is transactional across all four stores.
+Dexie stores profiles, plans, programs, workout records, and body-weight records in IndexedDB. Live queries refresh the UI after writes. The database uses schema version 2; the migration adds the programs store. Clear-all-data is transactional across all five stores.
 
 ## Out of scope or not release-ready
 
 - Accounts, cloud sync, file backup/import, installable PWA behavior, and custom exercises/media.
-- Weekly program grouping and history-based exercise selection.
+- Program-level scheduling, rest-day rules, next-workout recommendations, and program-level progress.
 - Expert-reviewed exercise demonstrations, formal content approval/attribution metadata, and media retry behavior.
 - Runtime validation of arbitrary persisted IndexedDB data, schema migrations, and stale-tab revision conflicts.
 - Browser-level automated journeys and a complete mobile/accessibility audit.

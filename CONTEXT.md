@@ -9,7 +9,7 @@ This file owns the project vocabulary. The current implementation snapshot below
 - React 19 + TypeScript + Vite client application.
 - React Router `HashRouter`; routes work from a static host without server rewrites.
 - Dexie-backed IndexedDB database named `form-fitness-planner`.
-- One singleton profile, saved plans, workout records, and body-weight records.
+- One singleton profile, saved plans, workout programs, workout records, and body-weight records.
 - 46 built-in Exercises: 38 strength-oriented entries and 8 aerobic entries.
 - Local four-frame looping GIF demonstrations for every Exercise, using grayscale anatomy with warm working-muscle accents.
 - Local focus illustrations for body areas, splits, and aerobic focus.
@@ -24,6 +24,8 @@ This file owns the project vocabulary. The current implementation snapshot below
 - How it works documentation covers estimate formulas, terms, sources, supported inputs, and safety boundaries.
 - A standalone calculator estimates calories, macros, and BMI without changing saved planner data.
 - Saved Workout Records can be deleted from session or history detail. Plan deletion preserves remaining historical records; Profile settings can clear all local data and reload onboarding.
+- Gamification derives weekly consistency streaks, workout-day milestones, Today markers, Progress history, and completion celebrations from saved completed records.
+- Dashboard energy tracking derives estimated calories burned from completed workout records across today, this week, this month, this year, and all retained history.
 
 ## Profile and goals
 
@@ -41,6 +43,9 @@ Body weight divided by height squared in metres. It is displayed separately from
 
 **Daily Nutrition Targets**  
 Estimated calories and protein, carbohydrate, and fat grams for a day. The current implementation uses a Mifflin–St Jeor-style BMR, activity multipliers, fixed goal adjustments, and macro heuristics under rule version `MVP-2026.1`. The How it works page documents sources and safety boundaries; these are product heuristics, not medical advice.
+
+**Estimated Workout Calories**  
+An approximate active-calorie total derived from completed Workout Records using the plan snapshot’s prescribed work/rest duration, target intensity, and the most recent body weight on or before the session date. It is a progress signal, not a wearable measurement or dietary prescription.
 
 **Estimate Calculator**
 
@@ -84,8 +89,20 @@ The latest logged recurring session’s measured result against the plan’s Tar
 **Workout Session**  
 A dated use of a Workout Plan. The current implementation stores the first explicit save or completion as a Workout Record rather than materializing an infinite recurrence series.
 
+**Workout Program**
+An ordered collection of existing Workout Plans for organizing related sessions, such as a Push/Pull/Legs routine. A plan belongs to at most one program; the program editor offers only unassigned plans, keeps current members in the order list, and can create and automatically attach a new plan in the current program flow. A program is not itself a session, does not have its own schedule, and does not change plan logging or historical records. The current UI calls programs “Programs” and lets each member open its normal plan detail.
+
 **Workout Record**  
 The persisted record for a dated session. It stores status (`in_progress` or `completed`), completion time, revision, actual Set Records, and a snapshot of the plan and exercise metadata used at that time. A record can be deleted independently from session or history detail.
+
+**Weekly Consistency Streak**
+A run of Monday–Sunday calendar weeks with at least one qualifying completed workout day. The current week remains pending until its first workout; rest days do not break an active week.
+
+**Qualifying Workout Day**
+A distinct local `sessionDate` from a completed Workout Record that is not later than today. Duplicate plans or repeated saves on the same date count once; in-progress records and future dates do not qualify.
+
+**Gamification Milestone**
+A derived badge for reaching a distinct workout-day total or best consecutive active-week threshold. Milestones are calculated from history rather than persisted as a separate reward ledger.
 
 **Set Record**  
 One optional actual observation tied to a snapshot prescription and set number. Reps or duration, load in kilograms, and RIR are independent fields. Blank values remain unknown; they are not copied from the prescription or converted to zero.
@@ -132,5 +149,6 @@ After two comparable completed sessions, repeated burden signals reduce the next
 - There are no accounts, authentication, server APIs, cloud sync, or cross-device recovery.
 - Custom exercises and custom media are not supported.
 - The app ships generated GIF demonstrations, but they are not expert-reviewed and do not include formal attribution/content-approval metadata.
-- Weekly multi-day program grouping is not modeled; a plan is one repeatable workout.
-- The current local database has one schema version and does not yet perform runtime validation or stale-tab conflict detection.
+- Programs group existing plans for navigation only; plan schedules still determine dashboard occurrences independently.
+- Program-level sequencing, rest days, next-workout logic, and program progress are not modeled.
+- The current local database has schema migrations but does not yet perform runtime validation or stale-tab conflict detection.

@@ -47,13 +47,13 @@ export function HistoryDetail({ data }: { data: PlannerData }) {
         <div className="snapshot-note"><Info size={17} /><p>This is a snapshot of the plan on {formatDateTime(record.planSnapshot.estimate?.calculatedAt ?? now())}. Editing or deleting the source plan won’t rewrite this record.</p></div>
         {error && <p className="form-error global-error" role="alert">{error}</p>}
       </div>
-      {deleteOpen && <DeleteRecordModal recordName={record.planSnapshot.name} deleting={deleting} onCancel={() => setDeleteOpen(false)} onDelete={deleteRecord} />}
+      {deleteOpen && <DeleteRecordModal recordName={record.planSnapshot.name} error={error} deleting={deleting} onCancel={() => setDeleteOpen(false)} onDelete={deleteRecord} />}
     </Page>
   );
 }
 
-export function DeleteRecordModal({ recordName, deleting, onCancel, onDelete }: { recordName: string; deleting: boolean; onCancel: () => void; onDelete: () => void }) {
-  return <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !deleting) onCancel(); }}><div className="delete-data-modal" role="dialog" aria-modal="true" aria-labelledby="delete-record-title"><div className="warning-icon"><Trash2 size={20} /></div><p className="eyebrow">Delete workout record</p><h2 id="delete-record-title">Delete this session?</h2><p>This removes the saved {recordName} record from your history. The workout plan itself will stay unchanged.</p><div className="modal-actions"><button type="button" className="button ghost" onClick={onCancel} disabled={deleting}>Cancel</button><button type="button" className="button danger-button" onClick={onDelete} disabled={deleting}>{deleting ? 'Deleting…' : 'Delete record'}</button></div></div></div>;
+export function DeleteRecordModal({ recordName, error = '', deleting, onCancel, onDelete }: { recordName: string; error?: string; deleting: boolean; onCancel: () => void; onDelete: () => void }) {
+  return <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !deleting) onCancel(); }}><div className="delete-data-modal" role="dialog" aria-modal="true" aria-labelledby="delete-record-title"><div className="warning-icon"><Trash2 size={20} /></div><p className="eyebrow">Delete workout record</p><h2 id="delete-record-title">Delete this session?</h2><p>This removes the saved {recordName} record from your history. The workout plan itself will stay unchanged.</p>{error && <p className="form-error" role="alert">{error}</p>}<div className="modal-actions"><button type="button" className="button ghost" onClick={onCancel} disabled={deleting} autoFocus>Cancel</button><button type="button" className="button danger-button" onClick={onDelete} disabled={deleting}>{deleting ? 'Deleting…' : 'Delete record'}</button></div></div></div>;
 }
 
 function HistoryExercise({ prescription, index, record }: { prescription: WorkoutRecord['planSnapshot']['prescriptions'][number]; index: number; record: WorkoutRecord }) {

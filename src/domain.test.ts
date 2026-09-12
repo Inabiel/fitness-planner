@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { calculateEstimates, occurrenceAfter, occurrenceBefore, occursOn, suggestArea, type Profile, type WorkoutPlan } from './domain';
+import { calculateEstimates, occurrenceAfter, occurrenceBefore, occursOn, removePlanFromProgram, suggestArea, type Profile, type WorkoutPlan, type WorkoutProgram } from './domain';
 
 const profile: Profile = {
   id: 'profile', name: 'Alex', age: 30, sex: 'female', heightCm: 170, weightKg: 70,
@@ -37,5 +37,10 @@ describe('fitness rules', () => {
   it('suggests a transparent focus without using history', () => {
     expect(suggestArea('build-muscle', 'beginner').area).toBe('full-body');
     expect(suggestArea('build-muscle', 'advanced').area).toBe('legs');
+  });
+
+  it('removes a deleted plan from program membership', () => {
+    const program: WorkoutProgram = { id: 'program', name: 'Strength', planIds: ['plan', 'other-plan'], revision: 1, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' };
+    expect(removePlanFromProgram(program, 'plan').planIds).toEqual(['other-plan']);
   });
 });

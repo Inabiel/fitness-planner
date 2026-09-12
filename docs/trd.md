@@ -1,6 +1,6 @@
 # Technical Requirements Document — Form Fitness Planner
 
-Status: current implementation and deployment baseline. Last reconciled: 2026-09-12. This document describes the code that exists today; unresolved hardening work is listed at the end.
+Status: current implementation and deployment baseline. Last reconciled: 2026-09-13. This document describes the code that exists today; unresolved hardening work is listed at the end.
 
 ## Architecture
 
@@ -30,7 +30,7 @@ Exact package versions are governed by package.json and package-lock.json.
 | --- | --- |
 | src/app/App.tsx | Reads live planner data and selects onboarding or authenticated routes. |
 | src/domain.ts | TypeScript domain types, labels, dates, estimates, focus mapping, schedule matching, and planned volume. |
-| src/data/db.ts | Dexie database, CRUD helpers, clear-all transaction, and usePlanner live query. |
+| src/data/db.ts | Dexie database, plan/program CRUD helpers, clear-all transaction, and usePlanner live query. |
 | src/data/exercises.ts | Static Exercise Library and curated popularity ranks. |
 | src/features/profile | Onboarding stepper, profile settings, form conversion, and validation guards. |
 | src/features/about | Formula, terminology, source, supported-input, and safety-boundary documentation. |
@@ -38,8 +38,9 @@ Exact package versions are governed by package.json and package-lock.json.
 | src/features/plans | Plan list/editor/detail, focus previews, illustration assets, presets, and progression heuristics. |
 | src/features/sessions | Dated session logger, plan snapshot creation, and historical record detail. |
 | src/features/progress | Body-weight entry/chart, workout history, performance trend chart, and performance table. |
+| src/features/gamification | Shared Today consistency card and Progress milestone/history surfaces. |
 | src/features/exercises | Persisted Custom Exercise Order with arrow and drag-and-drop reorder behavior. |
-| src/shared | App shell, page/field/empty-state/snackbar primitives, formatters, progress metric/chart, workout text export, and basic validation. |
+| src/shared | App shell, page/field/empty-state/snackbar primitives, formatters, progress and gamification calculations/charts, workout text export, and basic validation. |
 | src/styles.css | Central visual system, responsive layout, hover states, focus states, modal styling, and reduced-motion rules. |
 
 Feature index files re-export screen entry points. They provide stable import boundaries without adding a state-management layer.
@@ -51,11 +52,14 @@ The application uses hash routes so a static host does not need to rewrite unkno
 | Route | Component | Responsibility |
 | --- | --- | --- |
 | #/onboarding | Onboarding | New or existing profile stepper and final confirmation. |
-| #/ | Dashboard | Selected-date schedule, earlier/upcoming occurrences, date navigation, estimates, BMI, quick links, and responsive shell. |
-| #/plans | Plans | Saved plan cards and empty state. |
-| #/plans/new | PlanEditor | New plan form, focus selection, presets, library, prescriptions, and save. |
-| #/plans/:planId | PlanDetail | Focus, recurring progress trend, sequence, effort guidance, estimate, logging action, optional-step text export, recalculate, and delete. |
+| #/ | Dashboard | Selected-date schedule, earlier/upcoming occurrences, date navigation, estimates, BMI, energy totals, quick links, and responsive shell. |
+| #/plans | Plans | Program-priority view, quick-create program modal, saved plan cards with membership status, and empty state. |
+| #/plans/new | PlanEditor | New plan form, focus selection, presets, library, prescriptions, save, save-and-add-another, and optional return/attachment to a Program via `programId`. |
+| #/plans/:planId | PlanDetail | Focus, recurring progress trend, sequence, effort guidance, estimate, logging actions, Live Tracking modal, optional-step text export, recalculate, and delete. |
 | #/plans/:planId/edit | PlanEditor | Existing plan editing. |
+| #/programs/new | ProgramEditor | New program name, member-plan selection, and ordering. |
+| #/programs/:programId | ProgramDetail | Program summary and ordered member-plan cards linking to plan detail. |
+| #/programs/:programId/edit | ProgramEditor | Existing program editing. |
 | #/sessions/:planId/:date | Session | Dated occurrence logger and completion action. |
 | #/history/:recordId | HistoryDetail | Historical snapshot independent of a current plan. |
 | #/progress | Progress | Body-weight entry/trend, workout history, performance trend, and performance observations. |
@@ -79,28 +83,30 @@ The core model is in src/domain.ts:
 - SetRecord: prescription ID, one-based set number, optional actual reps or duration, optional load, and optional RIR.
 - WorkoutRecord: source plan ID, session date, status, completion time, revision, plan snapshot, and set records.
 - BodyWeightRecord: date, weight, timestamps, and revision.
+- WorkoutProgram: name, ordered `planIds`, timestamps, and revision. It is an organization record only; it has no schedule, prescriptions, sessions, or snapshot relationship.
 
 WorkoutFocus is a union of eight body-part focuses, four training splits, and aerobic. PrimaryTargetArea remains on plans for compatibility and is derived through targetAreaForFocus for non-body-part focuses.
 
 ## Persistence
 
-FitnessDatabase uses Dexie database name form-fitness-planner and schema version 1:
+FitnessDatabase uses Dexie database name form-fitness-planner and schema version 2:
 
 | Store | Current schema |
 | --- | --- |
 | profiles | id |
 | plans | id, updatedAt |
+| programs | id, updatedAt |
 | records | id, compound sourcePlanId + sessionDate index, sessionDate |
 | weights | date |
 
-usePlanner reads the four stores with Promise.all and returns a live-query value. Plans, records, and weights are ordered in the query for recent-first display.
+usePlanner reads the five stores with Promise.all and returns a live-query value. Plans, programs, records, and weights are ordered in the query for recent-first display.
 
-CRUD helpers use put/update/delete, including deleting an individual WorkoutRecord by ID. clearAllData uses one read-write transaction to clear profiles, plans, records, and weights together. The UI reports failures in the main write paths and keeps active form state in React memory.
+CRUD helpers use put/update/delete, including deleting an individual WorkoutRecord by ID. Deleting a plan also removes its ID from every program in the same transaction; deleting a program leaves its plans and records untouched. clearAllData uses one read-write transaction to clear profiles, plans, programs, records, and weights together. The UI reports failures in the main write paths and keeps active form state in React memory.
 
 Important current limitations:
 
 - The compound records index is indexed but not declared unique. The UI finds an existing record by plan/date, but the database does not enforce that invariant.
-- There is no Dexie migration beyond version 1.
+- The version 2 migration adds the programs store but there is no runtime shape validation.
 - Stored values are trusted as TypeScript objects; no runtime schema validation currently protects reads.
 - Revision fields are incremented but stale-tab writes are not rejected.
 - Plan deletion is intentionally non-cascading so records remain available.
@@ -117,8 +123,14 @@ Important current limitations:
 7. History detail resolves by record ID and does not require the source plan to exist.
 8. Deleting a record removes only that saved WorkoutRecord and returns to Progress.
 9. Explicit plan recalculation updates only the selected plan estimate.
+10. Program editing stores an ordered list of existing plan IDs. Program detail resolves those IDs against current plans; missing plans are skipped, and plan deletion cleans up references.
+11. The Program editor excludes plans already assigned to any program. “Create a new plan here” saves the program draft, opens PlanEditor with `programId`, and attaches the saved plan after creation. A new plan can save and reopen PlanEditor with the same `programId` for repeated creation; the normal save returns to Program detail.
+12. Live Tracking reuses the WorkoutRecord set model. It starts from the current local date, saves in-progress or completed records, uses the active prescription’s rest seconds for the countdown, and advances to the next known exercise when rest ends.
+13. After a completed save, standard Session and Live Tracking compare the derived gamification summary before and after persistence and show feedback only for newly crossed rewards. Dashboard and Progress recalculate the summary from live records and the current local date.
 
 The dashboard resolves the selected date directly from the current local calendar. occurrenceBefore and occurrenceAfter search for the closest valid occurrence on each side, inspect up to 366 days for recurring plans, and return a one-time plan only when its configured date is on that side. The UI caps each side at three occurrences and links each card to the exact plan/date session route.
+
+Programs do not participate in dashboard scheduling in the current release. Each member plan remains independently schedulable and appears as its own dashboard occurrence; program membership is context shown from the Plans page and Program detail.
 
 ## Domain rules currently implemented
 
@@ -135,6 +147,10 @@ calculateEstimates uses:
 - carbohydrate as the remaining calories.
 
 The result carries rule version MVP-2026.1. How it works documents the formulas, source links, supported inputs, and safety boundaries; these remain implementation heuristics and need qualified health review before release. CalculatePage runs the same rules in temporary React state and does not write to IndexedDB.
+
+### Workout energy tracking
+
+`src/shared/calorieBurn.ts` derives active-calorie estimates from completed Workout Records. Planned active seconds use duration prescriptions directly or three seconds per planned rep, planned rest excludes the final set of each prescription, and exercise transitions add 30 seconds between prescriptions; sessions have a ten-minute minimum estimate. MET-like intensity factors are Easy 3.5, Moderate 5, Hard 6.5, and Very hard 8; active calories use `(MET - 1) × 3.5 × weightKg × minutes / 200`. Weight selection uses the latest valid BodyWeightRecord on or before the session date, falling back to the current Profile weight. Aggregates use local calendar boundaries and exclude in-progress or future-dated records. The result is an estimate for progress context, not a clinical or wearable value.
 
 ### Focus and prescription selection
 
@@ -208,6 +224,10 @@ The workflow grants contents read, pages write, and id-token write permissions a
 References: [GitHub custom Pages workflows](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages) and [Vite static deployment](https://vite.dev/guide/static-deploy.html).
 
 ## Technical roadmap
+
+### Gamification and streaks — implemented
+
+See [Gamification and streaks](gamification.md) for the calculation contract and acceptance cases. `src/shared/gamification.ts` derives distinct qualifying days, Monday-based weekly streaks, milestone eligibility, weekly markers, and the 12-week history from completed Workout Records and an explicit local date. No new persisted counters or schema migration are used. Both completion paths provide consistent feedback after successful saves; deletion, corrections, future dates, and local calendar boundaries are covered by the same derived calculation.
 
 ### Before production release
 

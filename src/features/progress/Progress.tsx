@@ -1,23 +1,31 @@
-import { useState, type FormEvent } from 'react';
+import { useCallback, useState, type FormEvent } from 'react';
 import { ArrowRight, BarChart3, Check, Clock3, Dumbbell, HeartPulse, Plus, Trash2, TrendingUp } from 'lucide-react';
 import { Link } from 'react-router';
 import { dateIsValid, localDate, type BodyWeightRecord, type WorkoutRecord } from '../../domain';
 import { deleteBodyWeight, now, saveBodyWeight, type PlannerData } from '../../data/db';
+import { getGamificationSummary } from '../../shared/gamification';
 import { formatShortDate } from '../../shared/formatters';
 import { getProgressPoints } from '../../shared/progress';
 import { ChartMarker, ProgressLineChart } from '../../shared/progressChart';
-import { EmptyState, Field, Page } from '../../shared/ui';
+import { EmptyState, Field, Page, Snackbar } from '../../shared/ui';
+import { useLocalToday } from '../../shared/useLocalToday';
 import { positiveNumber } from '../../shared/validation';
+import { GamificationProgress } from '../gamification';
 
 export function Progress({ data }: { data: PlannerData }) {
   const [date, setDate] = useState(localDate());
   const [weight, setWeight] = useState('');
   const [message, setMessage] = useState('');
+  const [snackbar, setSnackbar] = useState<{ message: string; tone: 'success' | 'error' } | null>(null);
+  const today = useLocalToday();
   const weights = [...data.weights].sort((a, b) => a.date.localeCompare(b.date));
   const performancePoints = getProgressPoints(data.records);
+  const gamification = getGamificationSummary(data.records, today);
+  const dismissSnackbar = useCallback(() => setSnackbar(null), []);
 
   async function saveWeight(event: FormEvent) {
     event.preventDefault();
+    setSnackbar(null);
     if (!dateIsValid(date) || !positiveNumber(weight)) {
       setMessage('Enter a valid date and a positive weight.');
       return;
@@ -35,9 +43,10 @@ export function Progress({ data }: { data: PlannerData }) {
     try {
       await saveBodyWeight(record);
       setWeight('');
-      setMessage(existing ? 'Measurement updated.' : 'Measurement saved.');
+      setMessage('');
+      setSnackbar({ message: existing ? 'Measurement updated.' : 'Measurement saved.', tone: 'success' });
     } catch {
-      setMessage('Could not save this measurement. Try again.');
+      setSnackbar({ message: 'Could not save this measurement. Try again.', tone: 'error' });
     }
   }
 
@@ -45,7 +54,7 @@ export function Progress({ data }: { data: PlannerData }) {
     try {
       await deleteBodyWeight(item.date);
     } catch {
-      setMessage('Could not delete this measurement. Try again.');
+      setSnackbar({ message: 'Could not delete this measurement. Try again.', tone: 'error' });
     }
   }
 
@@ -77,6 +86,8 @@ export function Progress({ data }: { data: PlannerData }) {
         {performancePoints.length ? <div className="performance-chart"><div className="section-heading"><div><p className="eyebrow">Session trend</p><h3>Progress toward each target</h3></div><span className="unit-label">%</span></div><ProgressLineChart points={performancePoints} ariaLabel="Workout performance trend" /></div> : null}
         <PerformanceTable records={data.records} />
       </section>
+      <GamificationProgress summary={gamification} />
+      {snackbar && <Snackbar message={snackbar.message} tone={snackbar.tone} onDismiss={dismissSnackbar} />}
     </Page>
   );
 }

@@ -1,17 +1,19 @@
 import { useCallback, useState } from 'react';
 import { CalendarDays, Check, CircleCheck, Trash2 } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router';
-import { FOCUS_LABELS, INTENSITY_LABELS, dateIsValid, plannedVolume, type Exercise, type Prescription, type SetRecord, type WorkoutRecord } from '../../domain';
+import { FOCUS_LABELS, INTENSITY_LABELS, dateIsValid, localDate, plannedVolume, type Exercise, type Prescription, type SetRecord, type WorkoutRecord } from '../../domain';
 import type { PlannerData } from '../../data/db';
 import { deleteWorkoutRecord, now, saveWorkoutRecord, uid, updatePlanPrescriptions } from '../../data/db';
 import { EXERCISES } from '../../data/exercises';
+import { getGamificationCelebration, getGamificationFeedback, getGamificationSummary, type GamificationCelebration } from '../../shared/gamification';
 import { formatLongDate } from '../../shared/formatters';
 import { EmptyState, Page, Snackbar } from '../../shared/ui';
+import { GamificationCelebrationModal } from '../gamification';
 import { assessPlanIntensity, adjustPrescriptionsForIntensity, recommendNextIntensity, recommendNextPrescriptions } from '../plans/recommendations';
 import { makePlanSnapshot } from './snapshot';
 import { DeleteRecordModal } from './HistoryDetail';
 
-type SetValueField = 'actualReps' | 'actualDurationSeconds' | 'loadKg' | 'rir';
+export type SetValueField = 'actualReps' | 'actualDurationSeconds' | 'loadKg' | 'rir';
 
 export function Session({ data }: { data: PlannerData }) {
   const { planId, date } = useParams();
@@ -22,6 +24,8 @@ export function Session({ data }: { data: PlannerData }) {
   const [saving, setSaving] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [snackbar, setSnackbar] = useState<{ message: string; tone: 'success' | 'error' } | null>(null);
+  const [celebration, setCelebration] = useState<GamificationCelebration | null>(null);
+  const [celebrationDetail, setCelebrationDetail] = useState('');
   const dismissSnackbar = useCallback(() => setSnackbar(null), []);
 
   if (!selectedPlan || !date || !dateIsValid(date)) {
@@ -59,6 +63,8 @@ export function Session({ data }: { data: PlannerData }) {
   async function save(status: WorkoutRecord['status']) {
     setSaving(true);
     setSnackbar(null);
+    setCelebration(null);
+    setCelebrationDetail('');
     const record: WorkoutRecord = {
       id: existing?.id ?? uid(),
       sourcePlanId: plan.id,
@@ -74,6 +80,19 @@ export function Session({ data }: { data: PlannerData }) {
       await saveWorkoutRecord(record);
       if (status === 'completed') {
         const recordsForRecommendation = data.records.filter((item) => item.id !== record.id).concat(record);
+        const beforeGamification = getGamificationSummary(data.records, localDate());
+        const afterGamification = getGamificationSummary(recordsForRecommendation, localDate());
+        const gamificationMessage = getGamificationFeedback(beforeGamification, afterGamification);
+        const gamificationCelebration = getGamificationCelebration(beforeGamification, afterGamification);
+        const withGamification = (message: string) => gamificationMessage ? `${gamificationMessage} ${message}` : message;
+        const showCompletion = (message: string, tone: 'success' | 'error') => {
+          if (tone === 'success' && gamificationCelebration) {
+            setCelebration(gamificationCelebration);
+            setCelebrationDetail(message);
+            return;
+          }
+          setSnackbar({ message: withGamification(message), tone });
+        };
         const currentIntensity = plan.intensity ?? 'moderate';
         const nextIntensity = recommendNextIntensity(plan, recordsForRecommendation);
         const intensityChanged = plan.intensity !== undefined && nextIntensity !== currentIntensity;
@@ -85,19 +104,19 @@ export function Session({ data }: { data: PlannerData }) {
         if (changed || intensityChanged) {
           try {
             await updatePlanPrescriptions(plan.id, nextPrescriptions, plan.revision + 1, intensityChanged ? nextIntensity : undefined);
-            setSnackbar({ message: intensityChanged
+            showCompletion(intensityChanged
               ? `Session complete. You exceeded the ${INTENSITY_LABELS[currentIntensity]} target twice, so this plan is now ${INTENSITY_LABELS[nextIntensity]}.`
-              : 'Session complete. Your next recommendation was adjusted from recent performance.', tone: 'success' });
+              : 'Session complete. Your next recommendation was adjusted from recent performance.', 'success');
           } catch {
-            setSnackbar({ message: 'Session complete. Your next recommendation could not be updated.', tone: 'error' });
+            showCompletion('Session complete. Your next recommendation could not be updated.', 'error');
           }
         } else {
           const intensityResult = assessPlanIntensity(plan, recordsForRecommendation).result;
-          setSnackbar({ message: intensityResult === 'above'
+          showCompletion(intensityResult === 'above'
             ? `Session complete. You exceeded the ${INTENSITY_LABELS[currentIntensity]} target.`
             : intensityResult === 'on-target'
               ? `Session complete. You achieved the ${INTENSITY_LABELS[currentIntensity]} target.`
-              : 'Session complete. Nice work.', tone: 'success' });
+              : 'Session complete. Nice work.', 'success');
         }
       } else {
         setSnackbar({ message: 'Progress saved.', tone: 'success' });
@@ -140,12 +159,13 @@ export function Session({ data }: { data: PlannerData }) {
         <aside className="session-side"><div className="side-card"><p className="eyebrow">Session note</p><h3>Presence over perfection.</h3><p className="muted">You can finish a session without recording a single set. Actual performance is optional, not assumed.</p></div><div className="side-card"><p className="eyebrow">Planned work sets</p><strong className="big-number">{plannedVolume(snapshot.prescriptions)}</strong><span className="muted">sets scheduled in this session</span></div></aside>
       </div>
       {snackbar && <Snackbar message={snackbar.message} tone={snackbar.tone} onDismiss={dismissSnackbar} />}
+      {celebration && <GamificationCelebrationModal celebration={celebration} detail={celebrationDetail} onClose={() => { setCelebration(null); setCelebrationDetail(''); }} />}
       {deleteOpen && <DeleteRecordModal recordName={snapshot.name} deleting={saving} onCancel={() => setDeleteOpen(false)} onDelete={deleteRecord} />}
     </Page>
   );
 }
 
-function SessionExercise({ prescription, exercise, index, getSet, updateSet }: { prescription: Prescription; exercise: Exercise; index: number; getSet: (prescriptionId: string, setNumber: number) => SetRecord; updateSet: (prescriptionId: string, setNumber: number, field: SetValueField, value: string) => void }) {
+export function SessionExercise({ prescription, exercise, index, getSet, updateSet }: { prescription: Prescription; exercise: Exercise; index: number; getSet: (prescriptionId: string, setNumber: number) => SetRecord; updateSet: (prescriptionId: string, setNumber: number, field: SetValueField, value: string) => void }) {
   const doseLabel = prescription.dose.kind === 'reps' ? 'reps' : 'sec';
   const loadLabel = prescription.recommendedLoadKg === 0 ? 'bodyweight' : prescription.recommendedLoadKg ? `${prescription.recommendedLoadKg} kg` : 'choose a weight/resistance';
   const effortLabel = prescription.targetRir === undefined ? '' : ` · target ${prescription.targetRir} RIR (reps left)`;

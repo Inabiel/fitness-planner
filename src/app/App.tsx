@@ -6,7 +6,7 @@ import { CalculatePage } from '../features/calculate';
 import { ExerciseOrder } from '../features/exercises';
 import { HistoryDetail, Session } from '../features/sessions';
 import { Onboarding, ProfileSettings } from '../features/profile';
-import { PlanDetail, PlanEditor, Plans } from '../features/plans';
+import { PlanDetail, PlanEditor, Plans, ProgramDetail, ProgramEditor } from '../features/plans';
 import { Progress } from '../features/progress';
 import { AppShell, LoadingScreen } from '../shared/ui';
 
@@ -36,6 +36,9 @@ function AuthenticatedApp({ data }: { data: AuthenticatedPlannerData }) {
         <Route path="/plans/new" element={<PlanEditor data={data} />} />
         <Route path="/plans/:planId" element={<PlanDetail data={data} />} />
         <Route path="/plans/:planId/edit" element={<PlanEditor data={data} />} />
+        <Route path="/programs/new" element={<ProgramEditor data={data} />} />
+        <Route path="/programs/:programId" element={<ProgramDetail data={data} />} />
+        <Route path="/programs/:programId/edit" element={<ProgramEditor data={data} />} />
         <Route path="/sessions/:planId/:date" element={<Session data={data} />} />
         <Route path="/history/:recordId" element={<HistoryDetail data={data} />} />
         <Route path="/progress" element={<Progress data={data} />} />

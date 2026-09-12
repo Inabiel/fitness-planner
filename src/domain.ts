@@ -93,6 +93,19 @@ export interface WorkoutPlan {
   estimate?: EstimateSnapshot;
 }
 
+export interface WorkoutProgram {
+  id: string;
+  name: string;
+  planIds: string[];
+  revision: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export function removePlanFromProgram(program: WorkoutProgram, planId: string): WorkoutProgram {
+  return { ...program, planIds: program.planIds.filter((id) => id !== planId) };
+}
+
 export interface PlanSnapshot {
   name: string;
   primaryTargetArea: Area;

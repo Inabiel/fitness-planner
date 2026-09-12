@@ -1,7 +1,9 @@
 # Repository Review — Form Fitness Planner
 
-Review date: 2026-09-12  
+Review date: 2026-09-13
 Review scope: current source, product documents, tests, static assets, and deployment setup.
+
+This review includes the organization-only Workout Program capability: Programs group ordered references to existing plans, while plan scheduling, sessions, and history remain unchanged. Program-level scheduling and progression remain roadmap work.
 
 ## Executive summary
 
@@ -20,7 +22,7 @@ Overall score: 7.0 / 10
 | Architecture | 7.5 | Appropriate React/Vite/Dexie split with modest feature boundaries and no unnecessary backend. |
 | UX and accessibility baseline | 7.5 | Clear flows, custom modals, labels, focus, responsive drawer, hover motion, and reduced-motion support. |
 | Data integrity | 6.5 | History snapshots and clear-all transaction are good; runtime validation, migrations, uniqueness, and conflict handling are missing. |
-| Test confidence | 5.0 | Twenty pure-logic tests pass, but there are no browser journeys or persistence integration tests. |
+| Test confidence | 5.0 | Twenty-four pure-logic tests pass, but there are no browser journeys or persistence integration tests. |
 | Content readiness | 5.0 | The static library is broad and now has local GIF demonstrations, but generated output still needs movement/content review. |
 | Deployment readiness | 6.5 | A Pages workflow and relative asset paths now exist; branch/settings assumptions remain. |
 
@@ -105,7 +107,7 @@ Recommendation: keep the source, rationale, supported-input behavior, and safety
 
 ### 3. Persistence has a good shape but weak protection at the storage boundary
 
-Evidence: Dexie is on schema version 1; persisted objects are trusted as TypeScript values; there are no migrations, runtime parsers, or stale-tab conflict checks. Revision numbers are incremented but not compared before writes. The compound plan/date record index is not declared unique.
+Evidence: Dexie is on schema version 2 with a programs-store migration; persisted objects are trusted as TypeScript values; runtime parsers and stale-tab conflict checks are still absent. Revision numbers are incremented but not compared before writes. The compound plan/date record index is not declared unique.
 
 Impact: a future model change or malformed IndexedDB value can break rendering or calculations. Multiple tabs can overwrite each other. Duplicate occurrence records are not structurally impossible.
 
@@ -113,7 +115,7 @@ Recommendation: add small Zod parsers for each stored root entity, introduce exp
 
 ### 4. The test suite proves rules, not the application
 
-Evidence: the current suite has 20 Vitest tests for estimates/scheduling/suggestions, ordering, presets, progression, export formatting, progress metrics, and shared profile bounds. package.json includes a browser test command, but there are no Playwright spec files or Playwright configuration. There are no IndexedDB integration tests.
+Evidence: the current suite has 24 Vitest tests for estimates/scheduling/suggestions, ordering, presets, progression, export formatting, progress metrics, gamification, and shared profile bounds. package.json includes a browser test command, but there are no Playwright spec files or Playwright configuration. There are no IndexedDB integration tests.
 
 Impact: regressions in routes, forms, modals, snapshots, deletion, mobile navigation, and reload behavior can pass CI unnoticed.
 

@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { Check, Info, Trash2, UserRound } from 'lucide-react';
 import {
   ACTIVITY_LABELS,
@@ -9,7 +9,7 @@ import {
   type Profile,
 } from '../../domain';
 import { clearAllData, now, saveProfile } from '../../data/db';
-import { Field, Page } from '../../shared/ui';
+import { Field, Page, Snackbar } from '../../shared/ui';
 import { formToCalculationProfile, isActivityLevel, isCompleteProfileForm, isExperience, isGoal, isSex, PROFILE_LIMITS, profileToForm } from './form';
 
 export function ProfileSettings({ profile }: { profile: Profile }) {
@@ -18,8 +18,10 @@ export function ProfileSettings({ profile }: { profile: Profile }) {
   const [deleting, setDeleting] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [message, setMessage] = useState('');
+  const [snackbar, setSnackbar] = useState<{ message: string; tone: 'success' | 'error' } | null>(null);
   const [deleteError, setDeleteError] = useState('');
   const estimate = isCompleteProfileForm(form) ? calculateEstimates(formToCalculationProfile(form)) : null;
+  const dismissSnackbar = useCallback(() => setSnackbar(null), []);
 
   useEffect(() => {
     if (!deleteModalOpen) return;
@@ -41,6 +43,7 @@ export function ProfileSettings({ profile }: { profile: Profile }) {
 
     setSaving(true);
     setMessage('');
+    setSnackbar(null);
     try {
       await saveProfile({
         id: 'profile',
@@ -50,9 +53,9 @@ export function ProfileSettings({ profile }: { profile: Profile }) {
         updatedAt: now(),
         revision: profile.revision + 1,
       });
-      setMessage('Profile saved. Existing plan estimates stay as saved.');
+      setSnackbar({ message: 'Profile saved. Existing plan estimates stay as saved.', tone: 'success' });
     } catch {
-      setMessage('Could not save your profile. Try again.');
+      setSnackbar({ message: 'Could not save your profile. Try again.', tone: 'error' });
     } finally {
       setSaving(false);
     }
@@ -115,13 +118,14 @@ export function ProfileSettings({ profile }: { profile: Profile }) {
         </aside>
       </div>
       {deleteModalOpen && <DeleteDataModal deleting={deleting} error={deleteError} onCancel={() => setDeleteModalOpen(false)} onDelete={deleteAllData} />}
+      {snackbar && <Snackbar message={snackbar.message} tone={snackbar.tone} onDismiss={dismissSnackbar} />}
     </Page>
   );
 }
 
 function DeleteDataModal({ deleting, error, onCancel, onDelete }: { deleting: boolean; error: string; onCancel: () => void; onDelete: () => void }) {
   return (
-    <div className="modal-backdrop">
+    <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !deleting) onCancel(); }}>
       <div className="delete-data-modal" role="dialog" aria-modal="true" aria-labelledby="delete-data-modal-title">
         <div className="warning-icon"><Trash2 size={20} /></div>
         <p className="eyebrow">Danger zone</p>

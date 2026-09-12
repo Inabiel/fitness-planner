@@ -146,6 +146,7 @@ export function Onboarding({ existing }: OnboardingProps) {
         <section className="step-card" aria-labelledby="onboarding-title">
           <div className="step-progress"><span>Getting started</span><span>0{step + 1} / 0{ONBOARDING_STEPS.length}</span></div>
           <form onSubmit={submitProfile}>
+            <div className="step-content" key={step}>
             <div className="step-heading">
               <p className="eyebrow">Your fitness profile</p>
               <h2 id="onboarding-title">{title}</h2>
@@ -158,6 +159,7 @@ export function Onboarding({ existing }: OnboardingProps) {
             <div className="form-actions">
               {step > 0 && <button type="button" className="button ghost" onClick={() => setStep((current) => current - 1)}><ArrowLeft size={16} /> Back</button>}
               {step < LAST_STEP ? <button type="button" className="button primary next-button" onClick={nextStep}>Continue <ArrowRight size={16} /></button> : <button type="submit" className="button primary next-button" disabled={saving}>{saving ? 'Saving…' : existing ? 'Save changes' : 'Open my planner'} <ArrowRight size={16} /></button>}
+            </div>
             </div>
           </form>
         </section>
@@ -190,7 +192,7 @@ function OnboardingStepper({ currentStep }: { currentStep: number }) {
 
 function ReviewConfirmationModal({ existing, form, error, saving, onCancel, onConfirm }: { existing: boolean; form: ProfileForm; error: string; saving: boolean; onCancel: () => void; onConfirm: () => void }) {
   return (
-    <div className="modal-backdrop">
+    <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !saving) onCancel(); }}>
       <div className="review-confirmation-modal" role="dialog" aria-modal="true" aria-labelledby="review-confirmation-title">
         <div className="confirmation-icon"><Check size={20} /></div>
         <p className="eyebrow">Final review</p>

@@ -2,13 +2,16 @@
 
 Form is a local-first personal fitness planner for creating repeatable workouts, following dated sessions, logging results, and reviewing progress.
 
-It runs entirely in the browser. Profile data, plans, workout records, and body-weight entries are stored locally in IndexedDB; there is no account, backend, or cloud sync.
+It runs entirely in the browser. Profile data, plans, programs, workout records, and body-weight entries are stored locally in IndexedDB; there is no account, backend, or cloud sync.
 
 ## Features
 
 - Four-step onboarding: baseline, context, goals, and final review confirmation.
 - BMI and daily calorie/macronutrient estimates based on the current profile.
 - Workout plans focused on body areas, Push/Pull-style splits, or aerobic training.
+- Programs that organize existing workout plans into an ordered routine; each plan remains independently schedulable and loggable.
+- Program creation can select only unassigned plans or create and automatically attach new plans; the main action opens a quick-create modal and the plan editor can save and add another.
+- Live Tracking opens a workout modal with set inputs, exercise progress, rest countdowns, automatic exercise advance, and save/finish actions.
 - Focus-aware exercise recommendations and six presets:
   - Easy One
   - Strength Base
@@ -29,6 +32,8 @@ It runs entirely in the browser. Profile data, plans, workout records, and body-
 - A standalone calculator estimates calories, macros, and BMI without changing saved data.
 - Copyable workout plans with optional exercise steps for use in WhatsApp or elsewhere.
 - Body-weight chart, workout history, performance trend graph, and recorded performance table.
+- Weekly consistency streaks with fire styling, workout-day milestone badges, a 12-week activity history, and completion celebrations derived from saved workouts.
+- Estimated calories burned from completed workouts, summarized for today, this week, this month, this year, and all retained history.
 - Snackbar confirmations for copy, save-progress, and session-completion actions.
 - Responsive desktop sidebar and mobile navigation drawer.
 - Modal confirmation for profile deletion, plan deletion, and workout-record deletion.
@@ -106,11 +111,12 @@ The Vite build uses relative asset paths and HashRouter, so it works at a reposi
 - [Product requirements](docs/prd.md)
 - [Technical requirements](docs/trd.md)
 - [Repository review and roadmap](docs/review.md)
+- [Gamification and streaks](docs/gamification.md)
 
 ## Current limitations
 
 - Exercise GIFs are generated educational aids; movement review, attribution metadata, and a formal content-approval workflow are not shipped.
 - Nutrition calculations and progression recommendations are transparent MVP heuristics with documented sources and safety boundaries, not clinical or medical guidance.
-- IndexedDB is currently schema version 1 without runtime data parsing, migration coverage, or stale-tab conflict detection.
+- IndexedDB is currently schema version 2 without runtime data parsing, complete migration coverage, or stale-tab conflict detection.
 - Vitest covers pure domain, ordering, and recommendation rules. Browser-level Playwright journeys are not yet implemented.
-- Weekly multi-day programs, accounts, cloud sync, file backup/import, and custom exercises are outside the current scope.
+- Program-level scheduling, rest-day rules, next-workout recommendations, accounts, cloud sync, file backup/import, and custom exercises are outside the current scope.

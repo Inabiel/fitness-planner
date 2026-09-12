@@ -3,12 +3,20 @@ import { Activity, ArrowLeft, ArrowRight, CalendarDays, CircleCheck, Dumbbell, F
 import { Link } from 'react-router';
 import { FOCUS_LABELS, INTENSITY_LABELS, calculateEstimates, formatSchedule, localDate, occurrenceAfter, occurrenceBefore, occursOn, plannedVolume, type Profile, type WorkoutPlan } from '../../domain';
 import type { PlannerData } from '../../data/db';
+import { getCalorieBurnSummary } from '../../shared/calorieBurn';
+import { getGamificationSummary } from '../../shared/gamification';
 import { formatLongDate, formatShortDate, getGreeting } from '../../shared/formatters';
+import { useLocalToday } from '../../shared/useLocalToday';
 import { EmptyState, Page } from '../../shared/ui';
+import { WeeklyConsistencyCard } from '../gamification';
+import { CalorieBurnCard } from '../calories/CalorieBurnCard';
 
 export function Dashboard({ data }: { data: PlannerData }) {
   const { profile, plans, records, weights } = data;
+  const today = useLocalToday();
   const [selectedDate, setSelectedDate] = useState(localDate());
+  const gamification = getGamificationSummary(records, today);
+  const calorieBurn = getCalorieBurnSummary(records, { weightKg: profile?.weightKg ?? 0 }, weights, today);
   const estimate = profile ? calculateEstimates(profile) : null;
   const selectedPlans = plans.filter((plan) => occursOn(plan, selectedDate));
   const beforePlans = plans.map((plan) => ({ plan, date: occurrenceBefore(plan, selectedDate) })).filter((item): item is ScheduledOccurrence => Boolean(item.date)).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 3);
@@ -51,6 +59,8 @@ export function Dashboard({ data }: { data: PlannerData }) {
         </div>
         <aside className="dashboard-side">
           <EstimateCard estimate={estimate} profile={profile} />
+          <WeeklyConsistencyCard summary={gamification} />
+          <CalorieBurnCard summary={calorieBurn} />
           <div className="side-card quick-card">
             <div className="section-heading"><div><p className="eyebrow">Quick log</p><h3>Keep the signal</h3></div><Activity size={19} /></div>
             <Link className="quick-row" to="/progress">

@@ -1,9 +1,9 @@
-import { useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { Check, ChevronDown, ChevronUp, Dumbbell, GripVertical } from 'lucide-react';
 import { AREA_LABELS, AREAS, type Area, type Exercise, type Profile } from '../../domain';
 import { now, saveProfile } from '../../data/db';
 import { EXERCISES } from '../../data/exercises';
-import { Page } from '../../shared/ui';
+import { Page, Snackbar } from '../../shared/ui';
 import { moveExerciseInOrder, normalizeExerciseOrder, reorderExerciseInOrder } from './order';
 
 export function ExerciseOrder({ profile }: { profile: Profile }) {
@@ -16,10 +16,11 @@ export function ExerciseOrder({ profile }: { profile: Profile }) {
   const [search, setSearch] = useState('');
   const [filterArea, setFilterArea] = useState<Area | 'aerobic' | 'all'>('all');
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState('');
+  const [snackbar, setSnackbar] = useState<{ message: string; tone: 'success' | 'error' } | null>(null);
+  const dismissSnackbar = useCallback(() => setSnackbar(null), []);
 
   function move(id: string, direction: -1 | 1) {
-    setMessage('');
+    setSnackbar(null);
     setOrderWithAnimation(moveExerciseInOrder(orderRef.current, id, direction));
   }
 
@@ -55,7 +56,7 @@ export function ExerciseOrder({ profile }: { profile: Profile }) {
   }
 
   function reorder(sourceId: string, targetId: string, before: boolean) {
-    setMessage('');
+    setSnackbar(null);
     setOrderWithAnimation(reorderExerciseInOrder(orderRef.current, sourceId, targetId, before));
   }
 
@@ -67,15 +68,22 @@ export function ExerciseOrder({ profile }: { profile: Profile }) {
 
   async function saveOrder() {
     setSaving(true);
-    setMessage('');
+    setSnackbar(null);
     try {
       await saveProfile({ ...profile, exerciseOrder: order, updatedAt: now(), revision: profile.revision + 1 });
-      setMessage('Custom order saved for future plans.');
+      setSnackbar({ message: 'Custom order saved for future plans.', tone: 'success' });
     } catch {
-      setMessage('Could not save the custom order. Try again.');
+      setSnackbar({ message: 'Could not save the custom order. Try again.', tone: 'error' });
     } finally {
       setSaving(false);
     }
+  }
+
+  function resetOrder() {
+    const nextOrder = normalizeExerciseOrder(undefined);
+    orderRef.current = nextOrder;
+    setOrder(nextOrder);
+    setSnackbar(null);
   }
 
   const visibleExercises = order
@@ -99,8 +107,7 @@ export function ExerciseOrder({ profile }: { profile: Profile }) {
             })}
           </div>
           <div className="exercise-order-actions">
-            {message && <span className="save-message" role="status">{message}</span>}
-            <button type="button" className="button ghost" onClick={() => { setOrder(normalizeExerciseOrder(undefined)); setMessage(''); }}>Reset to popularity</button>
+            <button type="button" className="button ghost" onClick={resetOrder}>Reset to popularity</button>
             <button type="button" className="button primary" onClick={saveOrder} disabled={saving}>{saving ? 'Saving…' : 'Save order'} <Check size={16} /></button>
           </div>
         </section>
@@ -112,6 +119,7 @@ export function ExerciseOrder({ profile }: { profile: Profile }) {
           </section>
         </aside>
       </div>
+      {snackbar && <Snackbar message={snackbar.message} tone={snackbar.tone} onDismiss={dismissSnackbar} />}
     </Page>
   );
 }

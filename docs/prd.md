@@ -1,6 +1,6 @@
 # Product Requirements Document — Form Fitness Planner
 
-Status: implemented MVP baseline with explicit release gaps. Last reconciled: 2026-09-12. The domain vocabulary lives in [CONTEXT.md](../CONTEXT.md), shipped boundaries are listed in [MVP scope](mvp-scope.md), and the implementation is described in [TRD](trd.md).
+Status: implemented MVP baseline with explicit release gaps. Last reconciled: 2026-09-13. The domain vocabulary lives in [CONTEXT.md](../CONTEXT.md), shipped boundaries are listed in [MVP scope](mvp-scope.md), and the implementation is described in [TRD](trd.md).
 
 ## Product purpose
 
@@ -14,11 +14,13 @@ The intended user has access to a standard gym and wants a low-friction personal
 
 1. complete onboarding and see a profile-based estimate;
 2. create, edit, schedule, and delete a focused workout plan;
-3. choose from a searchable, sortable, paginated exercise library;
-4. follow and log a dated workout session;
-5. see historical snapshots survive plan changes;
-6. track body weight and exercise observations locally after reload;
-7. inspect how estimates are calculated or try a temporary estimate without changing saved data.
+3. organize existing workout plans into an ordered program;
+4. choose from a searchable, sortable, paginated exercise library;
+5. follow and log a dated workout session;
+6. see historical snapshots survive plan changes;
+7. track body weight and exercise observations locally after reload;
+8. see weekly consistency, milestones, and activity history derived from completed workouts;
+9. inspect how estimates are calculated or try a temporary estimate without changing saved data.
 
 ## Current user journey
 
@@ -28,10 +30,12 @@ The intended user has access to a standard gym and wants a low-friction personal
 4. Plan creation starts with a focus-aware recommendation and supports body-part, split, and aerobic focus.
 5. The person can apply a preset, edit the generated prescriptions, or add individual exercises from the library.
 6. Plan detail shows the focus illustration, recurring performance trend, sequence, planned volume, saved estimate, effort guidance, logging entry point, copy actions, and delete action.
-7. A dated session accepts optional actual dose, load, and RIR per set. Completion is always possible without performance input.
-8. Progress and history show weight observations, recorded sessions, snapshots, and entered exercise results.
-9. Profile settings allow profile edits and a modal-confirmed clear-all operation that returns to onboarding.
-10. The How it works page explains formulas, terms, sources, supported inputs, and safety boundaries; the Calculator page estimates locally without saving or changing planner data.
+7. The person can create a Program from a quick modal, select and order unassigned plans or create and automatically attach new plans in that flow, save and add another plan without leaving the Program context, and open each member plan from Program detail. Program deletion does not delete plans.
+8. From plan detail, Live Tracking opens a modal showing the exercise sequence. The person can enter set results, complete an exercise, see its rest countdown, and advance automatically to the next exercise or save progress and exit.
+9. A dated session accepts optional actual dose, load, and RIR per set. Completion is always possible without performance input and celebrates newly qualifying consistency milestones.
+10. Progress and history show weight observations, recorded sessions, snapshots, entered exercise results, milestone badges, and a 12-week activity history.
+11. Profile settings allow profile edits and a modal-confirmed clear-all operation that returns to onboarding.
+12. The How it works page explains formulas, terms, sources, supported inputs, and safety boundaries; the Calculator page estimates locally without saving or changing planner data.
 
 ## Functional requirements and implementation status
 
@@ -42,6 +46,7 @@ The intended user has access to a standard gym and wants a low-friction personal
 | P03 | Estimates | Implemented as MVP-2026.1 heuristics. BMI is separate; calories and macros are daily values. Formulas, constants, terms, sources, supported inputs, and safety boundaries are documented in How it works; qualified health review remains required. |
 | P04 | Workout volume | Implemented as planned work-set count per displayed session. It is clearly separated from actual logged workload; weekly volume and a clinical guidance model are not implemented. |
 | P05 | Plan management | Implemented. Plans require a name, confirmed focus, valid schedule, and at least one prescription. Delete uses a custom modal and leaves history. |
+| P05a | Program management | Implemented. Programs have a name and ordered references to at-most-one-program plans. The editor hides assigned plans from the chooser, can create and attach a new plan, and allows removal/reordering; plans remain independently editable, schedulable, loggable, and deletable. |
 | P06 | Scheduling | Implemented. Plans are one date or recurring weekday from startsOn; the dashboard shows the selected date, up to three nearest earlier occurrences, and up to three nearest upcoming occurrences. Date controls open the exact matching session route. |
 | P07 | Focus and suggestions | Implemented. Supports eight areas, four splits, and Aerobic. Goal/experience suggestion is editable and confirmation is required. |
 | P08 | Focus graphics | Implemented with optimized local WebP assets, labels, and alt text. The assets illustrate focus; they do not claim intensity or anatomical percentages. |
@@ -54,6 +59,8 @@ The intended user has access to a standard gym and wants a low-friction personal
 | P15 | Local persistence | Implemented with Dexie/IndexedDB and live queries. Clear-all is transactional. Runtime shape validation, migrations, and stale-tab conflict handling remain absent. |
 | P16 | Effort adaptation | Implemented as a deterministic heuristic. Two recent completed sessions with recorded dose drive Increase, Decrease, Hold, or Trend building guidance, target-intensity advancement for recurring plans, and future prescription adjustment. |
 | P17 | Calculation transparency and temporary calculator | Implemented. How it works documents estimate formulas, terms, sources, supported inputs, and safety boundaries; Calculator runs the same rules locally without persisting inputs or changing planner data. |
+| P18 | Gamification and streaks | Implemented. Completed records derive distinct workout days, Monday-based weekly streaks, milestone badges, weekly dashboard markers, 12-week Progress history, and one-time completion feedback for both logging paths. |
+| P19 | Workout energy tracking | Implemented. The Dashboard derives estimated calories burned from completed records and shows today, current week, month, year, and all-history totals using saved plan duration, target intensity, and body weight. The values are explicitly estimates, not wearable or medical measurements. |
 
 ## Interaction and quality requirements
 
@@ -119,7 +126,7 @@ The selected date is the primary schedule query. The dashboard separately finds 
 | --- | --- | --- |
 | R01 | Generated exercise media needs content review | Every exercise now has a local demonstration, but incorrect movement depiction could create trust or safety risk without expert review. |
 | R02 | Nutrition rules remain product heuristics awaiting qualified health review | Incorrect personalized guidance can create health and trust risk even with documented sources and safety boundaries. |
-| R04 | IndexedDB is version 1 with no runtime schema validation or migration tests | Future model changes can threaten stored user history. |
+| R04 | IndexedDB is version 2 with a programs migration but no runtime schema validation or migration tests | Future model changes can threaten stored user history. |
 | R05 | No browser test suite is present | Core route, IndexedDB, modal, mobile, and snapshot behavior are not regression-protected in a real browser. |
 | R06 | Recommendation matching is exercise-ID based | A plan containing the same exercise twice can conflate prescription history. |
 | R07 | The media generation npm script points to a missing scripts/generate-media.mjs | The documented/package workflow is incomplete. |
@@ -127,9 +134,13 @@ The selected date is the primary schedule query. The dashboard separately finds 
 
 ## Deferred product scope
 
-Accounts, cloud synchronization, file backup/import, custom exercises/media, weekly multi-day programs, social features, analytics, AI coaching, medical diagnosis, and automatic changes to historical records remain out of scope.
+Accounts, cloud synchronization, file backup/import, custom exercises/media, program-level scheduling, rest-day rules, next-workout recommendations, social features, analytics, AI coaching, medical diagnosis, and automatic changes to historical records remain out of scope.
 
 ## Roadmap
+
+### Gamification and streaks — implemented
+
+The [gamification and streaks specification](gamification.md) is implemented. It rewards recorded participation, permits rest days, derives results from existing Workout Records, and uses the same completion rules for standard logging and Live Tracking. Exact counting rules, correction behavior, and acceptance examples remain the source of truth.
 
 ### Release hardening
 
@@ -140,11 +151,12 @@ Accounts, cloud synchronization, file backup/import, custom exercises/media, wee
 
 ### Product depth
 
-1. Fix duplicate-exercise prescription matching and expand recommendation tests around missing data, duration, load, RIR, and mixed sessions.
-2. Add a transparent weekly volume model only after defining units and recovery assumptions.
-3. Add trend views that distinguish load, dose, RIR, and adherence instead of collapsing them into one score.
-4. Add accessible touch/keyboard alternatives for exercise reordering.
-5. Break dense screen components and CSS blocks into reviewable reusable units as the UI grows.
+1. Add program-level scheduling, rest-day rules, next-workout recommendations, and program progress only after the organization-only model proves useful.
+2. Fix duplicate-exercise prescription matching and expand recommendation tests around missing data, duration, load, RIR, and mixed sessions.
+3. Add a transparent weekly volume model only after defining units and recovery assumptions.
+4. Add trend views that distinguish load, dose, RIR, and adherence instead of collapsing them into one score.
+5. Add accessible touch/keyboard alternatives for exercise reordering.
+6. Break dense screen components and CSS blocks into reviewable reusable units as the UI grows.
 
 ### Scale only if demanded
 
