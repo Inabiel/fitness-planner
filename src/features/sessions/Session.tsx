@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import { CalendarDays, Check, CircleCheck, Trash2 } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router';
-import { FOCUS_LABELS, INTENSITY_LABELS, dateIsValid, localDate, plannedVolume, type Exercise, type Prescription, type SetRecord, type WorkoutRecord } from '../../domain';
+import { FOCUS_LABELS, INTENSITY_LABELS, dateIsValid, isPlanRecurring, localDate, plannedVolume, type Exercise, type Prescription, type SetRecord, type WorkoutRecord } from '../../domain';
 import type { PlannerData } from '../../data/db';
 import { deleteWorkoutRecord, now, saveWorkoutRecord, uid, updatePlanPrescriptions } from '../../data/db';
 import { EXERCISES } from '../../data/exercises';
@@ -94,7 +94,7 @@ export function Session({ data }: { data: PlannerData }) {
           setSnackbar({ message: withGamification(message), tone });
         };
         const currentIntensity = plan.intensity ?? 'moderate';
-        const nextIntensity = recommendNextIntensity(plan, recordsForRecommendation);
+        const nextIntensity = recommendNextIntensity(plan, recordsForRecommendation, isPlanRecurring(plan, data.programs));
         const intensityChanged = plan.intensity !== undefined && nextIntensity !== currentIntensity;
         const nextPrescriptions = intensityChanged
           ? adjustPrescriptionsForIntensity(plan.prescriptions, currentIntensity, nextIntensity)

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ArrowRight, Check, CircleCheck, Clipboard, Clock3, Dumbbell, Flame, Info, Pencil, Timer, Trash2 } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router';
-import { AREA_LABELS, FOCUS_LABELS, INTENSITY_LABELS, calculateEstimates, formatSchedule, localDate, occursOn, plannedVolume, snapshotEstimate, type EstimateSnapshot, type Exercise, type Prescription, type WorkoutIntensity } from '../../domain';
+import { AREA_LABELS, FOCUS_LABELS, INTENSITY_LABELS, calculateEstimates, formatPlanSchedule, isPlanRecurring, localDate, occurrenceAfter, occursOn, plannedVolume, snapshotEstimate, type EstimateSnapshot, type Exercise, type Prescription, type WorkoutIntensity } from '../../domain';
 import { deletePlan as removePlan, now, updatePlanEstimate, type AuthenticatedPlannerData } from '../../data/db';
 import { EXERCISES } from '../../data/exercises';
 import { formatDateTime } from '../../shared/formatters';
@@ -52,9 +52,12 @@ export function PlanDetail({ data }: { data: AuthenticatedPlannerData }) {
   const focus = plan.focus ?? plan.primaryTargetArea;
   const intensity = plan.intensity ?? 'moderate';
   const today = localDate();
-  const canStartToday = occursOn(plan, today);
+  const rollingProgram = data.programs.find((program) => program.schedule?.kind === 'rolling' && program.planIds.includes(plan.id));
+  const canStartToday = occursOn(plan, today, data.programs);
+  const fallbackSessionDate = rollingProgram?.schedule?.startsOn ?? (plan.schedule.kind === 'date' ? plan.schedule.date : plan.schedule.startsOn);
+  const logSessionDate = canStartToday ? today : rollingProgram ? (occurrenceAfter(plan, today, data.programs) ?? fallbackSessionDate) : fallbackSessionDate;
   const previewEstimate = calculateEstimates(data.profile);
-  const progressPoints = plan.schedule.kind === 'weekly' ? getProgressPoints(data.records, plan.id) : [];
+  const progressPoints = isPlanRecurring(plan, data.programs) ? getProgressPoints(data.records, plan.id) : [];
 
   async function deletePlan() {
     setSaving(true);
@@ -90,7 +93,7 @@ export function PlanDetail({ data }: { data: AuthenticatedPlannerData }) {
   async function copyPlan() {
     setSaving(true);
     try {
-      await copyToClipboard(formatWorkoutPlanText(plan, EXERCISES, includeSteps));
+      await copyToClipboard(formatWorkoutPlanText(plan, EXERCISES, includeSteps, data.programs));
       setCopyOpen(false);
       setCopied(true);
       setSnackbar({ message: 'Workout plan copied to clipboard.', tone: 'success' });
@@ -104,14 +107,14 @@ export function PlanDetail({ data }: { data: AuthenticatedPlannerData }) {
   return (
     <Page
       title={plan.name}
-      subtitle={`${FOCUS_LABELS[focus]} focus · ${INTENSITY_LABELS[intensity]} intensity · ${formatSchedule(plan.schedule)}`}
+      subtitle={`${FOCUS_LABELS[focus]} focus · ${INTENSITY_LABELS[intensity]} intensity · ${formatPlanSchedule(plan, data.programs)}`}
       backTo="/plans"
       action={<div className="page-actions"><Link className="button secondary" to={`/plans/${plan.id}/edit`}><Pencil size={16} /> Edit</Link><button className="button secondary" type="button" onClick={openCopyModal}>{copied ? <Check size={16} /> : <Clipboard size={16} />}{copied ? 'Copied' : 'Copy plan text'}</button>{canStartToday && <Link className="button primary" to={`/sessions/${plan.id}/${today}`}><Dumbbell size={16} /> Start today</Link>}</div>}
     >
       <div className="detail-layout">
         <div className="detail-main">
           <section className="focus-hero"><div className="focus-copy"><p className="eyebrow on-dark">Workout focus</p><h2>{FOCUS_LABELS[focus]}</h2><p>This is the intention you confirmed for the plan. Your exercises can work other areas too.</p></div><FocusIllustration focus={focus} /></section>
-          {plan.schedule.kind === 'weekly' && <section className="detail-section progress-card"><div className="section-heading"><div><p className="eyebrow">Recurring progress</p><h2>Performance trend</h2></div><span className="unit-label">% of target</span></div>{progressPoints.length ? <ProgressLineChart points={progressPoints} ariaLabel={`${plan.name} performance trend`} /> : <EmptyState compact icon={<Flame size={21} />} title="Your trend starts after one completed session" body="Log actual reps or duration in a recurring session to see progress here." />}</section>}
+          {isPlanRecurring(plan, data.programs) && <section className="detail-section progress-card"><div className="section-heading"><div><p className="eyebrow">Recurring progress</p><h2>Performance trend</h2></div><span className="unit-label">% of target</span></div>{progressPoints.length ? <ProgressLineChart points={progressPoints} ariaLabel={`${plan.name} performance trend`} /> : <EmptyState compact icon={<Flame size={21} />} title="Your trend starts after one completed session" body="Log actual reps or duration in a recurring session to see progress here." />}</section>}
           <section className="detail-section">
             <div className="section-heading"><div><p className="eyebrow">The sequence</p><h2>{plan.prescriptions.length} exercises</h2></div><span className="volume-badge"><Flame size={15} /> {plannedVolume(plan.prescriptions)} planned work sets</span></div>
             <p className="section-explainer">Planned volume means the total number of work sets in this session. It is guidance, not your actual workload.</p>
@@ -128,7 +131,7 @@ export function PlanDetail({ data }: { data: AuthenticatedPlannerData }) {
           <div className="side-card">
             <p className="eyebrow">Plan actions</p>
             <button className="side-action" type="button" onClick={() => setLiveTrackingOpen(true)}><Timer size={17} /><span><strong>Live tracking</strong><small>Track each exercise in a focused modal with rest countdowns between movements.</small></span><ArrowRight size={16} /></button>
-            <Link className="side-action" to={`/sessions/${plan.id}/${canStartToday ? today : (plan.schedule.kind === 'date' ? plan.schedule.date : plan.schedule.startsOn)}`}><CircleCheck size={17} /><span><strong>Log workout result</strong><small>Record reps, duration, weight/resistance, and RIR (reps in reserve) for effort guidance.</small></span><ArrowRight size={16} /></Link>
+            <Link className="side-action" to={`/sessions/${plan.id}/${logSessionDate}`}><CircleCheck size={17} /><span><strong>Log workout result</strong><small>Record reps, duration, weight/resistance, and RIR (reps in reserve) for effort guidance.</small></span><ArrowRight size={16} /></Link>
             <button className="side-action" onClick={() => setDeleteOpen(true)}><Trash2 size={17} /><span><strong>Delete this plan</strong><small>Recorded history will stay safe.</small></span><ArrowRight size={16} /></button>
           </div>
         </aside>

@@ -78,6 +78,8 @@ export type Schedule =
   | { kind: 'date'; date: string }
   | { kind: 'weekly'; weekday: number; startsOn: string };
 
+export type ProgramSchedule = { kind: 'rolling'; startsOn: string; intervalDays: number };
+
 export interface WorkoutPlan {
   id: string;
   name: string;
@@ -97,6 +99,7 @@ export interface WorkoutProgram {
   id: string;
   name: string;
   planIds: string[];
+  schedule?: ProgramSchedule;
   revision: number;
   createdAt: string;
   updatedAt: string;
@@ -241,30 +244,65 @@ export function weekdayFor(value: string): number {
   return weekday === 0 ? 7 : weekday;
 }
 
-export function occursOn(plan: WorkoutPlan, date: string): boolean {
+export function occursOn(plan: WorkoutPlan, date: string, programs: readonly WorkoutProgram[] = []): boolean {
   if (!dateIsValid(date)) return false;
+  const rollingProgram = rollingProgramForPlan(plan.id, programs);
+  if (rollingProgram) return rollingProgramPlanOn(rollingProgram, date) === plan.id;
   if (plan.schedule.kind === 'date') return plan.schedule.date === date;
   return date >= plan.schedule.startsOn && weekdayFor(date) === plan.schedule.weekday;
 }
 
-export function occurrenceBefore(plan: WorkoutPlan, date: string): string | null {
+export function occurrenceBefore(plan: WorkoutPlan, date: string, programs: readonly WorkoutProgram[] = []): string | null {
   if (!dateIsValid(date)) return null;
-  if (plan.schedule.kind === 'date') return dateIsValid(plan.schedule.date) && plan.schedule.date < date ? plan.schedule.date : null;
+  if (plan.schedule.kind === 'date' && !rollingProgramForPlan(plan.id, programs)) return dateIsValid(plan.schedule.date) && plan.schedule.date < date ? plan.schedule.date : null;
   for (let offset = 1; offset <= 366; offset += 1) {
     const candidate = shiftLocalDate(date, -offset);
-    if (occursOn(plan, candidate)) return candidate;
+    if (occursOn(plan, candidate, programs)) return candidate;
   }
   return null;
 }
 
-export function occurrenceAfter(plan: WorkoutPlan, date: string): string | null {
+export function occurrenceAfter(plan: WorkoutPlan, date: string, programs: readonly WorkoutProgram[] = []): string | null {
   if (!dateIsValid(date)) return null;
-  if (plan.schedule.kind === 'date') return dateIsValid(plan.schedule.date) && plan.schedule.date > date ? plan.schedule.date : null;
+  if (plan.schedule.kind === 'date' && !rollingProgramForPlan(plan.id, programs)) return dateIsValid(plan.schedule.date) && plan.schedule.date > date ? plan.schedule.date : null;
   for (let offset = 1; offset <= 366; offset += 1) {
     const candidate = shiftLocalDate(date, offset);
-    if (occursOn(plan, candidate)) return candidate;
+    if (occursOn(plan, candidate, programs)) return candidate;
   }
   return null;
+}
+
+export function rollingProgramPlanOn(program: WorkoutProgram, date: string): string | null {
+  const schedule = program.schedule;
+  if (!schedule || !program.planIds.length || !dateIsValid(date) || !dateIsValid(schedule.startsOn) || !Number.isInteger(schedule.intervalDays) || schedule.intervalDays < 1 || date < schedule.startsOn) return null;
+  const elapsedDays = calendarDaysBetween(schedule.startsOn, date);
+  if (elapsedDays % schedule.intervalDays !== 0) return null;
+  return program.planIds[(elapsedDays / schedule.intervalDays) % program.planIds.length] ?? null;
+}
+
+export function isPlanRecurring(plan: WorkoutPlan, programs: readonly WorkoutProgram[] = []): boolean {
+  return plan.schedule.kind === 'weekly' || Boolean(rollingProgramForPlan(plan.id, programs));
+}
+
+export function formatProgramSchedule(schedule?: ProgramSchedule): string {
+  if (!schedule) return 'Each plan keeps its own schedule';
+  const dayLabel = schedule.intervalDays === 1 ? 'day' : 'days';
+  return `Moving rotation · every ${schedule.intervalDays} ${dayLabel} · from ${schedule.startsOn}`;
+}
+
+export function formatPlanSchedule(plan: WorkoutPlan, programs: readonly WorkoutProgram[] = []): string {
+  const rollingSchedule = rollingProgramForPlan(plan.id, programs)?.schedule;
+  return rollingSchedule ? formatProgramSchedule(rollingSchedule) : formatSchedule(plan.schedule);
+}
+
+function rollingProgramForPlan(planId: string, programs: readonly WorkoutProgram[]): WorkoutProgram | undefined {
+  return programs.find((program) => program.schedule?.kind === 'rolling' && program.planIds.includes(planId));
+}
+
+function calendarDaysBetween(start: string, end: string): number {
+  const [startYear, startMonth, startDay] = start.split('-').map(Number);
+  const [endYear, endMonth, endDay] = end.split('-').map(Number);
+  return Math.round((Date.UTC(endYear, endMonth - 1, endDay) - Date.UTC(startYear, startMonth - 1, startDay)) / 86400000);
 }
 
 function shiftLocalDate(value: string, days: number): string {

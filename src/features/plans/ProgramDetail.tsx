@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Dumbbell, Layers, Pencil, Plus, Trash2 } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router';
-import type { WorkoutPlan } from '../../domain';
+import { formatProgramSchedule, type WorkoutPlan } from '../../domain';
 import { deleteProgram, type AuthenticatedPlannerData } from '../../data/db';
 import { EmptyState, Page } from '../../shared/ui';
 import { PlanCard } from './PlansPage';
@@ -44,8 +44,8 @@ export function ProgramDetail({ data }: { data: AuthenticatedPlannerData }) {
   }
 
   return (
-    <Page title={program.name} subtitle={`${memberPlans.length} ${workoutLabel} organized in this program.`} backTo="/plans" action={<div className="page-actions"><Link className="button primary" to={`/plans/new?programId=${program.id}`}><Plus size={16} /> Add workout plan</Link><Link className="button secondary" to={`/programs/${program.id}/edit`}><Pencil size={16} /> Edit</Link><button className="button danger-button" type="button" onClick={() => setDeleteOpen(true)} disabled={saving}><Trash2 size={16} /> Delete</button></div>}>
-      <section className="program-hero"><div><p className="eyebrow on-dark">Workout program</p><h2>{memberPlans.length ? 'Your sessions, in one place.' : 'Add workouts whenever you’re ready.'}</h2><p>Programs organize plans without changing their schedules, logging, or history.</p></div><Layers size={54} aria-hidden="true" /></section>
+      <Page title={program.name} subtitle={`${memberPlans.length} ${workoutLabel} organized in this program${program.schedule ? ` · ${formatProgramSchedule(program.schedule)}` : ''}.`} backTo="/plans" action={<div className="page-actions"><Link className="button primary" to={`/plans/new?programId=${program.id}`}><Plus size={16} /> Add workout plan</Link><Link className="button secondary" to={`/programs/${program.id}/edit`}><Pencil size={16} /> Edit</Link><button className="button danger-button" type="button" onClick={() => setDeleteOpen(true)} disabled={saving}><Trash2 size={16} /> Delete</button></div>}>
+      <section className="program-hero"><div><p className="eyebrow on-dark">Workout program</p><h2>{memberPlans.length ? 'Your sessions, in one place.' : 'Add workouts whenever you’re ready.'}</h2><p>{program.schedule ? 'The ordered plans rotate on this moving-day schedule. Rest days appear automatically between sessions.' : 'Programs organize plans without changing their schedules, logging, or history.'}</p></div><Layers size={54} aria-hidden="true" /></section>
       <section className="detail-section program-workouts-section"><div className="section-heading"><div><p className="eyebrow">Program workouts</p><h2>Open a session plan</h2></div><span className="count-badge">{memberPlans.length}</span></div>
         {memberPlans.length ? <div className="plan-grid">{memberPlans.map((plan) => <PlanCard key={plan.id} plan={plan} records={data.records} programs={data.programs} />)}</div> : <EmptyState compact icon={<Dumbbell size={21} />} title="No workout plans in this program" body="Edit the program to add plans you’ve already built." action={<Link className="button secondary small" to={`/programs/${program.id}/edit`}>Add workout plans</Link>} />}
       </section>

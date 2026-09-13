@@ -46,8 +46,8 @@ The intended user has access to a standard gym and wants a low-friction personal
 | P03 | Estimates | Implemented as MVP-2026.1 heuristics. BMI is separate; calories and macros are daily values. Formulas, constants, terms, sources, supported inputs, and safety boundaries are documented in How it works; qualified health review remains required. |
 | P04 | Workout volume | Implemented as planned work-set count per displayed session. It is clearly separated from actual logged workload; weekly volume and a clinical guidance model are not implemented. |
 | P05 | Plan management | Implemented. Plans require a name, confirmed focus, valid schedule, and at least one prescription. Delete uses a custom modal and leaves history. |
-| P05a | Program management | Implemented. Programs have a name and ordered references to at-most-one-program plans. The editor hides assigned plans from the chooser, can create and attach a new plan, and allows removal/reordering; plans remain independently editable, schedulable, loggable, and deletable. |
-| P06 | Scheduling | Implemented. Plans are one date or recurring weekday from startsOn; the dashboard shows the selected date, up to three nearest earlier occurrences, and up to three nearest upcoming occurrences. Date controls open the exact matching session route. |
+| P05a | Program management | Implemented. Programs have a name and ordered references to at-most-one-program plans. The editor hides assigned plans from the chooser, can create and attach a new plan, allows removal/reordering, and optionally configures a moving-day rotation; plans remain independently editable, loggable, and deletable. |
+| P06 | Scheduling | Implemented. Plans are one date or recurring weekday from `startsOn`; Programs can additionally rotate ordered plans every N days from a start date. The dashboard shows the selected date, up to three nearest earlier occurrences, and up to three nearest upcoming occurrences. Date controls open the exact matching session route. |
 | P07 | Focus and suggestions | Implemented. Supports eight areas, four splits, and Aerobic. Goal/experience suggestion is editable and confirmation is required. |
 | P08 | Focus graphics | Implemented with optimized local WebP assets, labels, and alt text. The assets illustrate focus; they do not claim intensity or anatomical percentages. |
 | P09 | Exercise library | Implemented for the MVP. 46 static exercises support search, filters, popularity/name/area/custom sorting, pagination, equipment labels, written instructions, and local four-frame GIF demonstrations. Expert movement review and formal content metadata remain missing. |
@@ -118,7 +118,7 @@ Completed-session progress is the average of each prescription’s actual reps o
 
 ### Dashboard schedule rule
 
-The selected date is the primary schedule query. The dashboard separately finds the nearest valid occurrence before and after that date for each plan, limits each side to three cards, and sorts earlier cards newest-first and upcoming cards oldest-first. Recurring occurrences are searched within a one-year window; one-time plans are returned only when their configured date is on the relevant side. Invalid dates return no occurrence.
+The selected date is the primary schedule query. The dashboard separately finds the nearest valid occurrence before and after that date for each plan, limits each side to three cards, and sorts earlier cards newest-first and upcoming cards oldest-first. Recurring weekday occurrences are searched within a one-year window; moving-day Program occurrences use the Program’s interval and ordered plan list; one-time plans are returned only when their configured date is on the relevant side. Invalid dates return no occurrence.
 
 ## Release gaps and risks
 
@@ -134,7 +134,7 @@ The selected date is the primary schedule query. The dashboard separately finds 
 
 ## Deferred product scope
 
-Accounts, cloud synchronization, file backup/import, custom exercises/media, program-level scheduling, rest-day rules, next-workout recommendations, social features, analytics, AI coaching, medical diagnosis, and automatic changes to historical records remain out of scope.
+Accounts, cloud synchronization, file backup/import, custom exercises/media, completion-driven schedule shifting, program-level progress, social features, analytics, AI coaching, medical diagnosis, and automatic changes to historical records remain out of scope.
 
 ## Roadmap
 
@@ -151,7 +151,7 @@ The [gamification and streaks specification](gamification.md) is implemented. It
 
 ### Product depth
 
-1. Add program-level scheduling, rest-day rules, next-workout recommendations, and program progress only after the organization-only model proves useful.
+1. Add program-level progress and completion-driven schedule shifting after the calendar-based rotation proves useful.
 2. Fix duplicate-exercise prescription matching and expand recommendation tests around missing data, duration, load, RIR, and mixed sessions.
 3. Add a transparent weekly volume model only after defining units and recovery assumptions.
 4. Add trend views that distinguish load, dose, RIR, and adherence instead of collapsing them into one score.

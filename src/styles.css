@@ -348,6 +348,8 @@ select { appearance: auto; }
 .program-modal-header h2 { font-size: 1.35rem; margin-top: 6px; }
 .program-modal-header p:not(.eyebrow) { font-size: 0.78rem; line-height: 1.5; margin-top: 10px; }
 .program-modal-form { margin-top: 20px; }
+.program-modal-schedule { margin-top: 22px; }
+.program-modal-schedule .section-heading { margin-bottom: 14px; }
 .program-modal-plans { margin-top: 22px; }
 .program-modal-plans .section-heading { margin-bottom: 0; }
 .program-modal-plans h3 { font-size: 1rem; margin-top: 5px; }

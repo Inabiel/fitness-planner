@@ -192,9 +192,9 @@ export function assessPlanIntensity(plan: WorkoutPlan, records: WorkoutRecord[])
   return { result, label: 'Target intensity achieved', detail: 'Your latest logged session matched this plan’s target.', completedSessions: completed.filter(recordHasIntensityData).length };
 }
 
-export function recommendNextIntensity(plan: WorkoutPlan, records: WorkoutRecord[]): WorkoutIntensity {
+export function recommendNextIntensity(plan: WorkoutPlan, records: WorkoutRecord[], recurring = plan.schedule.kind === 'weekly'): WorkoutIntensity {
   const current = plan.intensity ?? 'moderate';
-  if (plan.schedule.kind !== 'weekly') return current;
+  if (!recurring) return current;
   const recent = completedPlanRecords(plan.id, records).slice(0, 2);
   if (recent.length < 2 || recent.some((record) => compareRecordIntensity(record, record.planSnapshot.intensity ?? current) !== 'above')) return current;
   return nextIntensity(current) ?? current;

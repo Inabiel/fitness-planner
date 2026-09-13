@@ -1,9 +1,8 @@
 import { ArrowRight, CalendarDays, Dumbbell, FolderPlus, Layers, Plus, Sparkles, Target } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router';
-import { FOCUS_LABELS, INTENSITY_LABELS, formatSchedule, plannedVolume, type WorkoutPlan, type WorkoutProgram, type WorkoutRecord } from '../../domain';
+import { FOCUS_LABELS, INTENSITY_LABELS, formatPlanSchedule, formatProgramSchedule, formatSchedule, plannedVolume, type WorkoutPlan, type WorkoutProgram, type WorkoutRecord } from '../../domain';
 import type { PlannerData } from '../../data/db';
-import { weekdayLabel } from '../../shared/formatters';
 import { EmptyState, Page } from '../../shared/ui';
 import { FocusIllustration } from './FocusIllustration';
 import { ProgramCreateModal } from './ProgramCreateModal';
@@ -58,7 +57,7 @@ function ProgramCard({ program, plans }: { program: WorkoutProgram; plans: Worko
         <div className="card-topline"><span className="area-pill">Program</span><span className="muted">{memberPlans.length} {workoutLabel}</span></div>
         <h2>{program.name}</h2>
         <p className="muted">{memberPlans.length ? memberPlans.map((plan) => plan.name).join(' · ') : 'No workout plans yet'}</p>
-        <div className="program-card-footer"><span>{memberPlans.length ? `${formatSchedule(memberPlans[0].schedule)}${memberPlans.length > 1 ? ' and more' : ''}` : 'Add plans when you’re ready'}</span><span className="text-link">Open program <ArrowRight size={15} /></span></div>
+        <div className="program-card-footer"><span>{program.schedule ? formatProgramSchedule(program.schedule) : memberPlans.length ? `${formatSchedule(memberPlans[0].schedule)}${memberPlans.length > 1 ? ' and more' : ''}` : 'Add plans when you’re ready'}</span><span className="text-link">Open program <ArrowRight size={15} /></span></div>
       </div>
     </Link>
   );
@@ -67,7 +66,7 @@ function ProgramCard({ program, plans }: { program: WorkoutProgram; plans: Worko
 export function PlanCard({ plan, records, programs }: { plan: WorkoutPlan; records: WorkoutRecord[]; programs: WorkoutProgram[] }) {
   const lastRecord = records.find((record) => record.sourcePlanId === plan.id);
   const lastUsedLabel = lastRecord ? `Last used ${lastRecord.sessionDate}` : 'Not used yet';
-  const scheduleLabel = plan.schedule.kind === 'weekly' ? `Every ${weekdayLabel(plan.schedule.weekday)}` : plan.schedule.date;
+  const scheduleLabel = formatPlanSchedule(plan, programs);
   const focus = plan.focus ?? plan.primaryTargetArea;
   const intensity = plan.intensity ?? 'moderate';
   const membership = programs.filter((program) => program.planIds.includes(plan.id)).map((program) => program.name);

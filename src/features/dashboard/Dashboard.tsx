@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Activity, ArrowLeft, ArrowRight, CalendarDays, CircleCheck, Dumbbell, Flame, HeartPulse, Plus, TrendingUp } from 'lucide-react';
 import { Link } from 'react-router';
-import { FOCUS_LABELS, INTENSITY_LABELS, calculateEstimates, formatSchedule, localDate, occurrenceAfter, occurrenceBefore, occursOn, plannedVolume, type Profile, type WorkoutPlan } from '../../domain';
+import { FOCUS_LABELS, INTENSITY_LABELS, calculateEstimates, formatPlanSchedule, localDate, occurrenceAfter, occurrenceBefore, occursOn, plannedVolume, type Profile, type WorkoutPlan } from '../../domain';
 import type { PlannerData } from '../../data/db';
 import { getCalorieBurnSummary } from '../../shared/calorieBurn';
 import { getGamificationSummary } from '../../shared/gamification';
@@ -12,15 +12,15 @@ import { WeeklyConsistencyCard } from '../gamification';
 import { CalorieBurnCard } from '../calories/CalorieBurnCard';
 
 export function Dashboard({ data }: { data: PlannerData }) {
-  const { profile, plans, records, weights } = data;
+  const { profile, plans, programs, records, weights } = data;
   const today = useLocalToday();
   const [selectedDate, setSelectedDate] = useState(localDate());
   const gamification = getGamificationSummary(records, today);
   const calorieBurn = getCalorieBurnSummary(records, { weightKg: profile?.weightKg ?? 0 }, weights, today);
   const estimate = profile ? calculateEstimates(profile) : null;
-  const selectedPlans = plans.filter((plan) => occursOn(plan, selectedDate));
-  const beforePlans = plans.map((plan) => ({ plan, date: occurrenceBefore(plan, selectedDate) })).filter((item): item is ScheduledOccurrence => Boolean(item.date)).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 3);
-  const upcomingPlans = plans.map((plan) => ({ plan, date: occurrenceAfter(plan, selectedDate) })).filter((item): item is ScheduledOccurrence => Boolean(item.date)).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 3);
+  const selectedPlans = plans.filter((plan) => occursOn(plan, selectedDate, programs));
+  const beforePlans = plans.map((plan) => ({ plan, date: occurrenceBefore(plan, selectedDate, programs) })).filter((item): item is ScheduledOccurrence => Boolean(item.date)).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 3);
+  const upcomingPlans = plans.map((plan) => ({ plan, date: occurrenceAfter(plan, selectedDate, programs) })).filter((item): item is ScheduledOccurrence => Boolean(item.date)).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 3);
   const recentWeight = weights[0];
   const firstName = profile?.name.split(' ')[0] ?? 'there';
 
@@ -51,10 +51,10 @@ export function Dashboard({ data }: { data: PlannerData }) {
               body="Try another date, or create a one-time session or recurring plan."
               action={<Link className="button secondary" to="/plans/new"><Plus size={16} /> Create a plan</Link>}
             /> : <div className="schedule-list">
-              {selectedPlans.map((plan) => <ScheduleCard key={plan.id} plan={plan} completed={hasCompletedRecord(records, plan.id, selectedDate)} date={selectedDate} />)}
+              {selectedPlans.map((plan) => <ScheduleCard key={plan.id} plan={plan} programs={programs} completed={hasCompletedRecord(records, plan.id, selectedDate)} date={selectedDate} />)}
             </div>}
-            {beforePlans.length > 0 && <ScheduleWindow title="Before this date" occurrences={beforePlans} records={records} />}
-            {upcomingPlans.length > 0 && <ScheduleWindow title="Coming up" occurrences={upcomingPlans} records={records} />}
+            {beforePlans.length > 0 && <ScheduleWindow title="Before this date" occurrences={beforePlans} records={records} programs={programs} />}
+            {upcomingPlans.length > 0 && <ScheduleWindow title="Coming up" occurrences={upcomingPlans} records={records} programs={programs} />}
           </section>
         </div>
         <aside className="dashboard-side">
@@ -86,8 +86,8 @@ interface ScheduledOccurrence {
   date: string;
 }
 
-function ScheduleWindow({ title, occurrences, records }: { title: string; occurrences: ScheduledOccurrence[]; records: PlannerData['records'] }) {
-  return <section className="schedule-window"><div className="section-heading"><div><p className="eyebrow">{title}</p><h3>{occurrences.length} scheduled {occurrences.length === 1 ? 'workout' : 'workouts'}</h3></div></div><div className="schedule-list">{occurrences.map(({ plan, date }) => <ScheduleCard key={`${plan.id}-${date}`} plan={plan} completed={hasCompletedRecord(records, plan.id, date)} date={date} />)}</div></section>;
+function ScheduleWindow({ title, occurrences, records, programs }: { title: string; occurrences: ScheduledOccurrence[]; records: PlannerData['records']; programs: PlannerData['programs'] }) {
+  return <section className="schedule-window"><div className="section-heading"><div><p className="eyebrow">{title}</p><h3>{occurrences.length} scheduled {occurrences.length === 1 ? 'workout' : 'workouts'}</h3></div></div><div className="schedule-list">{occurrences.map(({ plan, date }) => <ScheduleCard key={`${plan.id}-${date}`} plan={plan} programs={programs} completed={hasCompletedRecord(records, plan.id, date)} date={date} />)}</div></section>;
 }
 
 function hasCompletedRecord(records: PlannerData['records'], planId: string, date: string): boolean {
@@ -125,11 +125,11 @@ function MacroBar({ label, value, width, tone }: { label: string; value: string;
   return <div className="macro-row"><span>{label}</span><span>{value}</span><div className="macro-track"><span className={tone} style={{ width: `${width}%` }} /></div></div>;
 }
 
-function ScheduleCard({ plan, completed, date }: { plan: WorkoutPlan; completed: boolean; date: string }) {
+function ScheduleCard({ plan, programs, completed, date }: { plan: WorkoutPlan; programs: PlannerData['programs']; completed: boolean; date: string }) {
   const focus = plan.focus ?? plan.primaryTargetArea;
   return <Link to={`/sessions/${plan.id}/${date}`} className={`schedule-card ${completed ? 'done' : ''}`}>
     <span className="schedule-status">{completed ? <CircleCheck size={20} /> : <span className="empty-circle" />}</span>
-    <span className="schedule-card-main"><span className="card-kicker">{FOCUS_LABELS[focus]} focus · {INTENSITY_LABELS[plan.intensity ?? 'moderate']} intensity · {plannedVolume(plan.prescriptions)} planned work sets</span><strong>{plan.name}</strong><span className="muted">{plan.prescriptions.length} exercises · {formatSchedule(plan.schedule)}</span><span className="schedule-occurrence"><CalendarDays size={13} /> {formatShortDate(date)}</span></span>
+    <span className="schedule-card-main"><span className="card-kicker">{FOCUS_LABELS[focus]} focus · {INTENSITY_LABELS[plan.intensity ?? 'moderate']} intensity · {plannedVolume(plan.prescriptions)} planned work sets</span><strong>{plan.name}</strong><span className="muted">{plan.prescriptions.length} exercises · {formatPlanSchedule(plan, programs)}</span><span className="schedule-occurrence"><CalendarDays size={13} /> {formatShortDate(date)}</span></span>
     <ArrowRight size={18} />
   </Link>;
 }

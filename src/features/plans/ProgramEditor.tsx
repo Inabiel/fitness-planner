@@ -1,9 +1,10 @@
 import { useState, type FormEvent } from 'react';
-import { ArrowRight, ChevronDown, ChevronUp, Dumbbell, FolderPlus, Info, Plus, Trash2 } from 'lucide-react';
+import { ArrowRight, CalendarDays, ChevronDown, ChevronUp, Dumbbell, FolderPlus, Info, Plus, Trash2 } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router';
-import { FOCUS_LABELS, formatSchedule, type WorkoutPlan, type WorkoutProgram } from '../../domain';
+import { FOCUS_LABELS, dateIsValid, formatSchedule, localDate, type WorkoutPlan, type WorkoutProgram } from '../../domain';
 import { saveProgram as saveProgramRecord, now as databaseNow, uid, type AuthenticatedPlannerData } from '../../data/db';
 import { EmptyState, Field, Page } from '../../shared/ui';
+import { ProgramScheduleFields, type ProgramScheduleKind } from './ProgramScheduleFields';
 
 export function ProgramEditor({ data }: { data: AuthenticatedPlannerData }) {
   const { programId } = useParams();
@@ -12,6 +13,9 @@ export function ProgramEditor({ data }: { data: AuthenticatedPlannerData }) {
   const source = data.programs.find((program) => program.id === programId);
   const [name, setName] = useState(source?.name ?? '');
   const [planIds, setPlanIds] = useState(() => source?.planIds.filter((id) => data.plans.some((plan) => plan.id === id)) ?? []);
+  const [scheduleKind, setScheduleKind] = useState<ProgramScheduleKind>(() => source?.schedule?.kind === 'rolling' ? 'rolling' : 'independent');
+  const [startsOn, setStartsOn] = useState(source?.schedule?.kind === 'rolling' ? source.schedule.startsOn : localDate());
+  const [intervalDays, setIntervalDays] = useState(String(source?.schedule?.kind === 'rolling' ? source.schedule.intervalDays : 2));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const selectedPlans = planIds.map((id) => data.plans.find((plan) => plan.id === id)).filter((plan): plan is WorkoutPlan => Boolean(plan));
@@ -45,10 +49,16 @@ export function ProgramEditor({ data }: { data: AuthenticatedPlannerData }) {
       setError('Name your program before saving.');
       return undefined;
     }
+    const interval = Number(intervalDays);
+    if (scheduleKind === 'rolling' && (!dateIsValid(startsOn) || !Number.isInteger(interval) || interval < 1 || interval > 30)) {
+      setError('Choose a valid start date and an interval from 1 to 30 days.');
+      return undefined;
+    }
     return {
       id: source?.id ?? uid(),
       name: name.trim(),
       planIds: planIds.filter((id) => data.plans.some((plan) => plan.id === id)),
+      ...(scheduleKind === 'rolling' ? { schedule: { kind: 'rolling' as const, startsOn, intervalDays: interval } } : {}),
       revision: (source?.revision ?? 0) + 1,
       createdAt: source?.createdAt ?? databaseNow(),
       updatedAt: databaseNow(),
@@ -103,9 +113,13 @@ export function ProgramEditor({ data }: { data: AuthenticatedPlannerData }) {
           })}</div> : <EmptyState compact icon={<Dumbbell size={21} />} title={data.plans.length ? 'No unassigned plans available' : 'Create a workout plan first'} body={data.plans.length ? 'Create a new plan here or remove a plan from another program.' : 'Programs can hold plans you’ve already built.'} action={<button type="button" className="button secondary small" onClick={createPlanHere} disabled={saving}><Plus size={15} /> Create a new plan here</button>} />}
           {availablePlans.length > 0 && <button type="button" className="button secondary small program-create-plan" onClick={createPlanHere} disabled={saving}><Plus size={15} /> Create a new plan here</button>}
         </section>
+        <section className="editor-section">
+          <div className="section-heading"><div><p className="eyebrow">03 · Schedule</p><h2>Choose the program rhythm</h2></div><CalendarDays size={19} /></div>
+          <ProgramScheduleFields kind={scheduleKind} startsOn={startsOn} intervalDays={intervalDays} onKindChange={setScheduleKind} onStartsOnChange={setStartsOn} onIntervalDaysChange={setIntervalDays} />
+        </section>
         {selectedPlans.length > 0 && <section className="editor-section">
-          <div className="section-heading"><div><p className="eyebrow">03 · Order</p><h2>Set the order</h2></div></div>
-          <p className="section-explainer">This order is how the workouts appear inside the program. It does not create a new schedule.</p>
+          <div className="section-heading"><div><p className="eyebrow">04 · Order</p><h2>Set the order</h2></div></div>
+          <p className="section-explainer">This order is how workouts appear in a moving-day rotation. It also controls the order shown inside the program.</p>
           <div className="program-order-list">{selectedPlans.map((plan, index) => <div className="program-order-item" key={plan.id}><span className="program-order-number">{String(index + 1).padStart(2, '0')}</span><span className="program-order-main"><strong>{plan.name}</strong><small>{FOCUS_LABELS[plan.focus ?? plan.primaryTargetArea]}</small></span><span className="program-order-controls"><button className="icon-button" type="button" onClick={() => movePlan(index, -1)} disabled={index === 0} aria-label={`Move ${plan.name} up`}><ChevronUp size={17} /></button><button className="icon-button" type="button" onClick={() => movePlan(index, 1)} disabled={index === selectedPlans.length - 1} aria-label={`Move ${plan.name} down`}><ChevronDown size={17} /></button><button className="icon-button danger" type="button" onClick={() => removePlan(plan.id)} aria-label={`Remove ${plan.name} from program`}><Trash2 size={16} /></button></span></div>)}</div>
         </section>}
         {error && <p className="form-error global-error" role="alert">{error}</p>}

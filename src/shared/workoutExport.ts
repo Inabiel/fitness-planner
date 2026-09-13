@@ -1,4 +1,4 @@
-import { FOCUS_LABELS, formatSchedule, INTENSITY_LABELS, type Exercise, type Prescription, type WorkoutPlan } from '../domain';
+import { FOCUS_LABELS, formatPlanSchedule, INTENSITY_LABELS, type Exercise, type Prescription, type WorkoutPlan, type WorkoutProgram } from '../domain';
 
 export function formatWorkoutStepText(prescription: Prescription, exercise: Exercise, stepNumber?: number): string {
   const dose = prescription.dose.kind === 'reps' ? `${prescription.dose.value} reps` : `${prescription.dose.value} sec`;
@@ -18,7 +18,7 @@ export function formatWorkoutStepText(prescription: Prescription, exercise: Exer
   ].join('\n');
 }
 
-export function formatWorkoutPlanText(plan: WorkoutPlan, exercises: Exercise[], includeSteps = false): string {
+export function formatWorkoutPlanText(plan: WorkoutPlan, exercises: Exercise[], includeSteps = false, programs: readonly WorkoutProgram[] = []): string {
   const focus = plan.focus ?? plan.primaryTargetArea;
   const intensity = plan.intensity ?? 'moderate';
   const exerciseLines = plan.prescriptions.flatMap((prescription, index) => {
@@ -41,7 +41,7 @@ export function formatWorkoutPlanText(plan: WorkoutPlan, exercises: Exercise[], 
     `*${plan.name}*`,
     `Focus: ${FOCUS_LABELS[focus]}`,
     `Target intensity: ${INTENSITY_LABELS[intensity]}`,
-    `Schedule: ${formatSchedule(plan.schedule)}`,
+    `Schedule: ${formatPlanSchedule(plan, programs)}`,
     '',
     '*Workout*',
     ...exerciseLines,

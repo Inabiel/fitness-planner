@@ -36,6 +36,7 @@ The Dashboard shows estimated active calories from completed Workout Records for
 
 - Create, view, edit, and delete one-workout Workout Plans.
 - Create, view, edit, and delete Programs that contain an ordered list of existing Workout Plans.
+- Optionally give a Program a moving-day rotation with a start date and interval; its ordered plans appear on successive rotation dates while fixed weekday plan schedules remain available when the rotation is off.
 - Select only unassigned plans when building a Program, remove or reorder selected plans, and create new plans from the Program flow with automatic assignment.
 - Save a new plan and immediately start another one without leaving its Program context; the normal save returns to Program detail.
 - The Program editor keeps already assigned plans out of the existing-plan chooser and offers a “Create a new plan here” action that returns to the Program after automatic assignment.
@@ -46,7 +47,7 @@ The Dashboard shows estimated active calories from completed Workout Records for
 - Confirm one Workout Focus: eight body-part categories, four training splits, or Aerobic.
 - Show an optimized local focus illustration in intention preview, plan cards, and plan detail.
 - Suggest a focus from goal and experience, with an editable explanation and explicit confirmation.
-- Choose a recurring weekday or one calendar date.
+- Choose a recurring weekday or one calendar date for an individual plan; optionally choose a moving-day Program rotation that schedules its ordered plans every N days.
 - Browse the selected date, nearest earlier occurrences, and nearest upcoming occurrences from the dashboard. Previous/next day controls, a date picker, and a Today shortcut support specific-date workout lookup.
 - Add at least one Exercise Prescription, reorder it, remove it, and edit sets, reps/duration, load, rest, and notes.
 - Apply six focus-aware presets: Easy One, Strength Base, Muscle Builder, Machine Circuit, Quick Sweat, and Aerobic Flow.
@@ -93,7 +94,7 @@ Every exercise includes a local four-frame looping GIF demonstration using the g
 
 ## Dashboard schedule browsing
 
-The dashboard keeps a selected calendar date as the primary schedule view. It displays every plan occurring on that date, including completed state for that exact occurrence. It also displays up to three nearest scheduled occurrences before and after the selected date, sorted chronologically within their groups. One-time plans appear only on their configured date; recurring plans resolve to their nearest valid local weekday occurrence after their startsOn date. Every displayed card links to the matching plan/date session route.
+The dashboard keeps a selected calendar date as the primary schedule view. It displays every plan occurring on that date, including completed state for that exact occurrence. It also displays up to three nearest scheduled occurrences before and after the selected date, sorted chronologically within their groups. One-time plans appear only on their configured date; recurring weekday plans resolve to their nearest valid local weekday occurrence after their `startsOn` date; plans in a moving-day Program resolve from the Program start, interval, and ordered plan IDs. Every displayed card links to the matching plan/date session route. A Program rotation does not shift based on completion; it follows its configured calendar cadence.
 
 ## Navigation and responsive behavior
 
@@ -127,7 +128,7 @@ Dexie stores profiles, plans, programs, workout records, and body-weight records
 ## Out of scope or not release-ready
 
 - Accounts, cloud sync, file backup/import, installable PWA behavior, and custom exercises/media.
-- Program-level scheduling, rest-day rules, next-workout recommendations, and program-level progress.
+- Program-level progress and completion-driven schedule shifting.
 - Expert-reviewed exercise demonstrations, formal content approval/attribution metadata, and media retry behavior.
 - Runtime validation of arbitrary persisted IndexedDB data, schema migrations, and stale-tab revision conflicts.
 - Browser-level automated journeys and a complete mobile/accessibility audit.

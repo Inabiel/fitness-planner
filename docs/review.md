@@ -3,7 +3,7 @@
 Review date: 2026-09-13
 Review scope: current source, product documents, tests, static assets, and deployment setup.
 
-This review includes the current organization-only Workout Program capability, Live Tracking, streak/badge gamification, celebration feedback, and derived workout-energy summaries. Programs group ordered references to existing plans; program-level scheduling and progression remain roadmap work.
+This review includes Workout Programs with optional calendar-based moving-day rotations, Live Tracking, streak/badge gamification, celebration feedback, and derived workout-energy summaries. Programs group ordered references to existing plans; program-level progress and completion-driven schedule shifting remain roadmap work.
 
 ## Executive summary
 
@@ -38,7 +38,7 @@ The implementation is not a collection of disconnected screens. A person can:
 - receive an estimate and focus suggestion;
 - create a plan with body-part, split, or aerobic focus;
 - use presets or select exercises;
-- schedule a dated occurrence;
+- schedule a dated occurrence or use a moving-day Program rotation;
 - save partial progress or complete without entering every result;
 - browse a selected dashboard date, nearby earlier/upcoming occurrences, or a specific calendar date;
 - inspect historical snapshots;
@@ -195,7 +195,7 @@ The product is strongest when it is concrete and user-controlled:
 - performance fields are optional;
 - deletion explains what is preserved;
 - recommendations are shown as guidance;
-- the dashboard makes recurring and one-time schedule occurrences discoverable around a selected date;
+- the dashboard makes recurring, one-time, and moving-day Program occurrences discoverable around a selected date;
 - historical data is not rewritten.
 
 The product is weakest where it implies expertise without enough evidence:

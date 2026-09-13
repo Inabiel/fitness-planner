@@ -84,7 +84,8 @@ The core model is in src/domain.ts:
 - SetRecord: prescription ID, one-based set number, optional actual reps or duration, optional load, and optional RIR.
 - WorkoutRecord: source plan ID, session date, status, completion time, revision, plan snapshot, and set records.
 - BodyWeightRecord: date, weight, timestamps, and revision.
-- WorkoutProgram: name, ordered `planIds`, timestamps, and revision. It is an organization record only; it has no schedule, prescriptions, sessions, or snapshot relationship.
+- ProgramSchedule: optional rolling schedule with local `startsOn` and positive `intervalDays`.
+- WorkoutProgram: name, ordered `planIds`, optional ProgramSchedule, timestamps, and revision. It is not a session and has no prescriptions or snapshot relationship.
 
 WorkoutFocus is a union of eight body-part focuses, four training splits, and aerobic. PrimaryTargetArea remains on plans for compatibility and is derived through targetAreaForFocus for non-body-part focuses.
 
@@ -124,14 +125,14 @@ Important current limitations:
 7. History detail resolves by record ID and does not require the source plan to exist.
 8. Deleting a record removes only that saved WorkoutRecord and returns to Progress.
 9. Explicit plan recalculation updates only the selected plan estimate.
-10. Program editing stores an ordered list of existing plan IDs. Program detail resolves those IDs against current plans; missing plans are skipped, and plan deletion cleans up references.
+10. Program editing stores an ordered list of existing plan IDs and can optionally store a rolling ProgramSchedule. Program detail resolves those IDs against current plans; missing plans are skipped, and plan deletion cleans up references.
 11. The Program editor excludes plans already assigned to any program. “Create a new plan here” saves the program draft, opens PlanEditor with `programId`, and attaches the saved plan after creation. A new plan can save and reopen PlanEditor with the same `programId` for repeated creation; the normal save returns to Program detail.
 12. Live Tracking reuses the WorkoutRecord set model. It starts from the current local date, saves in-progress or completed records, uses the active prescription’s rest seconds for the countdown, and advances to the next known exercise when rest ends.
 13. After a completed save, standard Session and Live Tracking compare the derived gamification summary before and after persistence. Newly activated streaks or earned badges use one celebration modal; routine completion uses a snackbar. Dashboard and Progress recalculate the summary from live records and the current local date.
 
 The dashboard resolves the selected date directly from the current local calendar. occurrenceBefore and occurrenceAfter search for the closest valid occurrence on each side, inspect up to 366 days for recurring plans, and return a one-time plan only when its configured date is on that side. The UI caps each side at three occurrences and links each card to the exact plan/date session route.
 
-Programs do not participate in dashboard scheduling in the current release. Each member plan remains independently schedulable and appears as its own dashboard occurrence; program membership is context shown from the Plans page and Program detail.
+Programs without a ProgramSchedule do not participate in dashboard scheduling; each member plan remains independently schedulable. A rolling ProgramSchedule overrides member plan schedules for dashboard occurrence resolution, assigns the ordered next plan on each interval date, and leaves interval dates empty as rest days. Plan detail and plan cards show the effective Program rotation when one is active.
 
 ## Domain rules currently implemented
 
@@ -203,9 +204,9 @@ Current automated checks:
 
 - npm run build: passes TypeScript checking and Vite production build.
 - npm run lint: passes ESLint.
-- npm test: passes 27 Vitest tests across domain rules, exercise ordering, recommendations, text export, progress metrics, gamification, calorie aggregation, and shared profile bounds.
+- npm test: passes 28 Vitest tests across domain rules, exercise ordering, recommendations, text export, progress metrics, gamification, calorie aggregation, and shared profile bounds.
 
-The domain suite also covers nearest earlier and upcoming occurrences for recurring and one-time schedules. Browser, IndexedDB, mobile, modal, and real asset smoke tests remain to be added.
+The domain suite also covers nearest earlier and upcoming occurrences for recurring, one-time, and moving-day Program schedules. Browser, IndexedDB, mobile, modal, and real asset smoke tests remain to be added.
 The package includes npm run test:browser, but there are currently no Playwright test files or Playwright configuration. The package also includes npm run media, but scripts/generate-media.mjs is not currently present.
 
 ## GitHub Pages deployment

@@ -90,7 +90,7 @@ The latest logged recurring session’s measured result against the plan’s Tar
 A dated use of a Workout Plan. The current implementation stores the first explicit save or completion as a Workout Record rather than materializing an infinite recurrence series.
 
 **Workout Program**
-An ordered collection of existing Workout Plans for organizing related sessions, such as a Push/Pull/Legs routine. A plan belongs to at most one program; the program editor offers only unassigned plans, keeps current members in the order list, and can create and automatically attach a new plan in the current program flow. A program is not itself a session, does not have its own schedule, and does not change plan logging or historical records. The current UI calls programs “Programs” and lets each member open its normal plan detail.
+An ordered collection of existing Workout Plans for organizing related sessions, such as a Push/Pull/Legs routine. A plan belongs to at most one program; the program editor offers only unassigned plans, keeps current members in the order list, and can create and automatically attach a new plan in the current program flow. A program can optionally own a moving-day rotation with a start date and interval; when enabled, its ordered plans determine dashboard occurrences and its member plans’ individual schedules are preserved but overridden for scheduling. A program is not itself a session and does not change plan logging or historical records. The current UI calls programs “Programs” and lets each member open its normal plan detail.
 
 **Workout Record**  
 The persisted record for a dated session. It stores status (`in_progress` or `completed`), completion time, revision, actual Set Records, and a snapshot of the plan and exercise metadata used at that time. A record can be deleted independently from session or history detail.
@@ -138,6 +138,9 @@ A deterministic editable suggestion based on the profile’s Primary Fitness Goa
 **Plan Schedule**  
 Either one calendar date or a recurring weekday with a local `startsOn` date. Recurring occurrences are derived when displayed; completion of one occurrence does not complete later occurrences. The dashboard can show the selected date plus up to three nearest occurrences before and after it, and each occurrence opens its exact dated session.
 
+**Program Rotation**  
+An optional moving-day schedule on a Workout Program. It has a local `startsOn` date and a positive interval in days. On each interval date, the next plan in `planIds` is scheduled; rest days are the dates between occurrences. After the final plan, the rotation returns to the first. Programs without a rotation leave each member plan’s own schedule in control.
+
 **Burden Signal**  
 Current evidence that a recent logged prescription may have been too difficult: any observed dose at or below 80% of target, a first-to-last-set drop-off of at least `max(2, 25% of target)`, or RIR 0–1. The algorithm evaluates the two most recent completed sessions that have logged dose values.
 
@@ -149,6 +152,6 @@ After two comparable completed sessions, repeated burden signals reduce the next
 - There are no accounts, authentication, server APIs, cloud sync, or cross-device recovery.
 - Custom exercises and custom media are not supported.
 - The app ships generated GIF demonstrations, but they are not expert-reviewed and do not include formal attribution/content-approval metadata.
-- Programs group existing plans for navigation only; plan schedules still determine dashboard occurrences independently.
-- Program-level sequencing, rest days, next-workout logic, and program progress are not modeled.
+- Programs without a rotation still group existing plans for navigation only; their member plan schedules determine dashboard occurrences independently.
+- Program-level progress and completion-driven schedule shifting are not modeled; the rolling rotation follows its configured calendar interval.
 - The current local database has schema migrations but does not yet perform runtime validation or stale-tab conflict detection.
