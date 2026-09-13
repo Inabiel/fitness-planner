@@ -112,6 +112,7 @@ The Vite build uses relative asset paths and HashRouter, so it works at a reposi
 - [Technical requirements](docs/trd.md)
 - [Repository review and roadmap](docs/review.md)
 - [Gamification and streaks](docs/gamification.md)
+- [Media generation guide](docs/media-generation/README.md)
 
 ## Current limitations
 
