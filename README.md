@@ -1,6 +1,6 @@
-# Form Fitness Planner
+# fitnessPal
 
-Form is a local-first personal fitness planner for creating repeatable workouts, following dated sessions, logging results, and reviewing progress.
+fitnessPal is a local-first personal fitness planner for creating repeatable workouts, following dated sessions, logging results, and reviewing progress.
 
 It runs entirely in the browser. Profile data, plans, programs, workout records, and body-weight entries are stored locally in IndexedDB; there is no account, backend, or cloud sync.
 

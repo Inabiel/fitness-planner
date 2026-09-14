@@ -1,4 +1,4 @@
-# Repository Review — Form Fitness Planner
+# Repository Review — fitnessPal
 
 Review date: 2026-09-13
 Review scope: current source, product documents, tests, static assets, and deployment setup.
@@ -7,7 +7,7 @@ This review includes Workout Programs with optional calendar-based moving-day ro
 
 ## Executive summary
 
-Form Fitness Planner is a focused local-first fitness planning prototype with a complete end-to-end loop: profile → plan/program → dated session or Live Tracking → optional result logging → history/progress. It now adds derived weekly consistency, milestone celebrations, and estimated workout-energy totals without introducing a backend or stored reward counters. The implementation has good domain instincts around snapshots, explicit confirmation, optional measurements, and preserving historical data when plans change.
+fitnessPal is a focused local-first fitness planning prototype with a complete end-to-end loop: profile → plan/program → dated session or Live Tracking → optional result logging → history/progress. It now adds derived weekly consistency, milestone celebrations, and estimated workout-energy totals without introducing a backend or stored reward counters. The implementation has good domain instincts around snapshots, explicit confirmation, optional measurements, and preserving historical data when plans change.
 
 The repository is closer to a strong MVP prototype than a production-ready fitness product. The largest gaps are trust and operational gaps: generated exercise demonstrations and nutrition/energy heuristics need review, IndexedDB data is not runtime-validated or migrated, browser coverage is absent, and a few domain invariants are only enforced by UI behavior. The new GitHub Pages workflow removes most deployment code risk, but repository settings still need to select GitHub Actions as the Pages source.
 

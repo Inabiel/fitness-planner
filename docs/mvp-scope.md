@@ -1,4 +1,4 @@
-# Form Fitness Planner — Implemented MVP Scope
+# fitnessPal — Implemented MVP Scope
 
 Status: current implementation baseline, 2026-09-13. Vocabulary is defined in [CONTEXT.md](../CONTEXT.md); technical details are in [TRD](trd.md).
 

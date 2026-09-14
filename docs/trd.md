@@ -1,4 +1,4 @@
-# Technical Requirements Document — Form Fitness Planner
+# Technical Requirements Document — fitnessPal
 
 Status: current implementation and deployment baseline. Last reconciled: 2026-09-13. This document describes the code that exists today; unresolved hardening work is listed at the end.
 

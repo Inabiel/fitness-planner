@@ -1,6 +1,6 @@
 # Media Generation Guide
 
-Technical reference for creating, reviewing, and integrating local image and GIF assets in Form Fitness Planner.
+Technical reference for creating, reviewing, and integrating local image and GIF assets in fitnessPal.
 
 ## 1. Scope and principles
 

@@ -13,7 +13,7 @@ export function AboutPage() {
             <div>
               <p className="eyebrow">Important boundary</p>
               <h2 id="about-safety-title">Useful estimates, not medical advice.</h2>
-              <p>FORM uses a simple heuristic for generally healthy people. It does not account for pregnancy, medical conditions, medication, eating-disorder history, or sport-specific needs.</p>
+              <p>fitnessPal uses a simple heuristic for generally healthy people. It does not account for pregnancy, medical conditions, medication, eating-disorder history, or sport-specific needs.</p>
               <p>If a result seems wrong, or you need nutrition guidance for a health condition, check with a qualified clinician or registered dietitian.</p>
             </div>
           </section>

@@ -74,7 +74,7 @@ export function Dashboard({ data }: { data: PlannerData }) {
               <ArrowRight size={16} />
             </Link>
           </div>
-          <div className="quote-card"><span className="quote-mark">“</span><p>Consistency is a practice, not a personality trait.</p><small>FORM NOTE</small></div>
+          <div className="quote-card"><span className="quote-mark">“</span><p>Consistency is a practice, not a personality trait.</p><small>FITNESSPAL NOTE</small></div>
         </aside>
       </div>
     </Page>

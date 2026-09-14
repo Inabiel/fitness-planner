@@ -149,7 +149,7 @@ export function Onboarding({ existing }: OnboardingProps) {
   return (
     <div className="onboarding-page">
       <header className="onboarding-top">
-        <Link to="/onboarding" className="brand"><span className="brand-mark">F</span><span>form</span></Link>
+        <Link to="/onboarding" className="brand"><span className="brand-mark">F</span><span>fitnessPal</span></Link>
         <span className="muted">Private by default · saved on this device</span>
       </header>
       <main className="onboarding-main">

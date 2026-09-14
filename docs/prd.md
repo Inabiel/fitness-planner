@@ -1,4 +1,4 @@
-# Product Requirements Document — Form Fitness Planner
+# Product Requirements Document — fitnessPal
 
 Status: implemented MVP baseline with explicit release gaps. Last reconciled: 2026-09-13. The domain vocabulary lives in [CONTEXT.md](../CONTEXT.md), shipped boundaries are listed in [MVP scope](mvp-scope.md), and the implementation is described in [TRD](trd.md).
 

@@ -43,7 +43,7 @@ export function AppShell({ profile }: { profile: Profile }) {
       {menuOpen && <button className="sidebar-scrim" onClick={closeMenu} aria-label="Close navigation" />}
       <main className="main-content">
         <header className="mobile-header">
-          <Link to="/" className="brand"><span className="brand-mark">F</span><span>form</span></Link>
+          <Link to="/" className="brand"><span className="brand-mark">F</span><span>fitnessPal</span></Link>
           <button className="icon-button" onClick={() => setMenuOpen(true)} aria-label="Open navigation" aria-expanded={menuOpen} aria-controls="primary-navigation"><MenuIcon /></button>
         </header>
         <div className="content-wrap"><Outlet /></div>

@@ -1,4 +1,4 @@
-# Form Fitness Planner — Domain Context
+# fitnessPal — Domain Context
 
 This is a browser-only personal fitness planner. One person keeps a fitness profile, creates reusable one-workout plans, follows dated sessions, records optional results, and reviews progress. The current implementation is local-first: data is stored in this browser with IndexedDB and is not sent to an application server.
 
