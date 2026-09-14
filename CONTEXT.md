@@ -26,6 +26,7 @@ This file owns the project vocabulary. The current implementation snapshot below
 - Saved Workout Records can be deleted from session or history detail. Plan deletion preserves remaining historical records; Profile settings can clear all local data and reload onboarding.
 - Gamification derives weekly consistency streaks, workout-day milestones, Today markers, Progress history, and completion celebrations from saved completed records.
 - Dashboard energy tracking derives estimated calories burned from completed workout records across today, this week, this month, this year, and all retained history.
+- Profile settings includes a temporary versioned JSON backup import/export bridge for manual device transfer; backend sync should replace and remove it.
 
 ## Profile and goals
 

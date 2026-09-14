@@ -91,6 +91,7 @@ Every exercise includes a local four-frame looping GIF demonstration using the g
 - Show weekly consistency streaks, best streak, current-week workout markers, and encouraging weekly copy on Today.
 - Derive workout-day milestone badges and a 12-week activity history on Progress from completed Workout Records.
 - Show one celebration modal after a completed standard or Live Tracking save activates a weekly streak or earns a new badge; routine completions use a snackbar.
+- Export and import a versioned JSON backup from Profile settings to move all current local data between devices. Import validates, previews, confirms replacement, and restores the five local stores transactionally. This is a temporary bridge to remove when backend sync ships; merging is out of scope.
 
 ## Dashboard schedule browsing
 
@@ -117,7 +118,7 @@ Current hash routes:
 | `#/exercise-order` | Custom exercise ordering |
 | `#/about` | Calculation formulas, terms, sources, and safety boundaries |
 | `#/calculate` | Temporary estimate calculator that does not change saved data |
-| `#/profile` | Profile settings and data deletion |
+| `#/profile` | Profile settings, temporary JSON data transfer, and data deletion |
 
 Desktop uses a fixed sidebar. At widths up to 720px the sidebar becomes a slide-out drawer with a visible hamburger button, sticky mobile header, independent drawer scrolling, close button, and scrim. Hover transitions are reduced when the person prefers reduced motion.
 
@@ -127,7 +128,7 @@ Dexie stores profiles, plans, programs, workout records, and body-weight records
 
 ## Out of scope or not release-ready
 
-- Accounts, cloud sync, file backup/import, installable PWA behavior, and custom exercises/media.
+- Accounts, cloud sync, installable PWA behavior, and custom exercises/media. The temporary JSON backup is manual transfer only and is not a sync implementation.
 - Program-level progress and completion-driven schedule shifting.
 - Expert-reviewed exercise demonstrations, formal content approval/attribution metadata, and media retry behavior.
 - Runtime validation of arbitrary persisted IndexedDB data, schema migrations, and stale-tab revision conflicts.

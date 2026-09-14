@@ -6,7 +6,7 @@ Status: implemented MVP baseline with explicit release gaps. Last reconciled: 20
 
 Help one person create repeatable gym workouts, understand the intended focus, follow a dated session, optionally record what actually happened, and notice progress without an account or cloud service.
 
-The current product is a local-first prototype. It is useful for planning and journaling, but nutrition calculations remain heuristics awaiting qualified health review and generated exercise demonstrations still need movement/content review.
+The current product is a local-first prototype. It is useful for planning and journaling, but nutrition calculations remain heuristics awaiting qualified health review and generated exercise demonstrations still need movement/content review. Profile settings includes a temporary JSON backup bridge for manual device transfer; backend sync should replace it.
 
 ## Intended user and outcome
 
@@ -34,7 +34,7 @@ The intended user has access to a standard gym and wants a low-friction personal
 8. From plan detail, Live Tracking opens a modal showing the exercise sequence. The person can enter set results, complete an exercise, see its rest countdown, and advance automatically to the next exercise or save progress and exit.
 9. A dated session accepts optional actual dose, load, and RIR per set. Completion is always possible without performance input and celebrates newly qualifying consistency milestones.
 10. Progress and history show weight observations, recorded sessions, snapshots, entered exercise results, milestone badges, and a 12-week activity history.
-11. Profile settings allow profile edits and a modal-confirmed clear-all operation that returns to onboarding.
+11. Profile settings allow profile edits, temporary JSON data transfer, and a modal-confirmed clear-all operation that returns to onboarding.
 12. The How it works page explains formulas, terms, sources, supported inputs, and safety boundaries; the Calculator page estimates locally without saving or changing planner data.
 
 ## Functional requirements and implementation status
@@ -61,6 +61,7 @@ The intended user has access to a standard gym and wants a low-friction personal
 | P17 | Calculation transparency and temporary calculator | Implemented. How it works documents estimate formulas, terms, sources, supported inputs, and safety boundaries; Calculator runs the same rules locally without persisting inputs or changing planner data. |
 | P18 | Gamification and streaks | Implemented. Completed records derive distinct workout days, Monday-based weekly streaks, milestone badges, weekly dashboard markers, 12-week Progress history, and a celebration modal for newly activated streaks or earned badges in both logging paths; routine completion uses a snackbar. |
 | P19 | Workout energy tracking | Implemented. The Dashboard derives estimated calories burned from completed records and shows today, current week, month, year, and all-history totals using saved plan duration, target intensity, and body weight. The values are explicitly estimates, not wearable or medical measurements. |
+| P20 | Temporary data transfer | Implemented as versioned JSON export/import in Profile settings. Import validates the document, previews counts, confirms replacement, and restores all five local stores transactionally. Remove this bridge when backend sync ships; do not extend it into merge/sync behavior. |
 
 ## Interaction and quality requirements
 
@@ -134,7 +135,7 @@ The selected date is the primary schedule query. The dashboard separately finds 
 
 ## Deferred product scope
 
-Accounts, cloud synchronization, file backup/import, custom exercises/media, completion-driven schedule shifting, program-level progress, social features, analytics, AI coaching, medical diagnosis, and automatic changes to historical records remain out of scope.
+Accounts, cloud synchronization, custom exercises/media, completion-driven schedule shifting, program-level progress, social features, analytics, AI coaching, medical diagnosis, and automatic changes to historical records remain out of scope. The shipped JSON backup is a temporary manual-transfer bridge, not a backend feature.
 
 ## Roadmap
 
@@ -160,4 +161,4 @@ The [gamification and streaks specification](gamification.md) is implemented. It
 
 ### Scale only if demanded
 
-Introduce accounts, sync, backup, multi-device recovery, and server-owned data only after local use validates the core workflow. They would change privacy, security, conflict, and migration requirements substantially.
+Introduce accounts, backend sync, multi-device recovery, and server-owned data only after local use validates the core workflow. At that point, remove the temporary JSON bridge and replace it with the new server-owned flow; this changes privacy, security, conflict, and migration requirements substantially.

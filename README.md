@@ -34,6 +34,7 @@ It runs entirely in the browser. Profile data, plans, programs, workout records,
 - Body-weight chart, workout history, performance trend graph, and recorded performance table.
 - Weekly consistency streaks with fire styling, workout-day milestone badges, a 12-week activity history, and completion celebrations derived from saved workouts.
 - Estimated calories burned from completed workouts, summarized for today, this week, this month, this year, and all retained history.
+- Temporary versioned JSON backup import/export for moving local data between devices; this bridge is intended to be replaced by backend sync.
 - Snackbar confirmations for transient actions and routine completion; newly activated streaks and earned badges use a celebratory modal.
 - Responsive desktop sidebar and mobile navigation drawer.
 - Modal confirmation for profile deletion, plan deletion, and workout-record deletion.
@@ -73,13 +74,15 @@ The app uses hash routing so it can run on static hosting without server-side ro
 | #/exercise-order | Customize exercise ordering |
 | #/about | Read calculation formulas, terms, sources, and safety boundaries |
 | #/calculate | Try a temporary estimate without changing saved data |
-| #/profile | Edit profile or delete all local data |
+| #/profile | Edit profile, transfer temporary JSON backups, or delete all local data |
 
 ## Data and privacy
 
 Data is stored in the browser database named form-fitness-planner. The app does not send profile, plan, measurement, or workout data to an application server. Clearing all local data from Profile settings removes the profile, plans, workout history, and body-weight records, then returns to onboarding.
 
-Because storage is origin- and browser-specific, clearing site data, changing browsers/devices, or browser eviction can remove access to local records. Backup and synchronization are not currently supported.
+Profile settings also provides temporary JSON backup export/import for manual device transfer. Import validates the backup and replaces all local stores; it is not automatic synchronization and should be removed when backend sync ships.
+
+Because storage is origin- and browser-specific, clearing site data, changing browsers/devices, or browser eviction can remove access to local records. The temporary JSON backup is manual transfer only; automatic synchronization is not currently supported.
 
 ## GitHub Pages deployment
 
@@ -119,5 +122,5 @@ The Vite build uses relative asset paths and HashRouter, so it works at a reposi
 - Exercise GIFs are generated educational aids; movement review, attribution metadata, and a formal content-approval workflow are not shipped.
 - Nutrition calculations, workout-energy totals, and progression recommendations are transparent MVP heuristics with documented boundaries, not clinical or medical guidance.
 - IndexedDB is currently schema version 2 without runtime data parsing, complete migration coverage, or stale-tab conflict detection.
-- Vitest covers 27 pure domain, ordering, recommendation, gamification, and calorie-aggregation tests. Browser-level Playwright journeys are not yet implemented.
-- Program-level scheduling, rest-day rules, next-workout recommendations, accounts, cloud sync, file backup/import, and custom exercises are outside the current scope.
+- Vitest covers pure domain, ordering, recommendation, gamification, calorie-aggregation, and backup-validation tests. Browser-level Playwright journeys are not yet implemented.
+- Program-level scheduling, rest-day rules, next-workout recommendations, accounts, cloud sync, and custom exercises are outside the current scope. The temporary JSON backup bridge is intentionally not a sync solution.

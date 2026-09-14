@@ -18,7 +18,7 @@ There is no application API, authentication, server database, server-rendered ro
 - React Router 7 declarative HashRouter.
 - Dexie 4 and dexie-react-hooks for IndexedDB and live queries.
 - Lucide React for interface icons.
-- Zod is installed but is not currently used for persistence-boundary validation.
+- Zod validates imported backup files at the persistence boundary.
 - Vitest for pure logic tests and Playwright is listed as a future browser-test runner.
 - Ordinary CSS in src/styles.css; no component styling framework.
 
@@ -67,7 +67,7 @@ The application uses hash routes so a static host does not need to rewrite unkno
 | #/exercise-order | ExerciseOrder | Profile-level custom ordering for future library browsing. |
 | #/about | AboutPage | Calculation formulas, terms, sources, supported inputs, and safety boundaries. |
 | #/calculate | CalculatePage | Temporary calorie, macro, and BMI estimate calculator. |
-| #/profile | ProfileSettings | Profile updates and modal-confirmed clear-all. |
+| #/profile | ProfileSettings | Profile updates, temporary JSON backup transfer, and modal-confirmed clear-all. |
 
 Unknown routes redirect to onboarding when no profile exists and to the dashboard otherwise. Unknown plan/record IDs render explicit empty states.
 
@@ -113,6 +113,7 @@ Important current limitations:
 - Revision fields are incremented but stale-tab writes are not rejected.
 - Plan deletion is intentionally non-cascading so records remain available.
 - Workout records can be deleted deliberately from session or history detail without deleting the source plan or other records.
+- JSON backup import/export is a temporary manual-transfer bridge. It replaces all local stores after validation; backend sync should replace and remove this flow rather than adding merge behavior here.
 
 ## Lifecycle and history
 
@@ -182,6 +183,8 @@ FocusIllustration resolves the focus union to relative local WebP files so the s
 
 Plan detail can copy a complete workout plan as WhatsApp-friendly text, with an optional checkbox to include every exercise step and its written instructions. Copying uses the Clipboard API with a local/older-browser textarea fallback. The shared Snackbar confirms copy, save-progress, and routine completion actions, auto-dismisses, and supports manual dismissal; newly activated streaks and earned badges use a celebration modal.
 
+Profile settings temporarily exports a versioned `fitnesspal-backup` JSON document containing the profile, plans, programs, workout records, and body-weight records. Import parses and validates the document, checks IDs and program references, asks for confirmation, then clears and restores all five stores in one transaction. It is manual transfer, not sync, and is a removal candidate once backend sync is available.
+
 Exercise entries render local four-frame GIF demonstrations at `public/assets/exercises/<exercise-id>.gif` alongside written instructions. The GIFs use full opaque 512×512 frames, one-second delays, and `Dispose: None` so each frame replaces the prior frame without shadowing. The generated visuals have no external media URL, formal attribution metadata, or expert content-review status.
 
 The shared AppShell contains a fixed desktop sidebar and a mobile drawer. At widths up to 720px, the drawer is hidden off-canvas until the visible hamburger control opens it; the header is sticky, the drawer scrolls independently, and a scrim closes it. CSS includes visible focus, action hover motion, and reduced-motion overrides.
@@ -196,7 +199,7 @@ Known maintainability debt:
 
 - Several screen JSX expressions and CSS blocks are compressed into long lines, which increases review and change cost.
 - Static EXERCISES data is coupled directly to recommendations and views instead of being validated at a content boundary.
-- Zod is installed but not used.
+- Backup import uses Zod for runtime validation at the file boundary.
 
 ## Verification status
 

@@ -1,14 +1,16 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react';
-import { Check, Info, Trash2, UserRound } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
+import { Check, Download, Info, Trash2, Upload, UserRound } from 'lucide-react';
 import {
   ACTIVITY_LABELS,
   EXPERIENCE_LABELS,
   GOALS,
   GOAL_LABELS,
   calculateEstimates,
+  localDate,
   type Profile,
 } from '../../domain';
 import { clearAllData, now, saveProfile } from '../../data/db';
+import type { BackupDocument } from '../../data/backup';
 import { Field, Page, Snackbar } from '../../shared/ui';
 import { formToCalculationProfile, isActivityLevel, isCompleteProfileForm, isExperience, isGoal, isSex, PROFILE_LIMITS, profileToForm } from './form';
 
@@ -20,19 +22,27 @@ export function ProfileSettings({ profile }: { profile: Profile }) {
   const [message, setMessage] = useState('');
   const [snackbar, setSnackbar] = useState<{ message: string; tone: 'success' | 'error' } | null>(null);
   const [deleteError, setDeleteError] = useState('');
+  const [exporting, setExporting] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [importError, setImportError] = useState('');
+  const [pendingImport, setPendingImport] = useState<BackupDocument | null>(null);
+  const importInputRef = useRef<HTMLInputElement>(null);
   const estimate = isCompleteProfileForm(form) ? calculateEstimates(formToCalculationProfile(form)) : null;
   const dismissSnackbar = useCallback(() => setSnackbar(null), []);
 
   useEffect(() => {
-    if (!deleteModalOpen) return;
+    if (!deleteModalOpen && !pendingImport) return;
 
     function closeOnEscape(event: KeyboardEvent) {
-      if (event.key === 'Escape' && !deleting) setDeleteModalOpen(false);
+      if (event.key !== 'Escape' || deleting || importing) return;
+      setDeleteModalOpen(false);
+      setPendingImport(null);
+      setImportError('');
     }
 
     window.addEventListener('keydown', closeOnEscape);
     return () => window.removeEventListener('keydown', closeOnEscape);
-  }, [deleteModalOpen, deleting]);
+  }, [deleteModalOpen, deleting, importing, pendingImport]);
 
   async function save(event: FormEvent) {
     event.preventDefault();
@@ -79,6 +89,65 @@ export function ProfileSettings({ profile }: { profile: Profile }) {
     }
   }
 
+  async function exportData() {
+    setExporting(true);
+    try {
+      const { exportCurrentData, serializeBackup } = await import('../../data/backup');
+      const backup = await exportCurrentData();
+      const blob = new Blob([serializeBackup(backup)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = window.document.createElement('a');
+      link.href = url;
+      link.download = `fitnesspal-backup-${localDate()}.json`;
+      window.document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      setSnackbar({ message: 'Your fitnessPal data was exported.', tone: 'success' });
+    } catch {
+      setSnackbar({ message: 'Your data could not be exported. Try again.', tone: 'error' });
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  async function selectImportFile(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+
+    setImporting(true);
+    setImportError('');
+    try {
+      const { parseBackup } = await import('../../data/backup');
+      setPendingImport(parseBackup(await file.text()));
+    } catch (error) {
+      setSnackbar({ message: error instanceof Error ? error.message : 'This backup could not be read.', tone: 'error' });
+    } finally {
+      setImporting(false);
+    }
+  }
+
+  async function importData() {
+    if (!pendingImport) return;
+    setImporting(true);
+    setImportError('');
+    try {
+      const { replaceCurrentData } = await import('../../data/backup');
+      await replaceCurrentData(pendingImport);
+      window.location.reload();
+    } catch {
+      setImportError('Your data could not be imported. Nothing was changed—try again.');
+      setImporting(false);
+    }
+  }
+
+  function cancelImport() {
+    if (importing) return;
+    setPendingImport(null);
+    setImportError('');
+  }
+
   return (
     <Page title="Profile settings" subtitle="Keep your baseline current. Saved plans won’t change without your say-so.">
       <div className="settings-layout">
@@ -108,7 +177,18 @@ export function ProfileSettings({ profile }: { profile: Profile }) {
             <p className="eyebrow">Current estimate</p>
             {estimate && <><strong className="settings-calories">{estimate.dailyCalories.toLocaleString()} <small>calories/day</small></strong><div className="saved-macros"><span>{estimate.proteinGrams}g protein</span><span>{estimate.carbohydrateGrams}g carbohydrates</span><span>{estimate.fatGrams}g fat</span></div><p className="fine-print">BMI (body mass index): {estimate.bmi.toFixed(1)}. This is a height-to-weight screening number, not a diagnosis. Nutrition estimates are starting points, not medical advice.</p></>}
           </div>
-          <div className="side-card privacy-card"><Info size={18} /><h3>Local by default</h3><p>Your profile, plans, measurements, and workout records stay in this browser on this device. Clearing browser data may remove them. No account or sync is involved.</p></div>
+          <div className="side-card privacy-card"><Info size={18} /><h3>Local by default</h3><p>Your profile, plans, measurements, and workout records stay in this browser on this device. Temporary JSON backup import/export can move them to another device; it is not automatic sync.</p></div>
+          <div className="side-card backup-card">
+            <p className="eyebrow">Temporary data transfer</p>
+            <h3>Move your planner</h3>
+            <p>Export a JSON backup for your phone or another browser. Importing replaces all local data after validation. This bridge will be replaced by backend sync.</p>
+            <div className="backup-actions">
+              <button type="button" className="button secondary" onClick={() => void exportData()} disabled={exporting || importing}><Download size={16} /> {exporting ? 'Exporting…' : 'Export data'}</button>
+              <button type="button" className="button secondary" onClick={() => importInputRef.current?.click()} disabled={exporting || importing}><Upload size={16} /> {importing ? 'Reading…' : 'Import data'}</button>
+            </div>
+            <input ref={importInputRef} className="sr-only" type="file" accept="application/json,.json" onChange={(event) => void selectImportFile(event)} />
+            <p className="fine-print">Keep backup files private: they contain your profile and workout history.</p>
+          </div>
           <div className="side-card danger-zone">
             <p className="eyebrow">Danger zone</p>
             <h3>Delete all local data</h3>
@@ -117,9 +197,30 @@ export function ProfileSettings({ profile }: { profile: Profile }) {
           </div>
         </aside>
       </div>
+      {pendingImport && <ImportDataModal backup={pendingImport} importing={importing} error={importError} onCancel={cancelImport} onImport={() => void importData()} />}
       {deleteModalOpen && <DeleteDataModal deleting={deleting} error={deleteError} onCancel={() => setDeleteModalOpen(false)} onDelete={deleteAllData} />}
       {snackbar && <Snackbar message={snackbar.message} tone={snackbar.tone} onDismiss={dismissSnackbar} />}
     </Page>
+  );
+}
+
+function ImportDataModal({ backup, importing, error, onCancel, onImport }: { backup: BackupDocument; importing: boolean; error: string; onCancel: () => void; onImport: () => void }) {
+  const { profile: importedProfile, plans, programs, records, weights } = backup.data;
+  return (
+    <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !importing) onCancel(); }}>
+      <div className="delete-data-modal" role="dialog" aria-modal="true" aria-labelledby="import-data-modal-title">
+        <div className="confirmation-icon"><Upload size={20} /></div>
+        <p className="eyebrow">Import backup</p>
+        <h2 id="import-data-modal-title">Replace local data?</h2>
+        <p className="muted">This replaces the current profile, plans, programs, workout history, and body-weight records on this device. The current data will not be merged.</p>
+        <div className="confirmation-summary"><strong>{importedProfile ? 'Profile included' : 'No profile included'}</strong><span>{plans.length} plans · {programs.length} programs · {records.length} workout records · {weights.length} body-weight records</span></div>
+        {error && <p className="form-error" role="alert">{error}</p>}
+        <div className="modal-actions">
+          <button type="button" className="button ghost" onClick={onCancel} disabled={importing} autoFocus>Cancel</button>
+          <button type="button" className="button primary" onClick={onImport} disabled={importing}>{importing ? 'Importing…' : 'Replace and import'} <Upload size={16} /></button>
+        </div>
+      </div>
+    </div>
   );
 }
 

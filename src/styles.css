@@ -184,6 +184,10 @@ select { appearance: auto; }
 .card-kicker { color: #6b8b70; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
 .dashboard-side { display: flex; flex-direction: column; gap: 15px; }
 .side-card, .chart-card, .editor-section, .library-panel { background: var(--paper); border: 1px solid #e4e5dc; border-radius: 12px; padding: 22px; }
+.backup-card > p:not(.eyebrow) { font-size: 0.75rem; line-height: 1.5; margin-top: 9px; }
+.backup-actions { display: grid; gap: 8px; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 15px; }
+.backup-actions .button { min-width: 0; padding: 0 10px; }
+.backup-card .fine-print { margin-top: 12px; }
 .estimate-card { background: #eef6e9; border: 0; }
 .estimate-card .section-heading h3 { font-size: 1.55rem; margin-top: 4px; }
 .estimate-card .section-heading h3 small { color: #839082; font-family: 'DM Sans', sans-serif; font-size: 0.72rem; font-weight: 500; letter-spacing: 0; }
