@@ -80,7 +80,7 @@ export function ProgramCreateModal({ data, onClose }: { data: PlannerData; onClo
         </div>
         <form className="program-modal-form" onSubmit={submit}>
           <Field label="Program name" hint="Make the routine easy to recognize"><input autoFocus value={name} onChange={(event) => setName(event.target.value)} placeholder="e.g. Three-day strength" /></Field>
-          <div className="program-modal-schedule"><div className="section-heading"><div><p className="eyebrow">Schedule</p><h3>Choose the program rhythm</h3></div><CalendarDays size={18} /></div><ProgramScheduleFields kind={scheduleKind} startsOn={startsOn} intervalDays={intervalDays} onKindChange={setScheduleKind} onStartsOnChange={setStartsOn} onIntervalDaysChange={setIntervalDays} /></div>
+          <div className="program-modal-schedule"><div className="section-heading"><div><p className="eyebrow">Schedule</p><h3>Choose the program rhythm</h3></div><CalendarDays size={18} /></div><ProgramScheduleFields kind={scheduleKind} startsOn={startsOn} intervalDays={intervalDays} onKindChange={setScheduleKind} onStartsOnChange={setStartsOn} onIntervalDaysChange={setIntervalDays} previewPlans={selectedPlans} /></div>
           <div className="program-modal-plans">
             <div className="section-heading"><div><p className="eyebrow">Workouts</p><h3>Add unassigned plans</h3></div><span className="count-badge">{planIds.length}</span></div>
             {availablePlans.length ? <div className="program-plan-picker">{availablePlans.map((plan) => {

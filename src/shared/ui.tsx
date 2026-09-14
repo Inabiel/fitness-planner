@@ -103,11 +103,12 @@ interface FieldProps {
   suffix?: string;
   hint?: string;
   error?: string;
+  validationTarget?: string;
   children: ReactNode;
 }
 
-export function Field({ label, suffix, hint, error, children }: FieldProps) {
-  return <label className="field"><span className="field-label">{label}{suffix && <em>{suffix}</em>}</span>{hint && <small className="field-hint">{hint}</small>}<span className="field-control">{children}</span>{error && <span className="form-error">{error}</span>}</label>;
+export function Field({ label, suffix, hint, error, validationTarget, children }: FieldProps) {
+  return <label className="field" data-validation-target={validationTarget}><span className="field-label">{label}{suffix && <em>{suffix}</em>}</span>{hint && <small className="field-hint">{hint}</small>}<span className="field-control">{children}</span>{error && <span className="form-error">{error}</span>}</label>;
 }
 
 export function Snackbar({ message, tone = 'success', onDismiss }: { message: string; tone?: 'success' | 'error'; onDismiss: () => void }) {

@@ -1,4 +1,4 @@
-import { useState, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { ArrowRight, CalendarDays, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Dumbbell, Info, Plus, Search, Sparkles, Target, Trash2 } from 'lucide-react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import {
@@ -22,10 +22,10 @@ import {
   type WorkoutIntensity,
   type WorkoutPlan,
 } from '../../domain';
-import { addPlanToProgram, now, savePlan as savePlanRecord, saveProgram as saveProgramRecord, uid, type AuthenticatedPlannerData } from '../../data/db';
+import { addPlanToProgram, now, savePlan as savePlanRecord, uid, type AuthenticatedPlannerData } from '../../data/db';
 import { EXERCISES } from '../../data/exercises';
 import { normalizeExerciseOrder } from '../exercises/order';
-import { weekdayLabel } from '../../shared/formatters';
+import { formatShortDate, weekdayLabel } from '../../shared/formatters';
 import { EmptyState, Field, Page } from '../../shared/ui';
 import { IntentionPreview } from './IntentionPreview';
 import { adjustPrescriptionsForIntensity, createPresetPrescriptions, createRecommendedPrescriptions, WORKOUT_PRESETS, type WorkoutPreset } from './recommendations';
@@ -41,7 +41,9 @@ export function PlanEditor({ data }: { data: AuthenticatedPlannerData }) {
   const returnTo = programId ? `/programs/${programId}` : '/plans';
   const editing = Boolean(planId);
   const source = data.plans.find((plan) => plan.id === planId);
-  const rollingProgram = source && data.programs.find((program) => program.schedule?.kind === 'rolling' && program.planIds.includes(source.id));
+  const rollingProgram = data.programs.find((program) => program.schedule?.kind === 'rolling' && (source ? program.planIds.includes(source.id) : program.id === programId));
+  const rollingSchedule = rollingProgram?.schedule;
+  const rotationIndex = source && rollingProgram ? rollingProgram.planIds.indexOf(source.id) : -1;
   const [name, setName] = useState(source?.name ?? '');
   const [scheduleKind, setScheduleKind] = useState<'date' | 'weekly'>(source?.schedule.kind ?? 'weekly');
   const [date, setDate] = useState(source?.schedule.kind === 'date' ? source.schedule.date : localDate());
@@ -49,7 +51,7 @@ export function PlanEditor({ data }: { data: AuthenticatedPlannerData }) {
   const [focus, setFocus] = useState<WorkoutFocus>(source?.focus ?? source?.primaryTargetArea ?? 'full-body');
   const [intensity, setIntensity] = useState<WorkoutIntensity>(source?.intensity ?? 'moderate');
   const [focusConfirmed, setFocusConfirmed] = useState(source?.focusConfirmed ?? false);
-  const [prescriptions, setPrescriptions] = useState<Prescription[]>(() => source?.prescriptions.length ? source.prescriptions : createRecommendedPrescriptions(source?.focus ?? source?.primaryTargetArea ?? 'full-body', data.profile.experience, data.profile.primaryGoal, EXERCISES, uid, source?.intensity ?? 'moderate'));
+  const [prescriptions, setPrescriptions] = useState<Prescription[]>(() => source ? source.prescriptions : createRecommendedPrescriptions('full-body', data.profile.experience, data.profile.primaryGoal, EXERCISES, uid, 'moderate'));
   const [search, setSearch] = useState('');
   const [filterArea, setFilterArea] = useState<Area | 'aerobic' | 'all'>('all');
   const [exerciseSort, setExerciseSort] = useState<ExerciseSort>(() => data.profile.exerciseOrder?.length ? 'custom' : 'popularity');
@@ -57,11 +59,20 @@ export function PlanEditor({ data }: { data: AuthenticatedPlannerData }) {
   const [libraryPage, setLibraryPage] = useState(1);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [validation, setValidation] = useState<PlanValidationError>();
   const suggestion = suggestArea(data.profile.primaryGoal, data.profile.experience);
   const filteredExercises = EXERCISES.filter((exercise) => matchesExercise(exercise, filterArea, search)).sort((a, b) => compareExercises(a, b, exerciseSort, exerciseOrder));
   const pageCount = Math.max(1, Math.ceil(filteredExercises.length / EXERCISES_PER_PAGE));
   const currentPage = Math.min(libraryPage, pageCount);
   const pageExercises = filteredExercises.slice((currentPage - 1) * EXERCISES_PER_PAGE, currentPage * EXERCISES_PER_PAGE);
+
+  useEffect(() => {
+    if (!validation) return;
+    const target = validation.target === 'prescription' && validation.prescriptionId ? `prescription-${validation.prescriptionId}` : validation.target;
+    const element = document.querySelector<HTMLElement>(`[data-validation-target="${target}"]`);
+    element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    element?.querySelector<HTMLElement>('input, select, textarea')?.focus({ preventScroll: true });
+  }, [validation]);
 
   if (editing && !source) {
     return <Page title="Plan not found" subtitle="It may have been deleted, but any completed history is still safe."><EmptyState icon={<Info size={22} />} title="There’s no plan with that ID" body="Return to your plans to choose another session." action={<Link className="button secondary" to="/plans">Back to plans</Link>} /></Page>;
@@ -108,12 +119,12 @@ export function PlanEditor({ data }: { data: AuthenticatedPlannerData }) {
   function selectFocus(nextFocus: WorkoutFocus) {
     setFocus(nextFocus);
     setFocusConfirmed(false);
-    setPrescriptions(createRecommendedPrescriptions(nextFocus, data.profile.experience, data.profile.primaryGoal, EXERCISES, uid, intensity));
+    if (!editing) setPrescriptions(createRecommendedPrescriptions(nextFocus, data.profile.experience, data.profile.primaryGoal, EXERCISES, uid, intensity));
     if (!name.trim()) setName(`${FOCUS_LABELS[nextFocus]} day`);
   }
 
   function selectIntensity(nextIntensity: WorkoutIntensity) {
-    setPrescriptions((current) => adjustPrescriptionsForIntensity(current, intensity, nextIntensity));
+    if (!editing) setPrescriptions((current) => adjustPrescriptionsForIntensity(current, intensity, nextIntensity));
     setIntensity(nextIntensity);
   }
 
@@ -137,7 +148,8 @@ export function PlanEditor({ data }: { data: AuthenticatedPlannerData }) {
     event.preventDefault();
     const validationError = getPlanValidationError({ name, focusConfirmed, prescriptions, scheduleKind, date, weekday });
     if (validationError) {
-      setError(validationError);
+      setValidation(validationError);
+      setError(validationError.message);
       return;
     }
 
@@ -161,12 +173,10 @@ export function PlanEditor({ data }: { data: AuthenticatedPlannerData }) {
 
     setSaving(true);
     setError('');
+    setValidation(undefined);
     const createAnother = programId && !editing && (event.nativeEvent as SubmitEvent).submitter?.getAttribute('data-save-action') === 'another';
     try {
       await savePlanRecord(plan);
-      if (rollingProgram?.schedule && rollingProgram.schedule.startsOn !== date) {
-        await saveProgramRecord({ ...rollingProgram, schedule: { ...rollingProgram.schedule, startsOn: date }, revision: rollingProgram.revision + 1, updatedAt: now() });
-      }
       if (programId) await addPlanToProgram(programId, plan.id);
       navigate(createAnother ? `/plans/new?programId=${programId}` : programId ? `/programs/${programId}` : `/plans/${plan.id}`);
     } catch {
@@ -178,12 +188,12 @@ export function PlanEditor({ data }: { data: AuthenticatedPlannerData }) {
 
   return (
     <Page title={editing ? 'Edit workout plan' : 'Build a workout plan'} subtitle="One focused session. Enough detail to follow it, not enough to overthink it." backTo={returnTo}>
-      <form onSubmit={savePlan} className="editor-layout">
+      <form noValidate onSubmit={savePlan} className="editor-layout">
         <div className="editor-main">
           <section className="editor-section">
             <EditorHeading eyebrow="01 · Identity" title="Give it a name"><Dumbbell size={19} /></EditorHeading>
-            <Field label="Plan name" hint="Make it easy to recognize on a busy day"><input autoFocus value={name} onChange={(event) => setName(event.target.value)} placeholder="e.g. Strong Monday" /></Field>
-            <div className="preset-grid">{WORKOUT_PRESETS.map((preset) => <button type="button" className="preset-option" key={preset.id} onClick={() => applyPreset(preset.id)} disabled={preset.id === 'aerobic-flow' && focus !== 'aerobic'}><span><strong>{preset.name}</strong><small>{preset.id === 'aerobic-flow' && focus !== 'aerobic' ? 'Select Cardio focus first' : preset.description}</small></span><ChevronRight size={16} /></button>)}</div>
+            <Field label="Plan name" hint="Make it easy to recognize on a busy day" error={validation?.target === 'name' ? validation.message : undefined} validationTarget="name"><input autoFocus aria-invalid={validation?.target === 'name'} value={name} onChange={(event) => setName(event.target.value)} placeholder="e.g. Strong Monday" /></Field>
+            <div className="preset-grid">{WORKOUT_PRESETS.map((preset) => <button type="button" className="preset-option" key={preset.id} onClick={() => applyPreset(preset.id)} disabled={preset.id === 'aerobic-flow' && focus !== 'aerobic'}><span><strong>{preset.name}</strong><small>{preset.id === 'aerobic-flow' && focus !== 'aerobic' ? 'Select Cardio focus first' : preset.description}</small></span><ChevronRight size={16} /></button>)}{!editing && <button type="button" className="preset-option" onClick={() => setPrescriptions([])}><span><strong>Start from scratch</strong><small>Clear recommendations and choose your own exercises.</small></span><Trash2 size={16} /></button>}</div>
           </section>
           <section className="editor-section">
             <EditorHeading eyebrow="02 · Focus" title="Choose the intention"><Target size={19} /></EditorHeading>
@@ -193,7 +203,7 @@ export function PlanEditor({ data }: { data: AuthenticatedPlannerData }) {
               <button type="button" className="button small ghost" onClick={() => selectFocus(suggestion.area)}>Use suggestion</button>
             </div>
             <IntentionPreview focus={focus} />
-            <div className="focus-group"><Field label="Target intensity" hint="Sets a starting dose, rest, and target effort for this plan"><select value={intensity} onChange={(event) => selectIntensity(event.target.value as WorkoutIntensity)}>{WORKOUT_INTENSITIES.map((option) => <option key={option} value={option}>{INTENSITY_LABELS[option]}</option>)}</select></Field></div>
+            <div className="focus-group"><Field label="Target intensity" hint={editing ? 'Changes the plan target without changing its exercise sequence.' : 'Sets a starting dose, rest, and target effort for this plan'}><select value={intensity} onChange={(event) => selectIntensity(event.target.value as WorkoutIntensity)}>{WORKOUT_INTENSITIES.map((option) => <option key={option} value={option}>{INTENSITY_LABELS[option]}</option>)}</select></Field></div>
             <div className="focus-group"><p className="field-label">Body part</p><div className="area-grid">
               {AREAS.map((area) => <button type="button" key={area} className={`area-option ${focus === area ? 'selected' : ''}`} onClick={() => selectFocus(area)}><span className={`area-dot ${area}`} /><span>{AREA_LABELS[area]}</span>{focus === area && <Check size={15} />}</button>)}
             </div></div>
@@ -203,22 +213,36 @@ export function PlanEditor({ data }: { data: AuthenticatedPlannerData }) {
             <div className="focus-group"><p className="field-label">Training style</p><div className="split-grid">
               {WORKOUT_STYLES.map((style) => <button type="button" key={style} className={`area-option ${focus === style ? 'selected' : ''}`} onClick={() => selectFocus(style)}><span className="area-dot full-body" /><span>{FOCUS_LABELS[style]}</span>{focus === style && <Check size={15} />}</button>)}
             </div></div>
-            <label className="confirm-row"><input type="checkbox" checked={focusConfirmed} onChange={(event) => setFocusConfirmed(event.target.checked)} /><span><strong>I confirm {FOCUS_LABELS[focus].toLowerCase()} as this plan’s primary focus.</strong><small>Recommended exercises are loaded automatically and can still be customized.</small></span></label>
+            <div data-validation-target="focus"><label className={`confirm-row ${validation?.target === 'focus' ? 'has-error' : ''}`}><input type="checkbox" aria-invalid={validation?.target === 'focus'} checked={focusConfirmed} onChange={(event) => setFocusConfirmed(event.target.checked)} /><span><strong>I confirm {FOCUS_LABELS[focus].toLowerCase()} as this plan’s primary focus.</strong><small>Recommended exercises are loaded automatically and can still be customized.</small></span></label>{validation?.target === 'focus' && <p className="form-error section-error" role="alert">{validation.message}</p>}</div>
           </section>
           <section className="editor-section">
             <EditorHeading eyebrow="03 · Schedule" title="When will you do it?"><CalendarDays size={19} /></EditorHeading>
-            {rollingProgram && <p className="section-explainer">This plan shares its effective date with <Link className="text-link" to={`/programs/${rollingProgram.id}/edit`}>{rollingProgram.name}</Link>; changing it moves the rotation for all plans.</p>}
-            <div className="segmented"><button type="button" className={scheduleKind === 'weekly' ? 'selected' : ''} onClick={() => setScheduleKind('weekly')}>Recurring weekday</button><button type="button" className={scheduleKind === 'date' ? 'selected' : ''} onClick={() => setScheduleKind('date')}>One calendar date</button></div>
-            <div className="schedule-fields">
-              {scheduleKind === 'weekly' && <Field label="Weekday"><select value={weekday} onChange={(event) => setWeekday(event.target.value)}>{[1, 2, 3, 4, 5, 6, 7].map((day) => <option key={day} value={day}>{weekdayLabel(day)}</option>)}</select></Field>}
-              <Field label={scheduleKind === 'weekly' ? 'Starts on' : 'Session date'}><input type="date" value={date} onChange={(event) => setDate(event.target.value)} /></Field>
-            </div>
+            {rollingProgram && rollingSchedule ? <>
+              <p className="section-explainer">This plan follows <Link className="text-link" to={`/programs/${rollingProgram.id}/edit`}>{rollingProgram.name}</Link>. The program controls when it appears; its saved individual schedule returns if rotation is turned off.</p>
+              <div className="schedule-managed-card">
+                <CalendarDays size={19} aria-hidden="true" />
+                <div className="schedule-managed-copy">
+                  <strong>One rotation schedule</strong>
+                  <span>Starts {formatShortDate(rollingSchedule.startsOn)} · workout every {rollingSchedule.intervalDays} {rollingSchedule.intervalDays === 1 ? 'day' : 'days'}</span>
+                  <small>{rotationIndex >= 0 ? `Workout ${rotationIndex + 1} of ${rollingProgram.planIds.length} in the rotation.` : 'This plan will be added to the rotation.'}</small>
+                </div>
+                <Link className="text-link" to={`/programs/${rollingProgram.id}/edit`}>Edit schedule</Link>
+              </div>
+            </> : <>
+              <div className="segmented"><button type="button" className={scheduleKind === 'weekly' ? 'selected' : ''} onClick={() => setScheduleKind('weekly')}>Recurring weekday</button><button type="button" className={scheduleKind === 'date' ? 'selected' : ''} onClick={() => setScheduleKind('date')}>One calendar date</button></div>
+              <div className="schedule-fields">
+                {scheduleKind === 'weekly' && <Field label="Weekday"><select value={weekday} onChange={(event) => setWeekday(event.target.value)}>{[1, 2, 3, 4, 5, 6, 7].map((day) => <option key={day} value={day}>{weekdayLabel(day)}</option>)}</select></Field>}
+                <Field label={scheduleKind === 'weekly' ? 'Starts on' : 'Session date'} error={validation?.target === 'schedule' ? validation.message : undefined} validationTarget="schedule"><input type="date" aria-invalid={validation?.target === 'schedule'} value={date} onChange={(event) => setDate(event.target.value)} /></Field>
+              </div>
+            </>}
           </section>
           <section className="editor-section">
             <EditorHeading eyebrow="04 · Exercises" title="Build the sequence"><span className="count-badge">{prescriptions.length}</span></EditorHeading>
-            {prescriptions.length === 0 ? <div className="inline-empty"><Dumbbell size={19} /><span>Add movements from the library on the right.</span></div> : <div className="prescription-list">{prescriptions.map((prescription, index) => {
+            {editing && <p className="section-explainer">Changing the plan details above does not change this exercise sequence. Use these controls when you want to update exercises explicitly.</p>}
+            {prescriptions.length === 0 ? <div data-validation-target="exercises"><div className={`inline-empty ${validation?.target === 'exercises' ? 'has-error' : ''}`}><Dumbbell size={19} /><span>Add movements from the library on the right.</span></div>{validation?.target === 'exercises' && <p className="form-error section-error" role="alert">{validation.message}</p>}</div> : <div className="prescription-list">{prescriptions.map((prescription, index) => {
               const exercise = EXERCISES.find((item) => item.id === prescription.exerciseId);
-              return exercise ? <PrescriptionEditor key={prescription.id} prescription={prescription} index={index} exercise={exercise} onChange={(patch) => updatePrescription(prescription.id, patch)} onMove={movePrescription} onRemove={() => setPrescriptions((current) => current.filter((item) => item.id !== prescription.id))} /> : null;
+              const prescriptionValidation = validation?.target === 'prescription' && validation.prescriptionId === prescription.id ? validation : undefined;
+              return exercise ? <PrescriptionEditor key={prescription.id} prescription={prescription} index={index} exercise={exercise} validation={prescriptionValidation} onChange={(patch) => updatePrescription(prescription.id, patch)} onMove={movePrescription} onRemove={() => setPrescriptions((current) => current.filter((item) => item.id !== prescription.id))} /> : null;
             })}</div>}
           </section>
           {error && <p className="form-error global-error" role="alert">{error}</p>}
@@ -239,12 +263,27 @@ interface PlanValidationInput {
   weekday: string;
 }
 
-function getPlanValidationError(input: PlanValidationInput): string | undefined {
-  if (!input.name.trim()) return 'Name your plan before saving.';
-  if (!input.focusConfirmed) return 'Confirm the primary target area before saving.';
-  if (!input.prescriptions.length) return 'Add at least one exercise.';
-  if (!dateIsValid(input.date) || (input.scheduleKind === 'weekly' && !input.weekday)) return 'Choose a valid schedule date.';
-  if (input.prescriptions.some((item) => item.sets < 1 || !Number.isInteger(item.sets) || item.dose.value <= 0 || item.restSeconds < 0)) return 'Check sets, reps or duration, and rest time. Values must be valid and positive where required.';
+type PlanValidationTarget = 'name' | 'focus' | 'exercises' | 'schedule' | 'prescription';
+type PrescriptionValidationField = 'sets' | 'dose' | 'rest';
+
+interface PlanValidationError {
+  message: string;
+  target: PlanValidationTarget;
+  prescriptionId?: string;
+  field?: PrescriptionValidationField;
+}
+
+function getPlanValidationError(input: PlanValidationInput): PlanValidationError | undefined {
+  if (!input.name.trim()) return { message: 'Name your plan before saving.', target: 'name' };
+  if (!input.focusConfirmed) return { message: 'Confirm the primary target area before saving.', target: 'focus' };
+  if (!input.prescriptions.length) return { message: 'Add at least one exercise.', target: 'exercises' };
+  if (!dateIsValid(input.date) || (input.scheduleKind === 'weekly' && !input.weekday)) return { message: 'Choose a valid schedule date.', target: 'schedule' };
+  const invalidPrescription = input.prescriptions.find((item) => !Number.isFinite(item.sets) || item.sets < 1 || !Number.isInteger(item.sets) || !Number.isFinite(item.dose.value) || item.dose.value <= 0 || !Number.isFinite(item.restSeconds) || item.restSeconds < 0);
+  if (invalidPrescription) {
+    if (!Number.isFinite(invalidPrescription.sets) || invalidPrescription.sets < 1 || !Number.isInteger(invalidPrescription.sets)) return { message: 'Sets must be a whole number of at least 1.', target: 'prescription', prescriptionId: invalidPrescription.id, field: 'sets' };
+    if (!Number.isFinite(invalidPrescription.dose.value) || invalidPrescription.dose.value <= 0) return { message: 'Enter a reps or duration value of at least 1.', target: 'prescription', prescriptionId: invalidPrescription.id, field: 'dose' };
+    return { message: 'Rest cannot be negative.', target: 'prescription', prescriptionId: invalidPrescription.id, field: 'rest' };
+  }
   return undefined;
 }
 
@@ -292,10 +331,10 @@ function ExerciseLibrary({ search, filterArea, sort, filteredExercises, totalExe
   </aside>;
 }
 
-function PrescriptionEditor({ prescription, exercise, index, onChange, onMove, onRemove }: { prescription: Prescription; exercise: Exercise; index: number; onChange: (patch: Partial<Prescription>) => void; onMove: (id: string, direction: -1 | 1) => void; onRemove: () => void }) {
-  return <div className="prescription-card">
+function PrescriptionEditor({ prescription, exercise, index, validation, onChange, onMove, onRemove }: { prescription: Prescription; exercise: Exercise; index: number; validation?: PlanValidationError; onChange: (patch: Partial<Prescription>) => void; onMove: (id: string, direction: -1 | 1) => void; onRemove: () => void }) {
+  return <div className={`prescription-card ${validation ? 'has-error' : ''}`} data-validation-target={validation ? `prescription-${prescription.id}` : undefined}>
     <div className="prescription-top"><span className="sequence-number">{String(index + 1).padStart(2, '0')}</span><div><strong>{exercise.name}</strong><span className="worked-label">Primary · {exercise.primaryAreas.map((area) => AREA_LABELS[area]).join(', ')}</span></div><div className="prescription-actions"><button type="button" className="icon-button" onClick={() => onMove(prescription.id, -1)} aria-label={`Move ${exercise.name} up`}><ChevronUp size={16} /></button><button type="button" className="icon-button" onClick={() => onMove(prescription.id, 1)} aria-label={`Move ${exercise.name} down`}><ChevronDown size={16} /></button><button type="button" className="icon-button danger" onClick={onRemove} aria-label={`Remove ${exercise.name}`}><Trash2 size={16} /></button></div></div>
-    <div className="prescription-fields"><Field label="Sets"><input type="number" min="1" step="1" value={prescription.sets} onChange={(event) => onChange({ sets: Number(event.target.value) })} /></Field><Field label={prescription.dose.kind === 'reps' ? 'Reps' : 'Duration'} suffix={prescription.dose.kind === 'reps' ? 'each' : 'sec'}><input type="number" min="1" step="1" value={prescription.dose.value} onChange={(event) => onChange({ dose: { ...prescription.dose, value: Number(event.target.value) } })} /></Field><Field label="Starting weight/resistance" suffix="kg"><input type="number" min="0" step="0.5" value={prescription.recommendedLoadKg ?? ''} onChange={(event) => onChange({ recommendedLoadKg: event.target.value === '' ? null : Number(event.target.value) })} /></Field><Field label="Rest" suffix="sec"><input type="number" min="0" step="5" value={prescription.restSeconds} onChange={(event) => onChange({ restSeconds: Number(event.target.value) })} /></Field></div>
+    <div className="prescription-fields"><Field label="Sets" error={validation?.field === 'sets' ? validation.message : undefined}><input aria-invalid={validation?.field === 'sets'} type="number" min="1" step="1" value={prescription.sets} onChange={(event) => onChange({ sets: Number(event.target.value) })} /></Field><Field label={prescription.dose.kind === 'reps' ? 'Reps' : 'Duration'} suffix={prescription.dose.kind === 'reps' ? 'each' : 'sec'} error={validation?.field === 'dose' ? validation.message : undefined}><input aria-invalid={validation?.field === 'dose'} type="number" min="1" step="1" value={prescription.dose.value} onChange={(event) => onChange({ dose: { ...prescription.dose, value: Number(event.target.value) } })} /></Field><Field label="Starting weight/resistance" suffix="kg"><input type="number" min="0" step="0.5" value={prescription.recommendedLoadKg ?? ''} onChange={(event) => onChange({ recommendedLoadKg: event.target.value === '' ? null : Number(event.target.value) })} /></Field><Field label="Rest" suffix="sec" error={validation?.field === 'rest' ? validation.message : undefined}><input aria-invalid={validation?.field === 'rest'} type="number" min="0" step="5" value={prescription.restSeconds} onChange={(event) => onChange({ restSeconds: Number(event.target.value) })} /></Field></div>
     {prescription.targetRir !== undefined && <p className="prescription-guidance">Target effort: finish with about {prescription.targetRir} reps in reserve (RIR), meaning you could still do about that many good-form reps.</p>}
     <input className="notes-input" value={prescription.notes} onChange={(event) => onChange({ notes: event.target.value })} placeholder="Optional coaching note" />
   </div>;

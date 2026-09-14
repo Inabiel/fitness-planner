@@ -106,16 +106,16 @@ export function ProgramEditor({ data }: { data: AuthenticatedPlannerData }) {
         </section>
         <section className="editor-section">
           <div className="section-heading"><div><p className="eyebrow">02 · Workouts</p><h2>Choose unassigned plans</h2></div><span className="count-badge">{planIds.length}</span></div>
-          <p className="section-explainer">Plans already assigned to a program stay out of this list. Each selected plan keeps its own schedule, detail page, and workout history.</p>
+          <p className="section-explainer">Plans already assigned to a program stay out of this list. Selected plans keep their own detail pages and workout history; the schedule above decides whether their dates stay individual or rotate together.</p>
           {availablePlans.length ? <div className="program-plan-picker">{availablePlans.map((plan) => {
             const focus = plan.focus ?? plan.primaryTargetArea;
-            return <label className="program-plan-option" key={plan.id}><input type="checkbox" checked={false} onChange={() => togglePlan(plan.id)} /><span className="program-plan-option-body"><strong>{plan.name}</strong><small>{FOCUS_LABELS[focus]} · {formatSchedule(plan.schedule)}</small></span></label>;
+            return <label className="program-plan-option" key={plan.id}><input type="checkbox" checked={false} onChange={() => togglePlan(plan.id)} /><span className="program-plan-option-body"><strong>{plan.name}</strong><small>{FOCUS_LABELS[focus]} · Individual: {formatSchedule(plan.schedule)}</small></span></label>;
           })}</div> : <EmptyState compact icon={<Dumbbell size={21} />} title={data.plans.length ? 'No unassigned plans available' : 'Create a workout plan first'} body={data.plans.length ? 'Create a new plan here or remove a plan from another program.' : 'Programs can hold plans you’ve already built.'} action={<button type="button" className="button secondary small" onClick={createPlanHere} disabled={saving}><Plus size={15} /> Create a new plan here</button>} />}
           {availablePlans.length > 0 && <button type="button" className="button secondary small program-create-plan" onClick={createPlanHere} disabled={saving}><Plus size={15} /> Create a new plan here</button>}
         </section>
         <section className="editor-section">
           <div className="section-heading"><div><p className="eyebrow">03 · Schedule</p><h2>Choose the program rhythm</h2></div><CalendarDays size={19} /></div>
-          <ProgramScheduleFields kind={scheduleKind} startsOn={startsOn} intervalDays={intervalDays} onKindChange={setScheduleKind} onStartsOnChange={setStartsOn} onIntervalDaysChange={setIntervalDays} />
+          <ProgramScheduleFields kind={scheduleKind} startsOn={startsOn} intervalDays={intervalDays} onKindChange={setScheduleKind} onStartsOnChange={setStartsOn} onIntervalDaysChange={setIntervalDays} previewPlans={selectedPlans} />
         </section>
         {selectedPlans.length > 0 && <section className="editor-section">
           <div className="section-heading"><div><p className="eyebrow">04 · Order</p><h2>Set the order</h2></div></div>
