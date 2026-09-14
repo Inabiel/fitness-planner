@@ -13,6 +13,7 @@ import type { GamificationCelebration } from '../../shared/gamification';
 import { GamificationCelebrationModal } from '../gamification';
 import { FocusIllustration } from './FocusIllustration';
 import { LiveTrackingModal } from './LiveTrackingModal';
+import { CopyPlanModal, DeletePlanModal } from './PlanActionModals';
 import { copyToClipboard, formatWorkoutPlanText } from '../../shared/workoutExport';
 import { assessPlanIntensity, assessPrescriptionEffort, type EffortAssessment, type IntensityAssessment } from './recommendations';
 
@@ -144,29 +145,8 @@ export function PlanDetail({ data }: { data: AuthenticatedPlannerData }) {
       {liveTrackingOpen && <LiveTrackingModal plan={plan} records={data.records} onClose={() => setLiveTrackingOpen(false)} onSaved={(message, nextCelebration) => { if (nextCelebration) { setCelebration(nextCelebration); setCelebrationDetail(message); } else { setSnackbar({ message, tone: 'success' }); } }} />}
       {celebration && <GamificationCelebrationModal celebration={celebration} detail={celebrationDetail} onClose={() => { setCelebration(null); setCelebrationDetail(''); }} />}
       {showRecalc && <RecalculationModal estimate={plan.estimate} previewEstimate={previewEstimate} profileRevision={data.profile.revision} saving={saving} onCancel={() => setShowRecalc(false)} onSave={saveRecalculation} />}
-      {deleteOpen && <DeleteModal planName={plan.name} error={error} saving={saving} onCancel={() => setDeleteOpen(false)} onDelete={deletePlan} />}
+      {deleteOpen && <DeletePlanModal planName={plan.name} error={error} saving={saving} onCancel={() => setDeleteOpen(false)} onDelete={deletePlan} />}
     </Page>
-  );
-}
-
-function CopyPlanModal({ includeSteps, saving, onIncludeStepsChange, onCancel, onCopy }: { includeSteps: boolean; saving: boolean; onIncludeStepsChange: (value: boolean) => void; onCancel: () => void; onCopy: () => void }) {
-  return (
-    <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !saving) onCancel(); }}>
-      <div className="review-confirmation-modal" role="dialog" aria-modal="true" aria-labelledby="copy-plan-title">
-        <div className="confirmation-icon"><Clipboard size={20} /></div>
-        <p className="eyebrow">Copy workout plan</p>
-        <h2 id="copy-plan-title">Choose what to copy</h2>
-        <p className="muted">The plan summary is always included. Add exercise steps when you want the movement instructions in your message too.</p>
-        <label className="confirm-row">
-          <input type="checkbox" checked={includeSteps} onChange={(event) => onIncludeStepsChange(event.target.checked)} />
-          <span><strong>Include exercise steps</strong><small>Copies each exercise’s plan, rest, notes, and written instructions.</small></span>
-        </label>
-        <div className="modal-actions">
-          <button type="button" className="button ghost" onClick={onCancel} disabled={saving} autoFocus>Cancel</button>
-          <button type="button" className="button primary" onClick={onCopy} disabled={saving}>{saving ? 'Copying…' : 'Copy plan text'} <Clipboard size={16} /></button>
-        </div>
-      </div>
-    </div>
   );
 }
 
@@ -177,10 +157,6 @@ function EstimateSnapshotCard({ estimate, onRecalculate }: { estimate?: Estimate
 function RecalculationModal({ estimate, previewEstimate, profileRevision, saving, onCancel, onSave }: { estimate?: EstimateSnapshot; previewEstimate: ReturnType<typeof calculateEstimates>; profileRevision: number; saving: boolean; onCancel: () => void; onSave: () => void }) {
   const newEstimate = { ...previewEstimate, calculatedAt: now(), profileRevision };
   return <div className="inline-modal"><div><p className="eyebrow">Explicit recalculation</p><h2>Preview replacement estimates</h2><p className="muted">Your profile may have changed. This only updates the saved estimate on this plan; history stays unchanged.</p></div><div className="compare-grid"><EstimateCompare label="Saved" estimate={estimate} /><EstimateCompare label="New preview" estimate={newEstimate} /></div><div className="modal-actions"><button className="button ghost" onClick={onCancel}>Keep current</button><button className="button primary" onClick={onSave} disabled={saving}>{saving ? 'Saving…' : 'Save replacement'}</button></div></div>;
-}
-
-function DeleteModal({ planName, error, saving, onCancel, onDelete }: { planName: string; error: string; saving: boolean; onCancel: () => void; onDelete: () => void }) {
-  return <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !saving) onCancel(); }}><div className="delete-data-modal" role="dialog" aria-modal="true" aria-labelledby="delete-plan-title"><div className="warning-icon"><Trash2 size={20} /></div><p className="eyebrow">Delete workout plan</p><h2 id="delete-plan-title">Delete {planName}?</h2><p>Future sessions will disappear, but recorded history will be retained.</p>{error && <p className="form-error" role="alert">{error}</p>}<div className="modal-actions"><button type="button" className="button ghost" onClick={onCancel} disabled={saving} autoFocus>Cancel</button><button type="button" className="button danger-button" onClick={onDelete} disabled={saving}>{saving ? 'Deleting…' : 'Delete plan'}</button></div></div></div>;
 }
 
 function EstimateCompare({ label, estimate }: { label: string; estimate?: EstimateSnapshot | (ReturnType<typeof calculateEstimates> & { calculatedAt: string; profileRevision: number }) }) {

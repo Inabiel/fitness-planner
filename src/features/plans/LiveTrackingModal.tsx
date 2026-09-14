@@ -4,7 +4,7 @@ import { FOCUS_LABELS, localDate, type Exercise, type Prescription, type SetReco
 import { now, saveWorkoutRecord, uid } from '../../data/db';
 import { getGamificationCelebration, getGamificationFeedback, getGamificationSummary, type GamificationCelebration } from '../../shared/gamification';
 import { EmptyState } from '../../shared/ui';
-import { SessionExercise, type SetValueField } from '../sessions/Session';
+import { SessionExercise, type SetValueField } from '../sessions/SessionExercise';
 import { makePlanSnapshot } from '../sessions/snapshot';
 
 interface TrackingStep {
