@@ -6,6 +6,7 @@ import { deletePlan as removePlan, now, updatePlanEstimate, type AuthenticatedPl
 import { EXERCISES } from '../../data/exercises';
 import { formatDateTime } from '../../shared/formatters';
 import { getProgressPoints } from '../../shared/progress';
+import { estimatePlanCalories } from '../../shared/calorieBurn';
 import { ProgressLineChart } from '../../shared/progressChart';
 import { EmptyState, Page, Snackbar } from '../../shared/ui';
 import type { GamificationCelebration } from '../../shared/gamification';
@@ -51,6 +52,7 @@ export function PlanDetail({ data }: { data: AuthenticatedPlannerData }) {
   const plan = selectedPlan;
   const focus = plan.focus ?? plan.primaryTargetArea;
   const intensity = plan.intensity ?? 'moderate';
+  const estimatedCalories = estimatePlanCalories(plan, data.profile.weightKg);
   const today = localDate();
   const rollingProgram = data.programs.find((program) => program.schedule?.kind === 'rolling' && program.planIds.includes(plan.id));
   const canStartToday = occursOn(plan, today, data.programs);
@@ -116,7 +118,7 @@ export function PlanDetail({ data }: { data: AuthenticatedPlannerData }) {
           <section className="focus-hero"><div className="focus-copy"><p className="eyebrow on-dark">Workout focus</p><h2>{FOCUS_LABELS[focus]}</h2><p>This is the intention you confirmed for the plan. Your exercises can work other areas too.</p></div><FocusIllustration focus={focus} /></section>
           {isPlanRecurring(plan, data.programs) && <section className="detail-section progress-card"><div className="section-heading"><div><p className="eyebrow">Recurring progress</p><h2>Performance trend</h2></div><span className="unit-label">% of target</span></div>{progressPoints.length ? <ProgressLineChart points={progressPoints} ariaLabel={`${plan.name} performance trend`} /> : <EmptyState compact icon={<Flame size={21} />} title="Your trend starts after one completed session" body="Log actual reps or duration in a recurring session to see progress here." />}</section>}
           <section className="detail-section">
-            <div className="section-heading"><div><p className="eyebrow">The sequence</p><h2>{plan.prescriptions.length} exercises</h2></div><span className="volume-badge"><Flame size={15} /> {plannedVolume(plan.prescriptions)} planned work sets</span></div>
+            <div className="section-heading"><div><p className="eyebrow">The sequence</p><h2>{plan.prescriptions.length} exercises</h2></div><span className="volume-badge"><Flame size={15} /> {plannedVolume(plan.prescriptions)} planned work sets · {estimatedCalories.toLocaleString()} estimated kcal</span></div>
             <p className="section-explainer">Planned volume means the total number of work sets in this session. It is guidance, not your actual workload.</p>
             <div className="detail-exercise-list">{plan.prescriptions.map((prescription, index) => {
               const exercise = EXERCISES.find((item) => item.id === prescription.exerciseId);

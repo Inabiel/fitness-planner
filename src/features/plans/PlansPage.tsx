@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Link } from 'react-router';
 import { FOCUS_LABELS, INTENSITY_LABELS, formatPlanSchedule, formatProgramSchedule, formatSchedule, plannedVolume, type WorkoutPlan, type WorkoutProgram, type WorkoutRecord } from '../../domain';
 import type { PlannerData } from '../../data/db';
+import { estimatePlanCalories } from '../../shared/calorieBurn';
 import { EmptyState, Page } from '../../shared/ui';
 import { FocusIllustration } from './FocusIllustration';
 import { ProgramCreateModal } from './ProgramCreateModal';
@@ -30,7 +31,7 @@ export function Plans({ data }: { data: PlannerData }) {
         body="Choose a focus, add a few movements from the library, and save a session you’ll want to come back to."
         action={<Link className="button primary" to="/plans/new"><Plus size={16} /> Build a plan</Link>}
       /> : view === 'plans' ? <div className="plan-grid">
-        {plans.map((plan) => <PlanCard key={plan.id} plan={plan} records={records} programs={programs} />)}
+        {plans.map((plan) => <PlanCard key={plan.id} plan={plan} records={records} programs={programs} weightKg={data.profile?.weightKg ?? 0} />)}
       </div> : programs.length === 0 ? <EmptyState
         large
         icon={<Layers size={24} />}
@@ -63,7 +64,7 @@ function ProgramCard({ program, plans }: { program: WorkoutProgram; plans: Worko
   );
 }
 
-export function PlanCard({ plan, records, programs }: { plan: WorkoutPlan; records: WorkoutRecord[]; programs: WorkoutProgram[] }) {
+export function PlanCard({ plan, records, programs, weightKg }: { plan: WorkoutPlan; records: WorkoutRecord[]; programs: WorkoutProgram[]; weightKg: number }) {
   const lastRecord = records.find((record) => record.sourcePlanId === plan.id);
   const lastUsedLabel = lastRecord ? `Last used ${lastRecord.sessionDate}` : 'Not used yet';
   const scheduleLabel = formatPlanSchedule(plan, programs);
@@ -79,7 +80,7 @@ export function PlanCard({ plan, records, programs }: { plan: WorkoutPlan; recor
         <div className="card-topline"><span className="area-pill">{FOCUS_LABELS[focus]}</span><span className="muted">{lastUsedLabel}</span></div>
         <h2>{plan.name}</h2>
         <p className={`plan-membership ${membership.length ? '' : 'unassigned'}`}><Layers size={13} /><span>{membershipLabel}</span></p>
-        <p className="muted">{plan.prescriptions.length} exercises · {plannedVolume(plan.prescriptions)} planned work sets · {INTENSITY_LABELS[intensity]} intensity</p>
+        <p className="muted">{plan.prescriptions.length} exercises · {plannedVolume(plan.prescriptions)} planned work sets · {INTENSITY_LABELS[intensity]} intensity · {estimatePlanCalories(plan, weightKg).toLocaleString()} estimated kcal</p>
         <div className="plan-card-footer">
           <span className="schedule-label"><CalendarDays size={15} /> {scheduleLabel}</span>
           <span className="text-link">Open plan <ArrowRight size={15} /></span>

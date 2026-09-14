@@ -22,7 +22,7 @@ import {
   type WorkoutIntensity,
   type WorkoutPlan,
 } from '../../domain';
-import { addPlanToProgram, now, savePlan as savePlanRecord, uid, type AuthenticatedPlannerData } from '../../data/db';
+import { addPlanToProgram, now, savePlan as savePlanRecord, saveProgram as saveProgramRecord, uid, type AuthenticatedPlannerData } from '../../data/db';
 import { EXERCISES } from '../../data/exercises';
 import { normalizeExerciseOrder } from '../exercises/order';
 import { weekdayLabel } from '../../shared/formatters';
@@ -41,6 +41,7 @@ export function PlanEditor({ data }: { data: AuthenticatedPlannerData }) {
   const returnTo = programId ? `/programs/${programId}` : '/plans';
   const editing = Boolean(planId);
   const source = data.plans.find((plan) => plan.id === planId);
+  const rollingProgram = source && data.programs.find((program) => program.schedule?.kind === 'rolling' && program.planIds.includes(source.id));
   const [name, setName] = useState(source?.name ?? '');
   const [scheduleKind, setScheduleKind] = useState<'date' | 'weekly'>(source?.schedule.kind ?? 'weekly');
   const [date, setDate] = useState(source?.schedule.kind === 'date' ? source.schedule.date : localDate());
@@ -163,6 +164,9 @@ export function PlanEditor({ data }: { data: AuthenticatedPlannerData }) {
     const createAnother = programId && !editing && (event.nativeEvent as SubmitEvent).submitter?.getAttribute('data-save-action') === 'another';
     try {
       await savePlanRecord(plan);
+      if (rollingProgram?.schedule && rollingProgram.schedule.startsOn !== date) {
+        await saveProgramRecord({ ...rollingProgram, schedule: { ...rollingProgram.schedule, startsOn: date }, revision: rollingProgram.revision + 1, updatedAt: now() });
+      }
       if (programId) await addPlanToProgram(programId, plan.id);
       navigate(createAnother ? `/plans/new?programId=${programId}` : programId ? `/programs/${programId}` : `/plans/${plan.id}`);
     } catch {
@@ -203,6 +207,7 @@ export function PlanEditor({ data }: { data: AuthenticatedPlannerData }) {
           </section>
           <section className="editor-section">
             <EditorHeading eyebrow="03 · Schedule" title="When will you do it?"><CalendarDays size={19} /></EditorHeading>
+            {rollingProgram && <p className="section-explainer">This plan shares its effective date with <Link className="text-link" to={`/programs/${rollingProgram.id}/edit`}>{rollingProgram.name}</Link>; changing it moves the rotation for all plans.</p>}
             <div className="segmented"><button type="button" className={scheduleKind === 'weekly' ? 'selected' : ''} onClick={() => setScheduleKind('weekly')}>Recurring weekday</button><button type="button" className={scheduleKind === 'date' ? 'selected' : ''} onClick={() => setScheduleKind('date')}>One calendar date</button></div>
             <div className="schedule-fields">
               {scheduleKind === 'weekly' && <Field label="Weekday"><select value={weekday} onChange={(event) => setWeekday(event.target.value)}>{[1, 2, 3, 4, 5, 6, 7].map((day) => <option key={day} value={day}>{weekdayLabel(day)}</option>)}</select></Field>}

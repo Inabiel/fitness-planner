@@ -1,4 +1,4 @@
-import { dateIsValid, localDate, weekdayFor, type BodyWeightRecord, type Profile, type WorkoutIntensity, type WorkoutRecord } from '../domain';
+import { dateIsValid, localDate, weekdayFor, type BodyWeightRecord, type Profile, type Prescription, type WorkoutIntensity, type WorkoutPlan, type WorkoutRecord } from '../domain';
 
 export interface CalorieBurnSummary {
   today: number;
@@ -39,19 +39,23 @@ export function estimateWorkoutCalories(record: WorkoutRecord, fallbackWeightKg:
   const weightKg = weights
     .filter((weight) => dateIsValid(weight.date) && weight.date <= record.sessionDate)
     .sort((a, b) => b.date.localeCompare(a.date))[0]?.weightKg ?? fallbackWeightKg;
-  const intensity = record.planSnapshot.intensity ?? 'moderate';
-  const minutes = estimateWorkoutMinutes(record);
-  const activeCalories = (INTENSITY_MET[intensity] - 1) * 3.5 * weightKg * minutes / 200;
+  return estimatePlanCalories(record.planSnapshot, weightKg);
+}
+
+export function estimatePlanCalories(plan: Pick<WorkoutPlan, 'intensity' | 'prescriptions'>, weightKg: number): number {
+  if (!plan.prescriptions.length) return 0;
+  const minutes = estimateWorkoutMinutes(plan.prescriptions);
+  const activeCalories = (INTENSITY_MET[plan.intensity ?? 'moderate'] - 1) * 3.5 * weightKg * minutes / 200;
   return Math.max(0, Math.round(activeCalories));
 }
 
-function estimateWorkoutMinutes(record: WorkoutRecord): number {
-  const activeSeconds = record.planSnapshot.prescriptions.reduce((total, prescription) => {
+function estimateWorkoutMinutes(prescriptions: readonly Prescription[]): number {
+  const activeSeconds = prescriptions.reduce((total, prescription) => {
     const secondsPerSet = prescription.dose.kind === 'duration' ? prescription.dose.value : Math.max(2, prescription.dose.value * 3);
     return total + prescription.sets * secondsPerSet;
   }, 0);
-  const restSeconds = record.planSnapshot.prescriptions.reduce((total, prescription) => total + Math.max(0, prescription.sets - 1) * Math.max(0, prescription.restSeconds), 0);
-  const transitionSeconds = Math.max(0, record.planSnapshot.prescriptions.length - 1) * 30;
+  const restSeconds = prescriptions.reduce((total, prescription) => total + Math.max(0, prescription.sets - 1) * Math.max(0, prescription.restSeconds), 0);
+  const transitionSeconds = Math.max(0, prescriptions.length - 1) * 30;
   return Math.max(10, Math.ceil((activeSeconds + restSeconds + transitionSeconds) / 60));
 }
 

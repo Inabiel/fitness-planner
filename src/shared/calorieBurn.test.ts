@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { WorkoutRecord } from '../domain';
-import { estimateWorkoutCalories, getCalorieBurnSummary } from './calorieBurn';
+import { estimatePlanCalories, estimateWorkoutCalories, getCalorieBurnSummary } from './calorieBurn';
 
 function record(date: string, intensity: WorkoutRecord['planSnapshot']['intensity'] = 'moderate', id = date): WorkoutRecord {
   return {
@@ -25,6 +25,11 @@ function record(date: string, intensity: WorkoutRecord['planSnapshot']['intensit
 describe('calorie burn', () => {
   it('estimates active calories from plan duration, intensity, and body weight', () => {
     expect(estimateWorkoutCalories(record('2026-09-13'), 70)).toBe(49);
+  });
+
+  it('combines every prescription when estimating a plan', () => {
+    const snapshot = record('2026-09-13').planSnapshot;
+    expect(estimatePlanCalories({ ...snapshot, prescriptions: [...snapshot.prescriptions, { ...snapshot.prescriptions[0], id: 'prescription-2', sets: 8 }] }, 70)).toBe(74);
   });
 
   it('aggregates completed history into local calendar periods', () => {
