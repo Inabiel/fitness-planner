@@ -142,7 +142,7 @@ export function PlanDetail({ data }: { data: AuthenticatedPlannerData }) {
       {error && <p className="form-error global-error" role="alert">{error}</p>}
       {snackbar && <Snackbar message={snackbar.message} tone={snackbar.tone} onDismiss={dismissSnackbar} />}
       {copyOpen && <CopyPlanModal includeSteps={includeSteps} saving={saving} onIncludeStepsChange={setIncludeSteps} onCancel={() => setCopyOpen(false)} onCopy={copyPlan} />}
-      {liveTrackingOpen && <LiveTrackingModal plan={plan} records={data.records} onClose={() => setLiveTrackingOpen(false)} onSaved={(message, nextCelebration) => { if (nextCelebration) { setCelebration(nextCelebration); setCelebrationDetail(message); } else { setSnackbar({ message, tone: 'success' }); } }} />}
+      {liveTrackingOpen && <LiveTrackingModal plan={plan} records={data.records} programs={data.programs} onClose={() => setLiveTrackingOpen(false)} onSaved={(message, nextCelebration) => { if (nextCelebration) { setCelebration(nextCelebration); setCelebrationDetail(message); } else { setSnackbar({ message, tone: 'success' }); } }} />}
       {celebration && <GamificationCelebrationModal celebration={celebration} detail={celebrationDetail} onClose={() => { setCelebration(null); setCelebrationDetail(''); }} />}
       {showRecalc && <RecalculationModal estimate={plan.estimate} previewEstimate={previewEstimate} profileRevision={data.profile.revision} saving={saving} onCancel={() => setShowRecalc(false)} onSave={saveRecalculation} />}
       {deleteOpen && <DeletePlanModal planName={plan.name} error={error} saving={saving} onCancel={() => setDeleteOpen(false)} onDelete={deletePlan} />}

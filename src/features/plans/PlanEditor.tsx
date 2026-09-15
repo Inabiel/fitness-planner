@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
-import { ArrowRight, CalendarDays, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Dumbbell, Info, Plus, Search, Sparkles, Target, Trash2 } from 'lucide-react';
+import { ArrowRight, CalendarDays, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Clock3, Dumbbell, Info, Plus, Search, Sparkles, Target, Trash2 } from 'lucide-react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import {
   AREA_LABELS,
@@ -10,6 +10,7 @@ import {
   WORKOUT_INTENSITIES,
   WORKOUT_STYLES,
   dateIsValid,
+  exerciseMatchesConstraints,
   localDate,
   snapshotEstimate,
   suggestArea,
@@ -17,6 +18,7 @@ import {
   type Area,
   type Exercise,
   type Prescription,
+  type PlanConstraints,
   type Schedule,
   type WorkoutFocus,
   type WorkoutIntensity,
@@ -32,6 +34,7 @@ import { adjustPrescriptionsForIntensity, createPresetPrescriptions, createRecom
 
 const EXERCISES_PER_PAGE = 6;
 type ExerciseSort = 'popularity' | 'name-asc' | 'name-desc' | 'area' | 'custom';
+const EQUIPMENT_OPTIONS = [...new Set(EXERCISES.map((exercise) => exercise.equipment).filter((equipment): equipment is string => Boolean(equipment)))].sort();
 
 export function PlanEditor({ data }: { data: AuthenticatedPlannerData }) {
   const { planId } = useParams();
@@ -51,7 +54,8 @@ export function PlanEditor({ data }: { data: AuthenticatedPlannerData }) {
   const [focus, setFocus] = useState<WorkoutFocus>(source?.focus ?? source?.primaryTargetArea ?? 'full-body');
   const [intensity, setIntensity] = useState<WorkoutIntensity>(source?.intensity ?? 'moderate');
   const [focusConfirmed, setFocusConfirmed] = useState(source?.focusConfirmed ?? false);
-  const [prescriptions, setPrescriptions] = useState<Prescription[]>(() => source ? source.prescriptions : createRecommendedPrescriptions('full-body', data.profile.experience, data.profile.primaryGoal, EXERCISES, uid, 'moderate'));
+  const [constraints, setConstraints] = useState<PlanConstraints>(() => source?.constraints ?? {});
+  const [prescriptions, setPrescriptions] = useState<Prescription[]>(() => source ? source.prescriptions : createRecommendedPrescriptions('full-body', data.profile.experience, data.profile.primaryGoal, EXERCISES, uid, 'moderate', constraints));
   const [search, setSearch] = useState('');
   const [filterArea, setFilterArea] = useState<Area | 'aerobic' | 'all'>('all');
   const [exerciseSort, setExerciseSort] = useState<ExerciseSort>(() => data.profile.exerciseOrder?.length ? 'custom' : 'popularity');
@@ -61,7 +65,7 @@ export function PlanEditor({ data }: { data: AuthenticatedPlannerData }) {
   const [error, setError] = useState('');
   const [validation, setValidation] = useState<PlanValidationError>();
   const suggestion = suggestArea(data.profile.primaryGoal, data.profile.experience);
-  const filteredExercises = EXERCISES.filter((exercise) => matchesExercise(exercise, filterArea, search)).sort((a, b) => compareExercises(a, b, exerciseSort, exerciseOrder));
+  const filteredExercises = EXERCISES.filter((exercise) => exerciseMatchesConstraints(exercise, constraints) && matchesExercise(exercise, filterArea, search)).sort((a, b) => compareExercises(a, b, exerciseSort, exerciseOrder));
   const pageCount = Math.max(1, Math.ceil(filteredExercises.length / EXERCISES_PER_PAGE));
   const currentPage = Math.min(libraryPage, pageCount);
   const pageExercises = filteredExercises.slice((currentPage - 1) * EXERCISES_PER_PAGE, currentPage * EXERCISES_PER_PAGE);
@@ -112,14 +116,14 @@ export function PlanEditor({ data }: { data: AuthenticatedPlannerData }) {
     if (!preset || (preset.id === 'aerobic-flow' && focus !== 'aerobic')) return;
 
     setFocusConfirmed(true);
-    setPrescriptions(createPresetPrescriptions(preset.id, focus, data.profile.experience, data.profile.primaryGoal, EXERCISES, uid, intensity));
+    setPrescriptions(createPresetPrescriptions(preset.id, focus, data.profile.experience, data.profile.primaryGoal, EXERCISES, uid, intensity, constraints));
     if (!name.trim()) setName(preset.name);
   }
 
   function selectFocus(nextFocus: WorkoutFocus) {
     setFocus(nextFocus);
     setFocusConfirmed(false);
-    if (!editing) setPrescriptions(createRecommendedPrescriptions(nextFocus, data.profile.experience, data.profile.primaryGoal, EXERCISES, uid, intensity));
+    if (!editing) setPrescriptions(createRecommendedPrescriptions(nextFocus, data.profile.experience, data.profile.primaryGoal, EXERCISES, uid, intensity, constraints));
     if (!name.trim()) setName(`${FOCUS_LABELS[nextFocus]} day`);
   }
 
@@ -169,6 +173,7 @@ export function PlanEditor({ data }: { data: AuthenticatedPlannerData }) {
       schedule,
       prescriptions,
       estimate: source?.estimate ?? snapshotEstimate(data.profile),
+      ...(constraints.durationMinutes || constraints.availableEquipment?.length ? { constraints } : {}),
     };
 
     setSaving(true);
@@ -216,7 +221,15 @@ export function PlanEditor({ data }: { data: AuthenticatedPlannerData }) {
             <div data-validation-target="focus"><label className={`confirm-row ${validation?.target === 'focus' ? 'has-error' : ''}`}><input type="checkbox" aria-invalid={validation?.target === 'focus'} checked={focusConfirmed} onChange={(event) => setFocusConfirmed(event.target.checked)} /><span><strong>I confirm {FOCUS_LABELS[focus].toLowerCase()} as this plan’s primary focus.</strong><small>Recommended exercises are loaded automatically and can still be customized.</small></span></label>{validation?.target === 'focus' && <p className="form-error section-error" role="alert">{validation.message}</p>}</div>
           </section>
           <section className="editor-section">
-            <EditorHeading eyebrow="03 · Schedule" title="When will you do it?"><CalendarDays size={19} /></EditorHeading>
+            <EditorHeading eyebrow="03 · Personalize" title="Fit your routine"><Clock3 size={19} /></EditorHeading>
+            <p className="section-explainer">These limits shape fresh recommendations and keep unavailable machine exercises out of the library. Leave them blank for the full catalog.</p>
+            <div className="schedule-fields">
+              <Field label="Time available" suffix="min" hint="Used to keep new suggestions compact"><input type="number" min="10" max="180" step="5" value={constraints.durationMinutes ?? ''} onChange={(event) => setConstraints((current) => ({ ...current, durationMinutes: event.target.value === '' ? undefined : Number(event.target.value) }))} placeholder="30" /></Field>
+              <Field label="Available machines" hint="Select every machine you can use"><select multiple size={4} value={constraints.availableEquipment ?? []} onChange={(event) => setConstraints((current) => ({ ...current, availableEquipment: Array.from(event.target.selectedOptions, (option) => option.value) }))}>{EQUIPMENT_OPTIONS.map((equipment) => <option key={equipment} value={equipment}>{equipment}</option>)}</select></Field>
+            </div>
+          </section>
+          <section className="editor-section">
+            <EditorHeading eyebrow="04 · Schedule" title="When will you do it?"><CalendarDays size={19} /></EditorHeading>
             {rollingProgram && rollingSchedule ? <>
               <p className="section-explainer">This plan follows <Link className="text-link" to={`/programs/${rollingProgram.id}/edit`}>{rollingProgram.name}</Link>. The program controls when it appears; its saved individual schedule returns if rotation is turned off.</p>
               <div className="schedule-managed-card">
@@ -237,7 +250,7 @@ export function PlanEditor({ data }: { data: AuthenticatedPlannerData }) {
             </>}
           </section>
           <section className="editor-section">
-            <EditorHeading eyebrow="04 · Exercises" title="Build the sequence"><span className="count-badge">{prescriptions.length}</span></EditorHeading>
+            <EditorHeading eyebrow="05 · Exercises" title="Build the sequence"><span className="count-badge">{prescriptions.length}</span></EditorHeading>
             {editing && <p className="section-explainer">Changing the plan details above does not change this exercise sequence. Use these controls when you want to update exercises explicitly.</p>}
             {prescriptions.length === 0 ? <div data-validation-target="exercises"><div className={`inline-empty ${validation?.target === 'exercises' ? 'has-error' : ''}`}><Dumbbell size={19} /><span>Add movements from the library on the right.</span></div>{validation?.target === 'exercises' && <p className="form-error section-error" role="alert">{validation.message}</p>}</div> : <div className="prescription-list">{prescriptions.map((prescription, index) => {
               const exercise = EXERCISES.find((item) => item.id === prescription.exerciseId);

@@ -9,9 +9,9 @@ It runs entirely in the browser. Profile data, plans, programs, workout records,
 - Four-step onboarding: baseline, context, goals, and final review confirmation.
 - BMI and daily calorie/macronutrient estimates based on the current profile.
 - Workout plans focused on body areas, Push/Pull-style splits, or aerobic training.
-- Programs that organize existing workout plans into an ordered routine; each plan remains independently schedulable and loggable.
+- Programs that organize existing workout plans into an ordered routine, track rotation progress, support skip/move controls, optional deload rotations, and optional completion-driven schedule shifting.
 - Program creation can select only unassigned plans or create and automatically attach new plans; the main action opens a quick-create modal and the plan editor can save and add another.
-- Live Tracking opens a workout modal with set inputs, exercise progress, rest countdowns, automatic exercise advance, and save/finish actions.
+- Live Tracking opens a workout modal with set inputs, per-set notes, session-only exercise substitutions, exercise progress, rest countdowns, automatic exercise advance, and save/finish actions.
 - Focus-aware exercise recommendations and six presets:
   - Easy One
   - Strength Base
@@ -23,7 +23,8 @@ It runs entirely in the browser. Profile data, plans, programs, workout records,
 - Local four-frame looping GIF demonstrations for every exercise, styled with grayscale anatomy and warm muscle accents.
 - Exercise search, area/type filters, pagination, popularity/name/area sorting, and custom ordering.
 - Dashboard schedule browsing for a selected date, nearby earlier workouts, and upcoming workouts.
-- Dated workout sessions with optional actual reps/duration, load, and reps in reserve (RIR).
+- Dated workout sessions with optional actual reps/duration, load, reps in reserve (RIR), and per-set notes.
+- Plan personalization with optional time and available-machine constraints that shape recommendations and the exercise library.
 - Effort guidance that recommends increasing, decreasing, or holding effort from recent logged results.
 - Four target intensity levels that shape plan prescriptions and advance after repeated above-target recurring sessions.
 - Historical plan snapshots that remain available after a plan is edited or deleted.
@@ -31,12 +32,12 @@ It runs entirely in the browser. Profile data, plans, programs, workout records,
 - A How it works page explains formulas, terms, sources, and safety boundaries.
 - A standalone calculator estimates calories, macros, and BMI without changing saved data.
 - Copyable workout plans with optional exercise steps for use in WhatsApp or elsewhere.
-- Body-weight chart, workout history, performance trend graph, and recorded performance table.
+- Body-weight chart, workout history, performance trend graph, recorded performance table, personal records, weekly work-set volume, schedule adherence, and primary muscle-balance signals.
 - Weekly consistency streaks with fire styling, workout-day milestone badges, a 12-week activity history, and completion celebrations derived from saved workouts.
 - Estimated calories burned from completed workouts, summarized for today, this week, this month, this year, and all retained history.
 - Temporary versioned JSON backup import/export for moving local data between devices; this bridge is intended to be replaced by backend sync.
 - Snackbar confirmations for transient actions and routine completion; newly activated streaks and earned badges use a celebratory modal.
-- Responsive desktop sidebar and mobile navigation drawer.
+- Responsive desktop sidebar, mobile navigation drawer, mobile-safe dialogs, and narrow-screen card layouts.
 - Modal confirmation for profile deletion, plan deletion, and workout-record deletion.
 
 ## Quick start
@@ -68,6 +69,9 @@ The app uses hash routing so it can run on static hosting without server-side ro
 | #/plans/new | Create a workout plan |
 | #/plans/:planId | View plan details, progress, effort guidance, and copy actions |
 | #/plans/:planId/edit | Edit a workout plan |
+| #/programs/new | Create a workout program |
+| #/programs/:programId | View a program and its member plans |
+| #/programs/:programId/edit | Edit a workout program |
 | #/sessions/:planId/:date | Log a dated workout session |
 | #/history/:recordId | View a historical session snapshot |
 | #/progress | Track body weight and performance |
@@ -114,6 +118,7 @@ The Vite build uses relative asset paths and HashRouter, so it works at a reposi
 - [Product requirements](docs/prd.md)
 - [Technical requirements](docs/trd.md)
 - [Repository review and roadmap](docs/review.md)
+- [Mobile UI/UX audit](docs/mobile-ux-audit.md)
 - [Gamification and streaks](docs/gamification.md)
 - [Media generation guide](docs/media-generation/README.md)
 
@@ -122,5 +127,5 @@ The Vite build uses relative asset paths and HashRouter, so it works at a reposi
 - Exercise GIFs are generated educational aids; movement review, attribution metadata, and a formal content-approval workflow are not shipped.
 - Nutrition calculations, workout-energy totals, and progression recommendations are transparent MVP heuristics with documented boundaries, not clinical or medical guidance.
 - IndexedDB is currently schema version 2 without runtime data parsing, complete migration coverage, or stale-tab conflict detection.
-- Vitest covers pure domain, ordering, recommendation, gamification, calorie-aggregation, and backup-validation tests. Browser-level Playwright journeys are not yet implemented.
-- Program-level scheduling, rest-day rules, next-workout recommendations, accounts, cloud sync, and custom exercises are outside the current scope. The temporary JSON backup bridge is intentionally not a sync solution.
+- Vitest covers pure domain, ordering, recommendation, gamification, calorie-aggregation, and backup-validation tests. Browser-level Playwright journeys and real browser/device responsive verification are not yet implemented.
+- Program scheduling, progress, rest-day behavior, skip/move controls, deload rotations, completion-driven shifting, and nearby next-workout recommendations are shipped. The temporary JSON backup bridge is intentionally not a sync solution.

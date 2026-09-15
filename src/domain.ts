@@ -74,11 +74,30 @@ export interface Prescription {
   targetRir?: number;
 }
 
+export interface PlanConstraints {
+  durationMinutes?: number;
+  availableEquipment?: string[];
+}
+
 export type Schedule =
   | { kind: 'date'; date: string }
   | { kind: 'weekly'; weekday: number; startsOn: string };
 
-export type ProgramSchedule = { kind: 'rolling'; startsOn: string; intervalDays: number };
+export type ProgramSchedule = {
+  kind: 'rolling';
+  startsOn: string;
+  intervalDays: number;
+  advanceOnCompletion?: boolean;
+  deloadEveryRotations?: number;
+  anchorDate?: string;
+  anchorPlanIndex?: number;
+};
+
+export interface ProgramReschedule {
+  planId: string;
+  fromDate: string;
+  toDate: string;
+}
 
 export interface WorkoutPlan {
   id: string;
@@ -93,6 +112,7 @@ export interface WorkoutPlan {
   schedule: Schedule;
   prescriptions: Prescription[];
   estimate?: EstimateSnapshot;
+  constraints?: PlanConstraints;
 }
 
 export interface WorkoutProgram {
@@ -100,6 +120,8 @@ export interface WorkoutProgram {
   name: string;
   planIds: string[];
   schedule?: ProgramSchedule;
+  skippedDates?: string[];
+  rescheduledOccurrences?: ProgramReschedule[];
   revision: number;
   createdAt: string;
   updatedAt: string;
@@ -118,6 +140,8 @@ export interface PlanSnapshot {
   prescriptions: Prescription[];
   exercises: Exercise[];
   estimate?: EstimateSnapshot;
+  constraints?: PlanConstraints;
+  programDeload?: boolean;
 }
 
 export interface SetRecord {
@@ -127,6 +151,7 @@ export interface SetRecord {
   actualDurationSeconds: number | null;
   loadKg: number | null;
   rir?: number | null;
+  notes?: string | null;
 }
 
 export interface WorkoutRecord {
@@ -274,10 +299,74 @@ export function occurrenceAfter(plan: WorkoutPlan, date: string, programs: reado
 
 export function rollingProgramPlanOn(program: WorkoutProgram, date: string): string | null {
   const schedule = program.schedule;
-  if (!schedule || !program.planIds.length || !dateIsValid(date) || !dateIsValid(schedule.startsOn) || !Number.isInteger(schedule.intervalDays) || schedule.intervalDays < 1 || date < schedule.startsOn) return null;
-  const elapsedDays = calendarDaysBetween(schedule.startsOn, date);
+  const rescheduled = program.rescheduledOccurrences?.find((item) => item.toDate === date);
+  if (rescheduled && program.planIds.includes(rescheduled.planId)) return rescheduled.planId;
+  if (program.skippedDates?.includes(date) || program.rescheduledOccurrences?.some((item) => item.fromDate === date)) return null;
+  if (!schedule || !program.planIds.length || !dateIsValid(date) || !dateIsValid(schedule.startsOn) || !Number.isInteger(schedule.intervalDays) || schedule.intervalDays < 1) return null;
+  const anchorDate = schedule.anchorDate ?? schedule.startsOn;
+  const anchorPlanIndex = schedule.anchorPlanIndex ?? 0;
+  if (!dateIsValid(anchorDate) || !dateIsValid(date) || date < anchorDate || !Number.isInteger(anchorPlanIndex)) return null;
+  const elapsedDays = calendarDaysBetween(anchorDate, date);
   if (elapsedDays % schedule.intervalDays !== 0) return null;
-  return program.planIds[(elapsedDays / schedule.intervalDays) % program.planIds.length] ?? null;
+  return program.planIds[(anchorPlanIndex + elapsedDays / schedule.intervalDays) % program.planIds.length] ?? null;
+}
+
+export function isProgramDeloadDate(program: WorkoutProgram, date: string): boolean {
+  const schedule = program.schedule;
+  const every = schedule?.deloadEveryRotations;
+  if (!schedule || !every || every < 2 || !Number.isInteger(every) || !program.planIds.length || !dateIsValid(date) || date < schedule.startsOn) return false;
+  const elapsedDays = calendarDaysBetween(schedule.startsOn, date);
+  if (elapsedDays < 0 || elapsedDays % schedule.intervalDays !== 0) return false;
+  const sessionNumber = elapsedDays / schedule.intervalDays;
+  const rotationNumber = Math.floor(sessionNumber / program.planIds.length) + 1;
+  return rotationNumber % every === 0 && rollingProgramPlanOn(program, date) !== null;
+}
+
+export function advanceProgramAfterCompletion(program: WorkoutProgram, planId: string, sessionDate: string): WorkoutProgram {
+  const schedule = program.schedule;
+  const planIndex = program.planIds.indexOf(planId);
+  if (!schedule?.advanceOnCompletion || planIndex < 0 || !dateIsValid(sessionDate)) return program;
+  return { ...program, schedule: { ...schedule, anchorDate: sessionDate, anchorPlanIndex: planIndex } };
+}
+
+export interface ProgramProgress {
+  completedSessions: number;
+  currentRotationCompleted: number;
+  rotationSize: number;
+  percentage: number;
+  lastCompletedDate: string | null;
+}
+
+export function getProgramProgress(program: WorkoutProgram, records: readonly WorkoutRecord[]): ProgramProgress {
+  const rotationSize = program.planIds.length;
+  const completed = records
+    .filter((record) => record.status === 'completed' && program.planIds.includes(record.sourcePlanId))
+    .sort((a, b) => a.sessionDate.localeCompare(b.sessionDate) || a.id.localeCompare(b.id))
+    .filter((record, index, all) => index === all.findIndex((item) => item.sourcePlanId === record.sourcePlanId && item.sessionDate === record.sessionDate));
+  if (!rotationSize || !completed.length) return { completedSessions: completed.length, currentRotationCompleted: 0, rotationSize, percentage: 0, lastCompletedDate: completed.at(-1)?.sessionDate ?? null };
+
+  let expectedIndex = program.planIds.indexOf(completed.at(-1)?.sourcePlanId ?? '');
+  let currentRotationCompleted = 0;
+  for (let index = completed.length - 1; index >= 0 && expectedIndex >= 0; index -= 1) {
+    if (completed[index].sourcePlanId !== program.planIds[expectedIndex]) break;
+    currentRotationCompleted += 1;
+    expectedIndex = (expectedIndex - 1 + rotationSize) % rotationSize;
+  }
+  const progressUnits = currentRotationCompleted % rotationSize || rotationSize;
+  return {
+    completedSessions: completed.length,
+    currentRotationCompleted,
+    rotationSize,
+    percentage: Math.round((progressUnits / rotationSize) * 100),
+    lastCompletedDate: completed.at(-1)?.sessionDate ?? null,
+  };
+}
+
+export function applyDeload(prescription: Prescription): Prescription {
+  const doseStep = prescription.dose.kind === 'duration' ? 5 : 1;
+  const dose = Math.max(doseStep, Math.round((prescription.dose.value * 0.8) / doseStep) * doseStep);
+  const note = prescription.notes.startsWith('Deload:') ? prescription.notes : `Deload: ${prescription.notes}`.trim();
+  return { ...prescription, sets: Math.max(1, Math.ceil(prescription.sets * 0.6)), dose: { ...prescription.dose, value: dose }, restSeconds: Math.min(180, prescription.restSeconds + 30), notes: note };
 }
 
 export function isPlanRecurring(plan: WorkoutPlan, programs: readonly WorkoutProgram[] = []): boolean {
@@ -347,6 +436,11 @@ export function suggestArea(goal: Goal, experience: Experience): { area: Area; r
 
 export function plannedVolume(prescriptions: Prescription[]): number {
   return prescriptions.reduce((total, prescription) => total + prescription.sets, 0);
+}
+
+export function exerciseMatchesConstraints(exercise: Exercise, constraints?: PlanConstraints): boolean {
+  const available = constraints?.availableEquipment;
+  return !available?.length || !exercise.equipment || available.includes(exercise.equipment);
 }
 
 export function formatSchedule(schedule: Schedule): string {

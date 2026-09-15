@@ -8,6 +8,7 @@ const area = z.enum(['chest', 'back', 'shoulders', 'arms', 'legs', 'glutes', 'co
 const focus = z.enum(['chest', 'back', 'shoulders', 'arms', 'legs', 'glutes', 'core', 'full-body', 'push', 'pull', 'upper-body', 'lower-body', 'aerobic']);
 const intensity = z.enum(['easy', 'moderate', 'hard', 'very-hard']);
 const goal = z.enum(['lose-fat', 'build-muscle', 'maintain-weight', 'general-fitness']);
+const constraints = z.object({ durationMinutes: z.number().int().positive().optional(), availableEquipment: z.array(z.string().min(1)).optional() });
 const schedule = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('date'), date: z.string().min(1) }),
   z.object({ kind: z.literal('weekly'), weekday: z.number().int().min(0).max(6), startsOn: z.string().min(1) }),
@@ -72,12 +73,15 @@ const plan = z.object({
   schedule,
   prescriptions: z.array(prescription),
   estimate: estimate.optional(),
+  constraints: constraints.optional(),
 });
 const program = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
   planIds: z.array(z.string().min(1)),
-  schedule: z.object({ kind: z.literal('rolling'), startsOn: z.string().min(1), intervalDays: z.number().int().positive() }).optional(),
+  schedule: z.object({ kind: z.literal('rolling'), startsOn: z.string().min(1), intervalDays: z.number().int().positive(), advanceOnCompletion: z.boolean().optional(), deloadEveryRotations: z.number().int().min(2).optional(), anchorDate: z.string().min(1).optional(), anchorPlanIndex: z.number().int().nonnegative().optional() }).optional(),
+  skippedDates: z.array(z.string().min(1)).optional(),
+  rescheduledOccurrences: z.array(z.object({ planId: z.string().min(1), fromDate: z.string().min(1), toDate: z.string().min(1) })).optional(),
   revision: z.number().int().nonnegative(),
   createdAt: z.string().min(1),
   updatedAt: z.string().min(1),
@@ -91,6 +95,8 @@ const snapshot = z.object({
   prescriptions: z.array(prescription),
   exercises: z.array(exercise),
   estimate: estimate.optional(),
+  constraints: constraints.optional(),
+  programDeload: z.boolean().optional(),
 });
 const record = z.object({
   id: z.string().min(1),
@@ -107,6 +113,7 @@ const record = z.object({
     actualDurationSeconds: z.number().nonnegative().nullable(),
     loadKg: z.number().nonnegative().nullable(),
     rir: z.number().int().nonnegative().nullable().optional(),
+    notes: z.string().nullable().optional(),
   })),
 });
 const weight = z.object({

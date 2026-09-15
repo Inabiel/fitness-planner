@@ -1,6 +1,6 @@
 # Product Requirements Document — fitnessPal
 
-Status: implemented MVP baseline with explicit release gaps. Last reconciled: 2026-09-13. The domain vocabulary lives in [CONTEXT.md](../CONTEXT.md), shipped boundaries are listed in [MVP scope](mvp-scope.md), and the implementation is described in [TRD](trd.md).
+Status: implemented MVP baseline with explicit release gaps. Last reconciled: 2026-09-15. The domain vocabulary lives in [CONTEXT.md](../CONTEXT.md), shipped boundaries are listed in [MVP scope](mvp-scope.md), and the implementation is described in [TRD](trd.md).
 
 ## Product purpose
 
@@ -29,11 +29,11 @@ The intended user has access to a standard gym and wants a low-friction personal
 3. The dashboard shows a selected calendar day, scheduled plans, nearest earlier and upcoming occurrences, daily nutrition estimates, BMI, quick log links, and recent context.
 4. Plan creation starts with a focus-aware recommendation and supports body-part, split, and aerobic focus.
 5. The person can apply a preset, edit the generated prescriptions, or add individual exercises from the library.
-6. Plan detail shows the focus illustration, recurring performance trend, sequence, planned volume, saved estimate, effort guidance, logging entry point, copy actions, and delete action.
+6. Plan detail shows the focus illustration, recurring performance trend, sequence, planned volume, saved estimate, effort guidance, logging entry point, copy actions, and delete action. New plans can optionally use time and available-machine constraints.
 7. The person can create a Program from a quick modal, select and order unassigned plans or create and automatically attach new plans in that flow, save and add another plan without leaving the Program context, and open each member plan from Program detail. Program deletion does not delete plans.
-8. From plan detail, Live Tracking opens a modal showing the exercise sequence. The person can enter set results, complete an exercise, see its rest countdown, and advance automatically to the next exercise or save progress and exit.
-9. A dated session accepts optional actual dose, load, and RIR per set. Completion is always possible without performance input and celebrates newly qualifying consistency milestones.
-10. Progress and history show weight observations, recorded sessions, snapshots, entered exercise results, milestone badges, and a 12-week activity history.
+8. From plan detail, Live Tracking opens a modal showing the exercise sequence. The person can enter set results and notes, substitute an exercise for that session, complete an exercise, see its rest countdown, and advance automatically to the next exercise or save progress and exit.
+9. A dated session accepts optional actual dose, load, RIR, and notes per set. Completion is always possible without performance input and celebrates newly qualifying consistency milestones.
+10. Progress and history show weight observations, recorded sessions, snapshots, entered exercise results, personal records, weekly volume, schedule adherence, primary muscle balance, milestone badges, and a 12-week activity history.
 11. Profile settings allow profile edits, temporary JSON data transfer, and a modal-confirmed clear-all operation that returns to onboarding.
 12. The How it works page explains formulas, terms, sources, supported inputs, and safety boundaries; the Calculator page estimates locally without saving or changing planner data.
 
@@ -44,17 +44,17 @@ The intended user has access to a standard gym and wants a low-friction personal
 | P01 | Profile stepper | Implemented. Four steps preserve in-memory entries, show field errors, require baseline/context/primary goal data, and require final confirmation. |
 | P02 | Goals and units | Implemented. Four goals, optional non-duplicate secondary goals, kg/cm inputs, female/male values, five activity levels, and three experience levels. |
 | P03 | Estimates | Implemented as MVP-2026.1 heuristics. BMI is separate; calories and macros are daily values. Formulas, constants, terms, sources, supported inputs, and safety boundaries are documented in How it works; qualified health review remains required. |
-| P04 | Workout volume | Implemented as planned work-set count per displayed session. It is clearly separated from actual logged workload; weekly volume and a clinical guidance model are not implemented. |
+| P04 | Workout volume | Implemented as planned work-set count per displayed session and derived completed work-set comparisons for the current and previous week. It remains a descriptive signal, not clinical guidance. |
 | P05 | Plan management | Implemented. Plans require a name, confirmed focus, valid schedule, and at least one prescription. Delete uses a custom modal and leaves history. |
-| P05a | Program management | Implemented. Programs have a name and ordered references to at-most-one-program plans. The editor hides assigned plans from the chooser, can create and attach a new plan, allows removal/reordering, and optionally configures a moving-day rotation; plans remain independently editable, loggable, and deletable. |
-| P06 | Scheduling | Implemented. Plans are one date or recurring weekday from `startsOn`; Programs can additionally rotate ordered plans every N days from a start date. The dashboard shows the selected date, up to three nearest earlier occurrences, and up to three nearest upcoming occurrences. Date controls open the exact matching session route. |
+| P05a | Program management | Implemented. Programs have ordered references, rotation progress, optional completion-driven shifting, skip/move controls, optional deload rotations, and the existing create/attach/remove/reorder behavior. Plans remain independently editable, loggable, and deletable. |
+| P06 | Scheduling | Implemented. Plans are one date or recurring weekday from `startsOn`; Programs can additionally rotate ordered plans every N days from a start date, shift after completion, mark lighter rotations, and skip or move the next occurrence. The dashboard shows the selected date, up to three nearest earlier occurrences, and up to three nearest upcoming occurrences. Date controls open the exact matching session route. |
 | P07 | Focus and suggestions | Implemented. Supports eight areas, four splits, and Aerobic. Goal/experience suggestion is editable and confirmation is required. |
 | P08 | Focus graphics | Implemented with optimized local WebP assets, labels, and alt text. The assets illustrate focus; they do not claim intensity or anatomical percentages. |
 | P09 | Exercise library | Implemented for the MVP. 46 static exercises support search, filters, popularity/name/area/custom sorting, pagination, equipment labels, written instructions, and local four-frame GIF demonstrations. Expert movement review and formal content metadata remain missing. |
-| P10 | Prescriptions | Implemented. Sets, reps/duration, load, rest, notes, ordering, removal, target RIR, six presets, and four target intensity levels are supported. |
-| P11 | Workout tracking | Implemented. In-progress and completed records accept optional actual reps/duration, load, and RIR for individual sets. Saved records can be deleted from session and history detail views. |
+| P10 | Prescriptions | Implemented. Sets, reps/duration, load, rest, notes, ordering, removal, target RIR, six presets, four target intensity levels, and optional time/equipment constraints are supported. |
+| P11 | Workout tracking | Implemented. In-progress and completed records accept optional actual reps/duration, load, RIR, and notes for individual sets. A session can substitute a same-dose movement without changing the source plan. Saved records can be deleted from session and history detail views. |
 | P12 | History preservation | Implemented in the normal UI flow. Records store plan/exercise/prescription snapshots and remain accessible after source-plan deletion. |
-| P13 | Body weight and progress | Implemented. One dated weight record can be created, updated, or deleted; body-weight and session-performance charts plus tables show progress and up to 12 performance rows. |
+| P13 | Body weight and progress | Implemented. One dated weight record can be created, updated, or deleted; body-weight and session-performance charts plus tables show progress, personal records, work-set volume, schedule adherence, primary muscle balance, and up to 12 performance rows. |
 | P14 | Profile updates and recalculation | Implemented. Profile saves increment revision; existing plan estimates stay unchanged until explicit plan-level recalculation. |
 | P15 | Local persistence | Implemented with Dexie/IndexedDB and live queries. Clear-all is transactional. Runtime shape validation, migrations, and stale-tab conflict handling remain absent. |
 | P16 | Effort adaptation | Implemented as a deterministic heuristic. Two recent completed sessions with recorded dose drive Increase, Decrease, Hold, or Trend building guidance, target-intensity advancement for recurring plans, and future prescription adjustment. |
@@ -76,13 +76,14 @@ Implemented baseline:
 - Save/complete actions disable while their write is pending.
 - Copy actions use a local clipboard fallback and show auto-dismissing snackbar feedback; routine session saves/completions use the same transient feedback, while newly activated streaks and earned badges use a celebration modal.
 - Dashboard schedule cards show the occurrence date and link directly to that dated session.
+- Mobile dialogs reserve space below the sticky top bar, remain scrollable, and use safe-area-aware spacing; schedule and plan cards wrap or stack at narrow widths.
 
 Still to verify or improve:
 
 - real-device keyboard and screen-reader audit;
 - browser journeys on Chromium, Firefox, and WebKit;
-- modal focus trapping and focus restoration;
-- touch-friendly drag-and-drop behavior for Custom Exercise Order;
+- browser verification of modal focus, scroll, header-offset, and safe-area behavior;
+- touch-only verification of the arrow alternative for Custom Exercise Order;
 
 ## Current rules
 
@@ -119,7 +120,7 @@ Completed-session progress is the average of each prescription’s actual reps o
 
 ### Dashboard schedule rule
 
-The selected date is the primary schedule query. The dashboard separately finds the nearest valid occurrence before and after that date for each plan, limits each side to three cards, and sorts earlier cards newest-first and upcoming cards oldest-first. Recurring weekday occurrences are searched within a one-year window; moving-day Program occurrences use the Program’s interval and ordered plan list; one-time plans are returned only when their configured date is on the relevant side. Invalid dates return no occurrence.
+The selected date is the primary schedule query. The dashboard separately finds the nearest valid occurrence before and after that date for each plan, limits each side to three cards, and sorts earlier cards newest-first and upcoming cards oldest-first. Recurring weekday occurrences are searched within a one-year window; moving-day Program occurrences use the Program’s interval and ordered plan list, with optional completion anchors and skip/move exceptions; one-time plans are returned only when their configured date is on the relevant side. Invalid dates return no occurrence.
 
 ## Release gaps and risks
 
@@ -135,7 +136,7 @@ The selected date is the primary schedule query. The dashboard separately finds 
 
 ## Deferred product scope
 
-Accounts, cloud synchronization, custom exercises/media, completion-driven schedule shifting, program-level progress, social features, analytics, AI coaching, medical diagnosis, and automatic changes to historical records remain out of scope. The shipped JSON backup is a temporary manual-transfer bridge, not a backend feature.
+Accounts, cloud synchronization, custom exercises/media, social features, AI coaching, medical diagnosis, and automatic changes to historical records remain out of scope. The shipped JSON backup is a temporary manual-transfer bridge, not a backend feature.
 
 ## Roadmap
 
@@ -152,12 +153,10 @@ The [gamification and streaks specification](gamification.md) is implemented. It
 
 ### Product depth
 
-1. Add program-level progress and completion-driven schedule shifting after the calendar-based rotation proves useful.
-2. Fix duplicate-exercise prescription matching and expand recommendation tests around missing data, duration, load, RIR, and mixed sessions.
-3. Add a transparent weekly volume model only after defining units and recovery assumptions.
-4. Add trend views that distinguish load, dose, RIR, and adherence instead of collapsing them into one score.
-5. Add accessible touch/keyboard alternatives for exercise reordering.
-6. Break dense screen components and CSS blocks into reviewable reusable units as the UI grows.
+1. Fix duplicate-exercise prescription matching and expand recommendation tests around missing data, duration, load, RIR, and mixed sessions.
+2. Add accept/skip controls for progression recommendations and richer load, dose, RIR, and adherence trends.
+3. Add more adaptive constraint options only after the current time/equipment filters prove useful.
+4. Break dense screen components and CSS blocks into reviewable reusable units as the UI grows.
 
 ### Scale only if demanded
 

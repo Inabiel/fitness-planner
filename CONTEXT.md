@@ -18,6 +18,10 @@ This file owns the project vocabulary. The current implementation snapshot below
 - Four target intensity levels that shape generated prescriptions and can advance after repeated above-target recurring sessions.
 - Dated session logging with optional reps/duration, load, and RIR per set.
 - Dashboard schedule browsing for the selected date, nearest earlier occurrences, nearest upcoming occurrences, and direct specific-date navigation.
+- Responsive desktop/mobile shell with safe-area-aware, scrollable dialogs and narrow-screen schedule/plan card layouts.
+- Programs track ordered rotation progress, can shift after completion, support skipped/moved next occurrences, and can mark lighter deload rotations.
+- Plans can store time and available-machine constraints; session records support per-set notes and session-only exercise substitutions.
+- Progress derives personal records, weekly work-set volume, schedule adherence, and primary muscle-balance signals from existing records.
 - Simple two-session progression guidance that can adjust the next prescription.
 - Body-weight and session-performance trend graphs, with exact tables retained for detail.
 - WhatsApp-friendly plan text copy with optional exercise steps and snackbar feedback for transient actions; meaningful streak and badge events use a celebration modal.
@@ -72,6 +76,9 @@ A profile-level ordering of known built-in exercise IDs. It is edited from the E
 **Exercise Prescription**  
 One exercise’s planned dose inside a Workout Plan: positive sets, reps or duration, rest seconds, optional coaching notes, optional recommended load, and optional target RIR. Each prescription has its own ID, so a plan can technically contain the same exercise more than once.
 
+**Plan Constraints**
+Optional time and available-machine limits used when generating a new plan and filtering its exercise library. Existing prescriptions remain editable; blank limits mean no restriction.
+
 **Recommended Prescription**  
 The current suggested next dose for an Exercise Prescription. It includes sets, dose, rest, recommended load, notes, and target RIR where applicable. Recommendations are editable guidance, not requirements.
 
@@ -91,7 +98,7 @@ The latest logged recurring session’s measured result against the plan’s Tar
 A dated use of a Workout Plan. The current implementation stores the first explicit save or completion as a Workout Record rather than materializing an infinite recurrence series.
 
 **Workout Program**
-An ordered collection of existing Workout Plans for organizing related sessions, such as a Push/Pull/Legs routine. A plan belongs to at most one program; the program editor offers only unassigned plans, keeps current members in the order list, and can create and automatically attach a new plan in the current program flow. A program can optionally own a moving-day rotation with a start date and interval; when enabled, its ordered plans determine dashboard occurrences and its member plans’ individual schedules are preserved but overridden for scheduling. A program is not itself a session and does not change plan logging or historical records. The current UI calls programs “Programs” and lets each member open its normal plan detail.
+An ordered collection of existing Workout Plans for organizing related sessions, such as a Push/Pull/Legs routine. A plan belongs to at most one program; the program editor offers only unassigned plans, keeps current members in the order list, and can create and automatically attach a new plan in the current program flow. A program can optionally own a moving-day rotation with a start date and interval; when enabled, its ordered plans determine dashboard occurrences and its member plans’ individual schedules are preserved but overridden for scheduling. Rolling programs can shift future occurrences after completion, mark every Nth rotation as a lighter deload, and skip or move the next occurrence. A program is not itself a session and does not change plan logging or historical records.
 
 **Workout Record**  
 The persisted record for a dated session. It stores status (`in_progress` or `completed`), completion time, revision, actual Set Records, and a snapshot of the plan and exercise metadata used at that time. A record can be deleted independently from session or history detail.
@@ -106,13 +113,19 @@ A distinct local `sessionDate` from a completed Workout Record that is not later
 A derived badge for reaching a distinct workout-day total or best consecutive active-week threshold. Milestones are calculated from history rather than persisted as a separate reward ledger.
 
 **Set Record**  
-One optional actual observation tied to a snapshot prescription and set number. Reps or duration, load in kilograms, and RIR are independent fields. Blank values remain unknown; they are not copied from the prescription or converted to zero.
+One optional actual observation tied to a snapshot prescription and set number. Reps or duration, load in kilograms, RIR, and a short note are independent fields. Blank values remain unknown; they are not copied from the prescription or converted to zero.
 
 **Body Weight Record**  
 A dated body-weight observation stored separately from the profile’s current weight. One record per date is supported; saving the same date updates it, and the Progress screen can delete it.
 
 **Session Progress**
 The rounded percentage of planned reps or duration completed in a completed session. 100% means the planned dose was completed. The Progress screen shows the overall latest-eight-session trend, and recurring plan detail shows the same metric for that plan; load and RIR remain separate recorded observations.
+
+**Program Progress**
+The trailing ordered completion sequence within a Program rotation, shown against the number of member plans. It is derived from completed Workout Records and does not rewrite history.
+
+**Personal Record**
+The highest recorded load for an exercise when load exists, otherwise the highest recorded reps or duration. It is a descriptive history signal, not a strength standard.
 
 ## Focus and areas
 
@@ -140,7 +153,7 @@ A deterministic editable suggestion based on the profile’s Primary Fitness Goa
 Either one calendar date or a recurring weekday with a local `startsOn` date. Recurring occurrences are derived when displayed; completion of one occurrence does not complete later occurrences. The dashboard can show the selected date plus up to three nearest occurrences before and after it, and each occurrence opens its exact dated session.
 
 **Program Rotation**  
-An optional moving-day schedule on a Workout Program. It has a local `startsOn` date and a positive interval in days. On each interval date, the next plan in `planIds` is scheduled; rest days are the dates between occurrences. After the final plan, the rotation returns to the first. Programs without a rotation leave each member plan’s own schedule in control.
+An optional moving-day schedule on a Workout Program. It has a local `startsOn` date and a positive interval in days. On each interval date, the next plan in `planIds` is scheduled; rest days are the dates between occurrences. After the final plan, the rotation returns to the first. It can optionally anchor future occurrences to completion, mark every Nth rotation as a deload, and store skip/move exceptions for the next occurrence. Programs without a rotation leave each member plan’s own schedule in control.
 
 **Burden Signal**  
 Current evidence that a recent logged prescription may have been too difficult: any observed dose at or below 80% of target, a first-to-last-set drop-off of at least `max(2, 25% of target)`, or RIR 0–1. The algorithm evaluates the two most recent completed sessions that have logged dose values.
@@ -154,5 +167,5 @@ After two comparable completed sessions, repeated burden signals reduce the next
 - Custom exercises and custom media are not supported.
 - The app ships generated GIF demonstrations, but they are not expert-reviewed and do not include formal attribution/content-approval metadata.
 - Programs without a rotation still group existing plans for navigation only; their member plan schedules determine dashboard occurrences independently.
-- Program-level progress and completion-driven schedule shifting are not modeled; the rolling rotation follows its configured calendar interval.
+- Progress insights are derived from saved records; they are not clinical workload, recovery, or strength assessments.
 - The current local database has schema migrations but does not yet perform runtime validation or stale-tab conflict detection.

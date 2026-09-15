@@ -1,6 +1,6 @@
 # Technical Requirements Document — fitnessPal
 
-Status: current implementation and deployment baseline. Last reconciled: 2026-09-13. This document describes the code that exists today; unresolved hardening work is listed at the end.
+Status: current implementation and deployment baseline. Last reconciled: 2026-09-15. This document describes the code that exists today; unresolved hardening work is listed at the end.
 
 ## Architecture
 
@@ -29,7 +29,7 @@ Exact package versions are governed by package.json and package-lock.json.
 | Boundary | Responsibility |
 | --- | --- |
 | src/app/App.tsx | Reads live planner data and selects onboarding or authenticated routes. |
-| src/domain.ts | TypeScript domain types, labels, dates, estimates, focus mapping, schedule matching, and planned volume. |
+| src/domain.ts | TypeScript domain types, labels, dates, estimates, focus mapping, schedule matching, program progress/deload rules, constraints, and planned volume. |
 | src/data/db.ts | Dexie database, plan/program CRUD helpers, clear-all transaction, and usePlanner live query. |
 | src/data/exercises.ts | Static Exercise Library and curated popularity ranks. |
 | src/features/profile | Onboarding stepper, profile settings, form conversion, and validation guards. |
@@ -37,8 +37,8 @@ Exact package versions are governed by package.json and package-lock.json.
 | src/features/calculate | Temporary estimate calculator with no persistence side effects. |
 | src/features/calories | Dashboard estimated workout-energy summary card. |
 | src/features/plans | Plan list/editor/detail, focus previews, illustration assets, presets, and progression heuristics. |
-| src/features/sessions | Dated session logger, plan snapshot creation, and historical record detail. |
-| src/features/progress | Body-weight entry/chart, workout history, performance trend chart, and performance table. |
+| src/features/sessions | Dated session logger, plan snapshot creation, substitutions, per-set notes, and historical record detail. |
+| src/features/progress | Body-weight entry/chart, workout history, performance trend chart, derived training insights, and performance table. |
 | src/features/gamification | Shared Today consistency card and Progress milestone/history surfaces. |
 | src/features/exercises | Persisted Custom Exercise Order with arrow and drag-and-drop reorder behavior. |
 | src/shared | App shell, page/field/empty-state/snackbar primitives, formatters, progress/gamification/calorie calculations/charts, workout text export, and basic validation. |
@@ -59,9 +59,9 @@ The application uses hash routes so a static host does not need to rewrite unkno
 | #/plans/:planId | PlanDetail | Focus, recurring progress trend, sequence, effort guidance, estimate, logging actions, Live Tracking modal, optional-step text export, recalculate, and delete. |
 | #/plans/:planId/edit | PlanEditor | Existing plan editing. |
 | #/programs/new | ProgramEditor | New program name, member-plan selection, and ordering. |
-| #/programs/:programId | ProgramDetail | Program summary and ordered member-plan cards linking to plan detail. |
-| #/programs/:programId/edit | ProgramEditor | Existing program editing. |
-| #/sessions/:planId/:date | Session | Dated occurrence logger and completion action. |
+| #/programs/:programId | ProgramDetail | Program summary, rotation progress, next-workout skip/move controls, and ordered member-plan cards linking to plan detail. |
+| #/programs/:programId/edit | ProgramEditor | Existing program editing, completion-shift setting, and optional deload cadence. |
+| #/sessions/:planId/:date | Session | Dated occurrence logger, per-set notes, session-only substitutions, and completion action. |
 | #/history/:recordId | HistoryDetail | Historical snapshot independent of a current plan. |
 | #/progress | Progress | Body-weight entry/trend, workout history, performance trend, and performance observations. |
 | #/exercise-order | ExerciseOrder | Profile-level custom ordering for future library browsing. |
@@ -79,13 +79,14 @@ The core model is in src/domain.ts:
 - Exercise: stable ID, name, instructions, primary/secondary areas, dose kind, popularity rank, optional equipment/aerobic type, and media label.
 - Prescription: stable ID, exercise ID, sets, reps or duration, rest seconds, notes, optional recommended load, and optional target RIR.
 - Schedule: date or weekly weekday plus startsOn.
-- WorkoutPlan: name, revision/timestamps, compatibility primaryTargetArea, optional WorkoutFocus and target intensity, confirmation, schedule, prescriptions, and optional EstimateSnapshot.
-- PlanSnapshot: plan name, focus/target intensity/schedule, prescriptions, exercise metadata, and estimate captured for a WorkoutRecord.
-- SetRecord: prescription ID, one-based set number, optional actual reps or duration, optional load, and optional RIR.
+- WorkoutPlan: name, revision/timestamps, compatibility primaryTargetArea, optional WorkoutFocus and target intensity, confirmation, schedule, prescriptions, optional PlanConstraints, and optional EstimateSnapshot.
+- PlanSnapshot: plan name, focus/target intensity/schedule, prescriptions, exercise metadata, optional constraints/deload marker, and estimate captured for a WorkoutRecord.
+- SetRecord: prescription ID, one-based set number, optional actual reps or duration, optional load, RIR, and note.
 - WorkoutRecord: source plan ID, session date, status, completion time, revision, plan snapshot, and set records.
 - BodyWeightRecord: date, weight, timestamps, and revision.
-- ProgramSchedule: optional rolling schedule with local `startsOn` and positive `intervalDays`.
-- WorkoutProgram: name, ordered `planIds`, optional ProgramSchedule, timestamps, and revision. It is not a session and has no prescriptions or snapshot relationship.
+- ProgramSchedule: optional rolling schedule with local `startsOn`, positive `intervalDays`, optional completion anchor, deload cadence, and completion-shift setting.
+- WorkoutProgram: name, ordered `planIds`, optional ProgramSchedule, skip/move exceptions, timestamps, and revision. It is not a session and has no prescriptions or snapshot relationship.
+- PlanConstraints: optional time limit and available machine labels used for new recommendations and library filtering.
 
 WorkoutFocus is a union of eight body-part focuses, four training splits, and aerobic. PrimaryTargetArea remains on plans for compatibility and is derived through targetAreaForFocus for non-body-part focuses.
 
@@ -187,7 +188,7 @@ Profile settings temporarily exports a versioned `fitnesspal-backup` JSON docume
 
 Exercise entries render local four-frame GIF demonstrations at `public/assets/exercises/<exercise-id>.gif` alongside written instructions. The GIFs use full opaque 512×512 frames, one-second delays, and `Dispose: None` so each frame replaces the prior frame without shadowing. The generated visuals have no external media URL, formal attribution metadata, or expert content-review status.
 
-The shared AppShell contains a fixed desktop sidebar and a mobile drawer. At widths up to 720px, the drawer is hidden off-canvas until the visible hamburger control opens it; the header is sticky, the drawer scrolls independently, and a scrim closes it. CSS includes visible focus, action hover motion, and reduced-motion overrides.
+The shared AppShell contains a fixed desktop sidebar and a mobile drawer. At widths up to 720px, the drawer is hidden off-canvas until the visible hamburger control opens it; the header is sticky, the drawer scrolls independently, and a scrim closes it. Modal backdrops reserve the mobile header offset, modal surfaces remain vertically scrollable, and safe-area spacing is applied to fixed actions. Schedule cards wrap long content, while very narrow plan cards stack their fixed illustration and content. CSS includes visible focus, action hover motion, and reduced-motion overrides.
 
 AboutPage and CalculatePage are authenticated, shell-level routes. CalculatePage reuses the domain estimate function and shared profile bounds, but its inputs and output remain local to the page and do not alter the saved profile, plans, or records.
 
@@ -207,9 +208,9 @@ Current automated checks:
 
 - npm run build: passes TypeScript checking and Vite production build.
 - npm run lint: passes ESLint.
-- npm test: passes 28 Vitest tests across domain rules, exercise ordering, recommendations, text export, progress metrics, gamification, calorie aggregation, and shared profile bounds.
+- npm test: passes 37 Vitest tests across domain rules, exercise ordering, recommendations, text export, progress metrics, gamification, calorie aggregation, backup validation, and shared profile bounds.
 
-The domain suite also covers nearest earlier and upcoming occurrences for recurring, one-time, and moving-day Program schedules. Browser, IndexedDB, mobile, modal, and real asset smoke tests remain to be added.
+The domain suite also covers nearest earlier and upcoming occurrences for recurring, one-time, and moving-day Program schedules. Browser, IndexedDB, and real asset smoke tests remain to be added; mobile and modal behavior has source-level coverage but still needs real browser/device verification.
 The package includes npm run test:browser, but there are currently no Playwright test files or Playwright configuration. The package also includes npm run media, but scripts/generate-media.mjs is not currently present.
 
 ## GitHub Pages deployment
@@ -245,9 +246,8 @@ See [Gamification and streaks](gamification.md) for the calculation contract and
 ### Next product increment
 
 - Match recommendations by prescription ID, not only exercise ID.
-- Separate load, dose, RIR, and adherence trends in progress views.
-- Define and implement a transparent weekly volume model.
-- Add keyboard/touch alternatives to native drag-and-drop ordering.
+- Add accept/skip controls and richer load, dose, RIR, and adherence trends to progression guidance.
+- Add more adaptive plan constraints only after the current time/equipment filters prove useful.
 - Split dense screens and CSS into smaller reusable components only where that improves changeability.
 
 ### Later, if product demand justifies it

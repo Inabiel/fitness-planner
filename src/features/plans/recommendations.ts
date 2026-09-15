@@ -1,5 +1,6 @@
 import { INTENSITY_LABELS } from '../../domain';
-import type { Area, Experience, Exercise, Goal, Prescription, SetRecord, WorkoutFocus, WorkoutIntensity, WorkoutPlan, WorkoutRecord } from '../../domain';
+import { exerciseMatchesConstraints } from '../../domain';
+import type { Area, Experience, Exercise, Goal, PlanConstraints, Prescription, SetRecord, WorkoutFocus, WorkoutIntensity, WorkoutPlan, WorkoutRecord } from '../../domain';
 
 const FOCUS_AREAS: Record<WorkoutFocus, readonly Area[]> = {
   chest: ['chest'],
@@ -75,28 +76,29 @@ const INTENSITY_PROFILES: Record<WorkoutIntensity, { doseFactor: number; setDelt
   'very-hard': { doseFactor: 1.3, setDelta: 1, restDelta: 45, targetRir: 0 },
 };
 
-export function selectRecommendedExercises(focus: WorkoutFocus, exercises: Exercise[]): Exercise[] {
+export function selectRecommendedExercises(focus: WorkoutFocus, exercises: Exercise[], constraints?: PlanConstraints): Exercise[] {
   const targetAreas = FOCUS_AREAS[focus];
-  const candidates = focus === 'aerobic' ? exercises.filter((exercise) => exercise.exerciseType === 'aerobic') : exercises;
+  const candidates = exercises.filter((exercise) => exerciseMatchesConstraints(exercise, constraints) && (focus !== 'aerobic' || exercise.exerciseType === 'aerobic'));
+  const maxExercises = constraints?.durationMinutes && constraints.durationMinutes > 0 ? Math.max(1, Math.min(4, Math.floor(constraints.durationMinutes / 12))) : 4;
   return candidates
     .map((exercise, index) => ({ exercise, index, score: focusScore(exercise, targetAreas) }))
     .filter((item) => item.score > 0)
     .sort((a, b) => b.score - a.score || a.exercise.popularityRank - b.exercise.popularityRank || a.index - b.index)
-    .slice(0, 4)
+    .slice(0, maxExercises)
     .map((item) => item.exercise);
 }
 
-export function createRecommendedPrescriptions(focus: WorkoutFocus, experience: Experience, goal: Goal, exercises: Exercise[], createId: () => string, intensity: WorkoutIntensity = 'moderate'): Prescription[] {
-  return selectRecommendedExercises(focus, exercises).map((exercise) => applyIntensity(createPrescription(exercise, experience, goal, createId), intensity));
+export function createRecommendedPrescriptions(focus: WorkoutFocus, experience: Experience, goal: Goal, exercises: Exercise[], createId: () => string, intensity: WorkoutIntensity = 'moderate', constraints?: PlanConstraints): Prescription[] {
+  return selectRecommendedExercises(focus, exercises, constraints).map((exercise) => applyIntensity(createPrescription(exercise, experience, goal, createId), intensity));
 }
 
-export function createPresetPrescriptions(presetId: WorkoutPreset, focus: WorkoutFocus, experience: Experience, goal: Goal, exercises: Exercise[], createId: () => string, intensity: WorkoutIntensity = 'moderate'): Prescription[] {
+export function createPresetPrescriptions(presetId: WorkoutPreset, focus: WorkoutFocus, experience: Experience, goal: Goal, exercises: Exercise[], createId: () => string, intensity: WorkoutIntensity = 'moderate', constraints?: PlanConstraints): Prescription[] {
   if (presetId === 'aerobic-flow' && focus !== 'aerobic') return [];
 
   const machineExercises = exercises.filter((exercise) => Boolean(exercise.equipment));
   const sourceExercises = presetId === 'machine-circuit' ? machineExercises : exercises;
-  const presetExercises = selectRecommendedExercises(focus, sourceExercises);
-  const fallbackExercises = presetId === 'machine-circuit' && presetExercises.length === 0 ? selectRecommendedExercises(focus, exercises) : presetExercises;
+  const presetExercises = selectRecommendedExercises(focus, sourceExercises, constraints);
+  const fallbackExercises = presetId === 'machine-circuit' && presetExercises.length === 0 ? selectRecommendedExercises(focus, exercises, constraints) : presetExercises;
 
   return fallbackExercises.map((exercise) => applyIntensity(applyPreset(presetId, exercise, createPrescription(exercise, experience, goal, createId), experience), intensity));
 }

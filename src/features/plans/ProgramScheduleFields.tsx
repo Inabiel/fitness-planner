@@ -11,10 +11,14 @@ interface ProgramScheduleFieldsProps {
   onKindChange: (kind: ProgramScheduleKind) => void;
   onStartsOnChange: (value: string) => void;
   onIntervalDaysChange: (value: string) => void;
+  advanceOnCompletion: boolean;
+  onAdvanceOnCompletionChange: (value: boolean) => void;
+  deloadEveryRotations: string;
+  onDeloadEveryRotationsChange: (value: string) => void;
   previewPlans?: readonly Pick<WorkoutPlan, 'name'>[];
 }
 
-export function ProgramScheduleFields({ kind, startsOn, intervalDays, onKindChange, onStartsOnChange, onIntervalDaysChange, previewPlans = [] }: ProgramScheduleFieldsProps) {
+export function ProgramScheduleFields({ kind, startsOn, intervalDays, onKindChange, onStartsOnChange, onIntervalDaysChange, advanceOnCompletion, onAdvanceOnCompletionChange, deloadEveryRotations, onDeloadEveryRotationsChange, previewPlans = [] }: ProgramScheduleFieldsProps) {
   const interval = Number(intervalDays);
   const showPreview = kind === 'rolling' && dateIsValid(startsOn) && Number.isInteger(interval) && interval > 0 && previewPlans.length > 0;
 
@@ -27,7 +31,9 @@ export function ProgramScheduleFields({ kind, startsOn, intervalDays, onKindChan
     {kind === 'rolling' && <div className="schedule-fields">
       <Field label="Starts on"><input type="date" value={startsOn} onChange={(event) => onStartsOnChange(event.target.value)} /></Field>
       <Field label="Workout every" suffix="days" hint="1 = daily · 2 = workout/rest"><input type="number" min="1" max="30" step="1" value={intervalDays} onChange={(event) => onIntervalDaysChange(event.target.value)} /></Field>
+      <Field label="Deload every" suffix="rotations" hint="Optional lighter cycle"><input type="number" min="2" max="12" step="1" value={deloadEveryRotations} onChange={(event) => onDeloadEveryRotationsChange(event.target.value)} placeholder="Off" /></Field>
     </div>}
+    {kind === 'rolling' && <label className="confirm-row program-advance-toggle"><input type="checkbox" checked={advanceOnCompletion} onChange={(event) => onAdvanceOnCompletionChange(event.target.checked)} /><span><strong>Shift the next workout after completion</strong><small>Late sessions move the future rotation forward while preserving history.</small></span></label>}
     {showPreview && <div className="rotation-preview">
       <p className="field-label">Next in the rotation</p>
       <div className="rotation-preview-list">{previewPlans.slice(0, 3).map((plan, index) => {

@@ -1,6 +1,6 @@
 import Dexie, { type Table } from 'dexie';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { removePlanFromProgram, type BodyWeightRecord, type Profile, type WorkoutIntensity, type WorkoutPlan, type WorkoutProgram, type WorkoutRecord } from '../domain';
+import { advanceProgramAfterCompletion, removePlanFromProgram, type BodyWeightRecord, type Profile, type WorkoutIntensity, type WorkoutPlan, type WorkoutProgram, type WorkoutRecord } from '../domain';
 
 class FitnessDatabase extends Dexie {
   declare profiles: Table<Profile, string>;
@@ -41,6 +41,17 @@ export function savePlan(plan: WorkoutPlan) {
 
 export function saveProgram(program: WorkoutProgram) {
   return db.programs.put(program);
+}
+
+export async function advanceProgramsAfterCompletion(planId: string, sessionDate: string) {
+  await db.transaction('rw', db.programs, async () => {
+    const programs = await db.programs.toArray();
+    for (const program of programs) {
+      const next = advanceProgramAfterCompletion(program, planId, sessionDate);
+      if (next === program || (next.schedule?.anchorDate === program.schedule?.anchorDate && next.schedule?.anchorPlanIndex === program.schedule?.anchorPlanIndex)) continue;
+      await db.programs.put({ ...next, revision: program.revision + 1, updatedAt: now() });
+    }
+  });
 }
 
 export function deleteProgram(programId: string) {

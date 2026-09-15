@@ -1,6 +1,6 @@
 # Gamification and streaks
 
-Status: implemented 2026-09-13. This document defines the shipped first increment. See [PRD](prd.md), [TRD](trd.md), and [domain context](../CONTEXT.md).
+Status: implemented 2026-09-15. This document defines the shipped first increment. See [PRD](prd.md), [TRD](trd.md), and [domain context](../CONTEXT.md).
 
 ## Product direction
 

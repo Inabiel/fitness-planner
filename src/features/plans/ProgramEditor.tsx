@@ -16,6 +16,8 @@ export function ProgramEditor({ data }: { data: AuthenticatedPlannerData }) {
   const [scheduleKind, setScheduleKind] = useState<ProgramScheduleKind>(() => source?.schedule?.kind === 'rolling' ? 'rolling' : 'independent');
   const [startsOn, setStartsOn] = useState(source?.schedule?.kind === 'rolling' ? source.schedule.startsOn : localDate());
   const [intervalDays, setIntervalDays] = useState(String(source?.schedule?.kind === 'rolling' ? source.schedule.intervalDays : 2));
+  const [advanceOnCompletion, setAdvanceOnCompletion] = useState(source?.schedule?.advanceOnCompletion ?? !editing);
+  const [deloadEveryRotations, setDeloadEveryRotations] = useState(String(source?.schedule?.deloadEveryRotations ?? ''));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const selectedPlans = planIds.map((id) => data.plans.find((plan) => plan.id === id)).filter((plan): plan is WorkoutPlan => Boolean(plan));
@@ -54,11 +56,19 @@ export function ProgramEditor({ data }: { data: AuthenticatedPlannerData }) {
       setError('Choose a valid start date and an interval from 1 to 30 days.');
       return undefined;
     }
+    const deloadEvery = Number(deloadEveryRotations);
+    if (scheduleKind === 'rolling' && deloadEveryRotations !== '' && (!Number.isInteger(deloadEvery) || deloadEvery < 2 || deloadEvery > 12)) {
+      setError('Deload frequency must be between 2 and 12 rotations, or left blank.');
+      return undefined;
+    }
+    const sourceSchedule = source?.schedule;
+    const anchorIndex = sourceSchedule?.anchorPlanIndex ?? 0;
+    const preserveAnchor = Boolean(sourceSchedule?.anchorDate && sourceSchedule.startsOn === startsOn && sourceSchedule.intervalDays === interval && source?.planIds[anchorIndex] === planIds[anchorIndex]);
     return {
       id: source?.id ?? uid(),
       name: name.trim(),
       planIds: planIds.filter((id) => data.plans.some((plan) => plan.id === id)),
-      ...(scheduleKind === 'rolling' ? { schedule: { kind: 'rolling' as const, startsOn, intervalDays: interval } } : {}),
+      ...(scheduleKind === 'rolling' ? { schedule: { kind: 'rolling' as const, startsOn, intervalDays: interval, advanceOnCompletion, ...(deloadEveryRotations ? { deloadEveryRotations: deloadEvery } : {}), ...(preserveAnchor ? { anchorDate: sourceSchedule?.anchorDate, anchorPlanIndex: sourceSchedule?.anchorPlanIndex } : {}) } } : {}),
       revision: (source?.revision ?? 0) + 1,
       createdAt: source?.createdAt ?? databaseNow(),
       updatedAt: databaseNow(),
@@ -115,7 +125,7 @@ export function ProgramEditor({ data }: { data: AuthenticatedPlannerData }) {
         </section>
         <section className="editor-section">
           <div className="section-heading"><div><p className="eyebrow">03 · Schedule</p><h2>Choose the program rhythm</h2></div><CalendarDays size={19} /></div>
-          <ProgramScheduleFields kind={scheduleKind} startsOn={startsOn} intervalDays={intervalDays} onKindChange={setScheduleKind} onStartsOnChange={setStartsOn} onIntervalDaysChange={setIntervalDays} previewPlans={selectedPlans} />
+          <ProgramScheduleFields kind={scheduleKind} startsOn={startsOn} intervalDays={intervalDays} onKindChange={setScheduleKind} onStartsOnChange={setStartsOn} onIntervalDaysChange={setIntervalDays} advanceOnCompletion={advanceOnCompletion} onAdvanceOnCompletionChange={setAdvanceOnCompletion} deloadEveryRotations={deloadEveryRotations} onDeloadEveryRotationsChange={setDeloadEveryRotations} previewPlans={selectedPlans} />
         </section>
         {selectedPlans.length > 0 && <section className="editor-section">
           <div className="section-heading"><div><p className="eyebrow">04 · Order</p><h2>Set the order</h2></div></div>

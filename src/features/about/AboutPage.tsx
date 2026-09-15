@@ -34,7 +34,10 @@ export function AboutPage() {
             <ul className="about-list">
               <li><strong>Focus suggestion:</strong> a deterministic starting suggestion from experience and primary goal. You can replace it before saving.</li>
               <li><strong>Prescription:</strong> one exercise’s planned sets, reps or duration, rest, optional load, notes, and target RIR (reps in reserve).</li>
+              <li><strong>Plan constraints:</strong> optional time and available-machine limits shape new recommendations and filter the exercise library. Existing exercises remain editable.</li>
               <li><strong>Planned volume:</strong> the total number of planned work sets. It is not your actual workload.</li>
+              <li><strong>Program rotation:</strong> ordered plans can track the current rotation, shift after completion, skip or move the next occurrence, and mark lighter deload rotations. Historical records remain unchanged.</li>
+              <li><strong>Session notes and substitutions:</strong> per-set notes and same-dose exercise swaps are saved in that session’s snapshot without changing the source plan.</li>
               <li><strong>Effort guidance:</strong> after two comparable completed sessions, repeated below-target work, drop-off, or very low RIR can suggest decreasing effort; repeated above-target work can suggest increasing it. Mixed evidence means hold. This is a simple heuristic, not a fatigue or readiness diagnosis.</li>
             </ul>
           </section>
@@ -43,6 +46,7 @@ export function AboutPage() {
             <div className="section-heading"><div><p className="eyebrow">Progress</p><h2 id="about-progress-title">How the graph is calculated</h2></div><BarChart3 size={19} /></div>
             <p className="about-copy">For each prescription with logged reps or duration, the app divides actual dose by planned dose. It averages those prescription ratios, rounds the result, and shows the latest eight completed sessions with positive data. <strong>100%</strong> means the planned dose was completed.</p>
             <p className="about-copy">Load, RIR, and exact set details stay separate in the table. Editing a plan never rewrites an old record because each record stores a snapshot of the plan you followed.</p>
+            <p className="about-copy">Progress also summarizes personal records, completed work-set volume, schedule adherence, and primary muscle areas from the last 28 days. These are descriptive history signals, not clinical workload or recovery assessments.</p>
           </section>
 
           <section className="about-card" aria-labelledby="about-terms-title">

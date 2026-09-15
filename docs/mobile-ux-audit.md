@@ -1,15 +1,15 @@
-# Mobile UI/UX Audit — Deferred Fixes
+# Mobile UI/UX Audit — Status and Remaining Work
 
-Audit date: 2026-09-14  
+Audit date: 2026-09-15
 Scope: mobile layouts and interactions, with emphasis on 320px–430px phone widths.
 
-This is an implementation backlog, not a redesign brief. Fix the items in priority order and keep the current visual language.
+This started as an implementation backlog, not a redesign brief. Source-level fixes landed in the responsive stylesheet; the remaining confidence gap is real browser/device verification. Keep the current visual language.
 
 ## Priority 1 — Fix before relying on mobile
 
-### 1. Increase touch targets in live tracking
+### 1. Increase touch targets in live tracking — implemented at source level
 
-Current set inputs are approximately 34px high. The `Add another set` button and shared icon buttons are also below a comfortable mobile hit area.
+Mobile rules now give set inputs, compact buttons, modal close controls, date controls, reorder/delete controls, and snackbar dismissal controls a 44px target where they are used.
 
 Affected areas:
 
@@ -29,9 +29,9 @@ Acceptance criteria:
 - No important mobile control is smaller than approximately 44px × 44px.
 - The compact visual style is preserved.
 
-### 2. Keep the live-tracking completion action available
+### 2. Keep the live-tracking completion action available — implemented at source level
 
-The live-tracking modal scrolls as one surface, so `Complete & rest` / `Finish workout` can disappear below a long workout.
+The live-tracking footer is sticky inside the scrollable modal, with bottom scroll padding and safe-area spacing so `Complete & rest` / `Finish workout` stays reachable.
 
 Affected areas:
 
@@ -50,19 +50,21 @@ Acceptance criteria:
 - The last input remains visible above the footer when focused.
 - The footer works at 320px width and with extra sets.
 
-### 3. Prevent narrow-screen compression
+### 3. Prevent narrow-screen compression — implemented at source level
 
-The focus hero and plan cards retain fixed horizontal allocations at small widths. At 320px, long labels, plan names, and actions are likely to become cramped.
+At very narrow widths, the focus hero and plan cards stack their fixed visual/content areas. Dashboard schedule cards, program rotation previews, and modal headings also constrain long content so it wraps instead of forcing horizontal overflow.
 
 Affected areas:
 
 - `src/styles.css` — `.focus-hero`, `.plan-card`, `.plan-graphic`, `.plan-card-footer`
+- `src/styles.css` — `.schedule-list`, `.schedule-card`, `.rotation-preview-row`, modal headers
 
 Change:
 
 - At a very narrow breakpoint, stack the focus illustration and copy.
 - Reduce or stack the plan card illustration and content.
 - Allow plan card footer actions to wrap without clipping.
+- Constrain schedule grid items to the available column width and wrap long workout names.
 
 Acceptance criteria:
 
@@ -70,9 +72,9 @@ Acceptance criteria:
 - No heading, label, plan name, or action is clipped or horizontally overflows.
 - The primary action remains obvious and easy to tap.
 
-### 4. Make the plan editor save bar wrap safely
+### 4. Make the plan editor save bar wrap safely — implemented at source level
 
-The editor can show three actions at once: `Cancel`, `Save & add another`, and `Save plan`. The current sticky row does not have a mobile wrapping strategy.
+The sticky row wraps its actions on mobile and places the primary save action on its own row when needed, with safe-area bottom padding.
 
 Affected areas:
 
@@ -92,9 +94,9 @@ Acceptance criteria:
 
 ## Priority 2 — Improve mobile usability and accessibility
 
-### 5. Allow section headings and badges to wrap
+### 5. Allow section headings and badges to wrap — implemented at source level
 
-Section headings use a single flex row. Long badges such as planned volume summaries can crowd headings on phones.
+Mobile section headings wrap and constrain their children so long badges do not crowd the heading or force horizontal scrolling.
 
 Affected areas:
 
@@ -110,9 +112,9 @@ Acceptance criteria:
 
 - Long volume, streak, and progress badges do not overlap or force horizontal scrolling.
 
-### 6. Improve tables for phone use
+### 6. Improve tables for phone use — implemented at source level
 
-Progress tables are horizontally scrollable, but there is no indication that more columns are available. Performance data can require significant sideways scrolling.
+Progress tables remain horizontally scrollable, now show a `Swipe to see more` hint on mobile, and keep their first column sticky for context.
 
 Affected areas:
 
@@ -130,9 +132,9 @@ Acceptance criteria:
 - The first column remains understandable while scrolling.
 - No table content is clipped permanently.
 
-### 7. Make exercise ordering touch-friendly
+### 7. Make exercise ordering touch-friendly — implemented at source level
 
-HTML drag-and-drop is unreliable on touch devices. The arrow fallback exists, but the controls are small and currently feel secondary.
+Arrow controls provide the touch fallback, and the shared mobile icon-button target makes them tappable. Drag-and-drop remains available for pointer devices; touch-only verification is still pending.
 
 Affected areas:
 
@@ -150,9 +152,9 @@ Acceptance criteria:
 - A user can reorder a list entirely by touch without dragging.
 - Reordering gives immediate, visible feedback.
 
-### 8. Improve modal and drawer focus behavior
+### 8. Improve modal and drawer focus behavior — implemented in shared focus hook
 
-Dialogs and the mobile navigation drawer expose the correct dialog semantics, but focus trapping, focus restoration, and body-scroll locking are incomplete or inconsistent.
+The shared dialog focus hook moves focus into dialogs/drawers, traps Tab navigation, restores the opening element, locks body scrolling, and handles Escape. Real browser and screen-reader verification is still pending.
 
 Affected areas:
 
@@ -174,9 +176,9 @@ Acceptance criteria:
 - Closing a modal returns focus to the triggering control.
 - Mobile background content does not scroll behind the drawer or modal.
 
-### 9. Improve small-text contrast and readability
+### 9. Improve small-text contrast and readability — improved at source level
 
-Several metadata, filter, and helper labels are very small and muted. This is especially difficult on phone screens and in bright conditions.
+Mobile overrides darken and enlarge key eyebrow, helper, filter, status, and worked-label text. A measured contrast audit is still pending.
 
 Affected areas:
 
@@ -193,9 +195,9 @@ Acceptance criteria:
 - Supporting labels remain legible without zooming.
 - Small text meets the chosen accessibility contrast target.
 
-### 10. Handle mobile viewport and safe-area behavior
+### 10. Handle mobile viewport and safe-area behavior — implemented at source level
 
-The app uses `100vh` in loading and modal layouts, and some bottom-positioned UI does not include the iOS home-indicator inset.
+Viewport-sensitive surfaces use `100dvh` fallbacks and safe-area insets. Mobile modal dialogs reserve space below the app/onboarding top bar, remain scrollable, and keep fixed actions above the home indicator.
 
 Affected areas:
 
@@ -212,6 +214,10 @@ Acceptance criteria:
 
 - No fixed control is hidden behind the browser UI or iPhone home indicator.
 - Modal content remains usable when the browser address bar expands or collapses.
+
+## Verification status
+
+Automated checks pass: `npm run build`, `npm run lint`, and `npm test` (37 tests). No Playwright specs exist yet, and no real browser/device pass was run.
 
 ## Verification checklist
 
@@ -231,6 +237,4 @@ Before marking this backlog complete, test at minimum:
 
 ## Audit limitation
 
-This audit was completed from the responsive source and route structure. A real browser screenshot/click-through pass could not be completed in the development environment because the available browser binary failed to launch. The narrow-screen compression findings must therefore be confirmed during implementation.
-
-No product code was changed as part of this audit.
+The responsive status above is based on source inspection and automated project checks. The 320px, 360px, and 390px layouts, mobile modal scrolling/header offsets, keyboard focus, touch controls, and iOS safe-area behavior still need a real browser/device pass before this audit is closed.

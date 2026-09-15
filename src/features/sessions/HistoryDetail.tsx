@@ -41,7 +41,7 @@ export function HistoryDetail({ data }: { data: PlannerData }) {
       <div className="history-detail">
         <div className="history-status"><span className={`status-pill ${record.status}`}>{record.status === 'completed' ? <CircleCheck size={15} /> : <Clock3 size={15} />}{record.status === 'completed' ? 'Completed' : 'In progress'}</span><span className="muted">{filledSets.length ? `${filledSets.length} set entries recorded` : 'No performance entries'}</span></div>
         <section className="detail-section">
-          <div className="section-heading"><div><p className="eyebrow">What you followed</p><h2>{record.planSnapshot.prescriptions.length} exercises</h2></div><span className="area-pill">{FOCUS_LABELS[focus]} · {INTENSITY_LABELS[intensity]}</span></div>
+          <div className="section-heading"><div><p className="eyebrow">What you followed</p><h2>{record.planSnapshot.prescriptions.length} exercises</h2></div><span className="area-pill">{FOCUS_LABELS[focus]} · {INTENSITY_LABELS[intensity]}{record.planSnapshot.programDeload ? ' · Deload' : ''}</span></div>
           {record.planSnapshot.prescriptions.map((prescription, index) => <HistoryExercise key={prescription.id} prescription={prescription} index={index} record={record} />)}
         </section>
         <div className="snapshot-note"><Info size={17} /><p>This is a snapshot of the plan on {formatDateTime(record.planSnapshot.estimate?.calculatedAt ?? now())}. Editing or deleting the source plan won’t rewrite this record.</p></div>
@@ -61,5 +61,5 @@ function HistoryExercise({ prescription, index, record }: { prescription: Workou
   const doseLabel = prescription.dose.kind === 'reps' ? 'reps' : 'sec';
   const recordedSets = record.sets.filter((set) => set.prescriptionId === prescription.id);
 
-  return <div className="history-exercise"><div><span className="sequence-number">{String(index + 1).padStart(2, '0')}</span><strong>{exerciseName}</strong></div><span>{prescription.sets} × {prescription.dose.value} {doseLabel}</span><div className="history-set-list">{recordedSets.map((set) => <span key={set.setNumber}>Set {set.setNumber}{set.setNumber > prescription.sets ? ' · Added' : ''}: {set.actualReps ?? set.actualDurationSeconds ?? '—'} · {set.loadKg === null ? 'weight/resistance unknown' : `${set.loadKg} kg`}{set.rir === null || set.rir === undefined ? '' : ` · ${set.rir} RIR (reps left)`}</span>)}</div></div>;
+  return <div className="history-exercise"><div><span className="sequence-number">{String(index + 1).padStart(2, '0')}</span><strong>{exerciseName}</strong></div><span>{prescription.sets} × {prescription.dose.value} {doseLabel}</span><div className="history-set-list">{recordedSets.map((set) => <span key={set.setNumber}>Set {set.setNumber}{set.setNumber > prescription.sets ? ' · Added' : ''}: {set.actualReps ?? set.actualDurationSeconds ?? '—'} · {set.loadKg === null ? 'weight/resistance unknown' : `${set.loadKg} kg`}{set.rir === null || set.rir === undefined ? '' : ` · ${set.rir} RIR (reps left)`}{set.notes ? ` · ${set.notes}` : ''}</span>)}</div></div>;
 }

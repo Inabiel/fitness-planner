@@ -1,11 +1,11 @@
 import { useCallback, useState, type FormEvent } from 'react';
-import { ArrowRight, BarChart3, Check, Clock3, Dumbbell, HeartPulse, Plus, Trash2, TrendingUp } from 'lucide-react';
+import { Activity, ArrowRight, Award, BarChart3, Check, Clock3, Dumbbell, HeartPulse, Plus, Target, Trash2, TrendingUp } from 'lucide-react';
 import { Link } from 'react-router';
 import { dateIsValid, localDate, type BodyWeightRecord, type WorkoutRecord } from '../../domain';
 import { deleteBodyWeight, now, saveBodyWeight, type PlannerData } from '../../data/db';
 import { getGamificationSummary } from '../../shared/gamification';
 import { formatShortDate } from '../../shared/formatters';
-import { getProgressPoints } from '../../shared/progress';
+import { getAdherenceSummary, getMuscleBalance, getPersonalRecords, getProgressPoints, getWeeklyVolumeSummary } from '../../shared/progress';
 import { ChartMarker, ProgressLineChart } from '../../shared/progressChart';
 import { EmptyState, Field, Page, Snackbar } from '../../shared/ui';
 import { useLocalToday } from '../../shared/useLocalToday';
@@ -21,6 +21,10 @@ export function Progress({ data }: { data: PlannerData }) {
   const weights = [...data.weights].sort((a, b) => a.date.localeCompare(b.date));
   const performancePoints = getProgressPoints(data.records);
   const gamification = getGamificationSummary(data.records, today);
+  const personalRecords = getPersonalRecords(data.records);
+  const weeklyVolume = getWeeklyVolumeSummary(data.records, today);
+  const adherence = getAdherenceSummary(data.plans, data.programs, data.records, today);
+  const muscleBalance = getMuscleBalance(data.records, today);
   const dismissSnackbar = useCallback(() => setSnackbar(null), []);
 
   async function saveWeight(event: FormEvent) {
@@ -77,6 +81,15 @@ export function Progress({ data }: { data: PlannerData }) {
           </form>
         </aside>
       </div>
+      <section className="insights-section">
+        <div className="section-heading"><div><p className="eyebrow">Training insights</p><h2>Useful signals from your history</h2></div><Activity size={19} /></div>
+        <div className="insight-grid">
+          <article className="insight-card"><div className="insight-card-heading"><div><p className="eyebrow">Personal records</p><h3>Best recorded efforts</h3></div><Award size={18} /></div>{personalRecords.length ? <div className="insight-list">{personalRecords.map((record) => <div className="insight-row" key={record.exerciseId}><span><strong>{record.exerciseName}</strong><small>{formatShortDate(record.date)}</small></span><b>{record.value} {record.unit}</b></div>)}</div> : <p className="insight-empty">Log actual reps, duration, or load to see personal records.</p>}</article>
+          <article className="insight-card"><div className="insight-card-heading"><div><p className="eyebrow">Weekly volume</p><h3>{weeklyVolume.current} completed work sets</h3></div><BarChart3 size={18} /></div><p className="insight-copy">This week compared with {weeklyVolume.previous} sets in the previous seven days.</p><span className="insight-stat">{weeklyVolume.changePercent === null ? 'Baseline week' : `${weeklyVolume.changePercent >= 0 ? '+' : ''}${weeklyVolume.changePercent}% vs previous week`}</span></article>
+          <article className="insight-card"><div className="insight-card-heading"><div><p className="eyebrow">Adherence</p><h3>{adherence.percentage === null ? 'No scheduled sessions yet' : `${adherence.percentage}% on schedule`}</h3></div><Target size={18} /></div><p className="insight-copy">{adherence.completed} of {adherence.scheduled} scheduled sessions completed in the last {adherence.windowDays} days.</p><div className="insight-meter"><span style={{ width: `${adherence.percentage ?? 0}%` }} /></div></article>
+          <article className="insight-card"><div className="insight-card-heading"><div><p className="eyebrow">Muscle balance</p><h3>Primary work areas</h3></div><Activity size={18} /></div>{muscleBalance.length ? <div className="balance-list">{muscleBalance.slice(0, 5).map((entry) => <div className="balance-row" key={entry.area}><div><span>{entry.label}</span><small>{entry.sets} sets · {entry.percentage}%</small></div><div className="insight-meter"><span style={{ width: `${entry.percentage}%` }} /></div></div>)}</div> : <p className="insight-empty">Complete a workout to see where your recent work is going.</p>}</article>
+        </div>
+      </section>
       <section className="history-section">
         <div className="section-heading"><div><p className="eyebrow">Workout history</p><h2>Sessions you’ve recorded</h2></div><Link className="text-link" to="/progress">{data.records.length} records <ArrowRight size={15} /></Link></div>
         {data.records.length === 0 ? <EmptyState compact icon={<Dumbbell size={21} />} title="No workout records yet" body="Complete or save a session to see it here." /> : <div className="history-list">{data.records.map((record) => <Link key={record.id} to={`/history/${record.id}`} className="history-row"><span className={`history-icon ${record.status}`}>{record.status === 'completed' ? <Check size={16} /> : <Clock3 size={16} />}</span><span><strong>{record.planSnapshot.name}</strong><small>{formatShortDate(record.sessionDate)} · {record.sets.length ? `${record.sets.length} set entries` : 'No performance details'}</small></span><span className="status-text">{record.status === 'completed' ? 'Completed' : 'In progress'}</span><ArrowRight size={16} /></Link>)}</div>}

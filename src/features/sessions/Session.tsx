@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ArrowRight, CalendarDays, Check, CircleCheck, Clipboard, Dumbbell, Flame, Pencil, Timer, Trash2 } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router';
-import { FOCUS_LABELS, INTENSITY_LABELS, dateIsValid, isPlanRecurring, localDate, plannedVolume, type EstimateSnapshot, type SetRecord, type WorkoutIntensity, type WorkoutRecord } from '../../domain';
+import { FOCUS_LABELS, INTENSITY_LABELS, dateIsValid, isPlanRecurring, localDate, plannedVolume, type EstimateSnapshot, type Exercise, type PlanSnapshot, type SetRecord, type WorkoutIntensity, type WorkoutRecord } from '../../domain';
 import type { PlannerData } from '../../data/db';
-import { deletePlan as removePlan, deleteWorkoutRecord, now, saveWorkoutRecord, uid, updatePlanPrescriptions } from '../../data/db';
+import { advanceProgramsAfterCompletion, deletePlan as removePlan, deleteWorkoutRecord, now, saveWorkoutRecord, uid, updatePlanPrescriptions } from '../../data/db';
 import { EXERCISES } from '../../data/exercises';
 import { getGamificationCelebration, getGamificationFeedback, getGamificationSummary, type GamificationCelebration } from '../../shared/gamification';
 import { formatDateTime, formatLongDate } from '../../shared/formatters';
@@ -27,6 +27,7 @@ export function Session({ data }: { data: PlannerData }) {
   const selectedPlan = data.plans.find((item) => item.id === planId);
   const existing = data.records.find((record) => record.sourcePlanId === planId && record.sessionDate === date);
   const [sets, setSets] = useState<SetRecord[]>(existing?.sets ?? []);
+  const [sessionSnapshot, setSessionSnapshot] = useState<PlanSnapshot>();
   const [saving, setSaving] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deletePlanOpen, setDeletePlanOpen] = useState(false);
@@ -57,7 +58,7 @@ export function Session({ data }: { data: PlannerData }) {
 
   const plan = selectedPlan;
   const sessionDate = date;
-  const snapshot = existing?.planSnapshot ?? makePlanSnapshot(plan);
+  const snapshot = sessionSnapshot ?? existing?.planSnapshot ?? makePlanSnapshot(plan, data.programs, sessionDate);
   const focus = snapshot.focus ?? snapshot.primaryTargetArea;
   const intensity = snapshot.intensity ?? plan.intensity ?? 'moderate';
   const estimatedCalories = estimatePlanCalories(plan, data.profile?.weightKg ?? 0);
@@ -71,18 +72,28 @@ export function Session({ data }: { data: PlannerData }) {
       actualDurationSeconds: null,
       loadKg: null,
       rir: null,
+      notes: null,
     };
   }
 
   function updateSet(prescriptionId: string, setNumber: number, field: SetValueField, value: string) {
     const current = getSet(prescriptionId, setNumber);
-    const parsed = value === '' ? null : Number(value);
+    const parsed = field === 'notes' ? (value.trim() || null) : value === '' ? null : Number(value);
     const next = { ...current, [field]: parsed };
-    const hasValue = next.actualReps !== null || next.actualDurationSeconds !== null || next.loadKg !== null || next.rir !== null;
+    const hasValue = next.actualReps !== null || next.actualDurationSeconds !== null || next.loadKg !== null || next.rir !== null && next.rir !== undefined || Boolean(next.notes);
 
     setSets((items) => {
       const withoutCurrent = items.filter((item) => !(item.prescriptionId === prescriptionId && item.setNumber === setNumber));
       return hasValue ? [...withoutCurrent, next] : withoutCurrent;
+    });
+  }
+
+  function replaceExercise(prescriptionId: string, exercise: Exercise) {
+    setSessionSnapshot((current) => {
+      const base = current ?? snapshot;
+      const prescriptions = base.prescriptions.map((item) => item.id === prescriptionId ? { ...item, exerciseId: exercise.id, dose: { ...item.dose, kind: exercise.doseKind } } : item);
+      const usedExerciseIds = new Set(prescriptions.map((item) => item.exerciseId));
+      return { ...base, prescriptions, exercises: [...base.exercises.filter((item) => usedExerciseIds.has(item.id)), ...(base.exercises.some((item) => item.id === exercise.id) ? [] : [exercise])] };
     });
   }
 
@@ -104,6 +115,13 @@ export function Session({ data }: { data: PlannerData }) {
 
     try {
       await saveWorkoutRecord(record);
+      if (status === 'completed') {
+        try {
+          await advanceProgramsAfterCompletion(plan.id, sessionDate);
+        } catch {
+          // The session is already safe; a later completion can retry the schedule shift.
+        }
+      }
       if (status === 'completed') {
         const recordsForRecommendation = data.records.filter((item) => item.id !== record.id).concat(record);
         const beforeGamification = getGamificationSummary(data.records, localDate());
@@ -203,10 +221,10 @@ export function Session({ data }: { data: PlannerData }) {
         <div className="session-main">
           <section className="focus-hero session-focus-hero"><div className="focus-copy"><p className="eyebrow on-dark">Workout focus</p><h2>{FOCUS_LABELS[focus]}</h2><p>This is the intention you confirmed for the plan. Your exercises can work other areas too.</p></div><FocusIllustration focus={focus} /></section>
           {progressPoints.length > 0 && <section className="detail-section progress-card"><div className="section-heading"><div><p className="eyebrow">Recurring progress</p><h2>Performance trend</h2></div><span className="unit-label">% of target</span></div><ProgressLineChart points={progressPoints} ariaLabel={`${snapshot.name} performance trend`} /></section>}
-          <div className="session-intro"><span className="session-date"><CalendarDays size={16} /> {formatLongDate(date)}</span><span className="area-pill">{FOCUS_LABELS[focus]} focus</span><span className="area-pill intensity-pill">Target: {INTENSITY_LABELS[intensity]}</span><h2>{snapshot.name}</h2><p className="muted">Log actual reps, weight/resistance, and optional RIR (reps in reserve). RIR means how many more good-form reps you could have done after a set. Blank fields stay unknown, and completion never requires performance details.</p></div>
+          <div className="session-intro"><span className="session-date"><CalendarDays size={16} /> {formatLongDate(date)}</span><span className="area-pill">{FOCUS_LABELS[focus]} focus</span><span className="area-pill intensity-pill">Target: {INTENSITY_LABELS[intensity]}</span>{snapshot.programDeload && <span className="area-pill deload-pill">Deload session</span>}<h2>{snapshot.name}</h2><p className="muted">Log actual reps, weight/resistance, and optional RIR (reps in reserve). RIR means how many more good-form reps you could have done after a set. Blank fields stay unknown, and completion never requires performance details.</p></div>
           {snapshot.prescriptions.map((prescription, index) => {
             const exercise = snapshot.exercises.find((item) => item.id === prescription.exerciseId) ?? EXERCISES.find((item) => item.id === prescription.exerciseId);
-            return exercise ? <SessionExercise key={prescription.id} prescription={prescription} exercise={exercise} index={index} effort={assessPrescriptionEffort(prescription, plan.id, data.records)} setCount={getVisibleSetCount(prescription, sets)} showDetails getSet={getSet} updateSet={updateSet} /> : null;
+            return exercise ? <SessionExercise key={prescription.id} prescription={prescription} exercise={exercise} index={index} effort={assessPrescriptionEffort(prescription, plan.id, data.records)} setCount={getVisibleSetCount(prescription, sets)} showDetails replacementExercises={EXERCISES} onReplaceExercise={(replacement) => replaceExercise(prescription.id, replacement)} getSet={getSet} updateSet={updateSet} /> : null;
           })}
           <div className="session-actions">
             <button className="button ghost" onClick={() => navigate(-1)}>Exit</button>
@@ -233,7 +251,7 @@ export function Session({ data }: { data: PlannerData }) {
       </div>
       {snackbar && <Snackbar message={snackbar.message} tone={snackbar.tone} onDismiss={dismissSnackbar} />}
       {copyOpen && <CopyPlanModal includeSteps={includeSteps} saving={saving} onIncludeStepsChange={setIncludeSteps} onCancel={() => setCopyOpen(false)} onCopy={copyPlan} />}
-      {liveTrackingOpen && <LiveTrackingModal plan={plan} records={data.records} onClose={() => setLiveTrackingOpen(false)} onSaved={(message, nextCelebration) => { if (nextCelebration) { setCelebration(nextCelebration); setCelebrationDetail(message); } else { setSnackbar({ message, tone: 'success' }); } }} />}
+      {liveTrackingOpen && <LiveTrackingModal plan={plan} records={data.records} programs={data.programs} onClose={() => setLiveTrackingOpen(false)} onSaved={(message, nextCelebration) => { if (nextCelebration) { setCelebration(nextCelebration); setCelebrationDetail(message); } else { setSnackbar({ message, tone: 'success' }); } }} />}
       {celebration && <GamificationCelebrationModal celebration={celebration} detail={celebrationDetail} onClose={() => { setCelebration(null); setCelebrationDetail(''); }} />}
       {deletePlanOpen && <DeletePlanModal planName={plan.name} error={snackbar?.tone === 'error' ? snackbar.message : ''} saving={saving} onCancel={() => setDeletePlanOpen(false)} onDelete={deletePlan} />}
       {deleteOpen && <DeleteRecordModal recordName={snapshot.name} deleting={saving} onCancel={() => setDeleteOpen(false)} onDelete={deleteRecord} />}

@@ -13,6 +13,8 @@ export function ProgramCreateModal({ data, onClose }: { data: PlannerData; onClo
   const [scheduleKind, setScheduleKind] = useState<ProgramScheduleKind>('independent');
   const [startsOn, setStartsOn] = useState(localDate());
   const [intervalDays, setIntervalDays] = useState('2');
+  const [advanceOnCompletion, setAdvanceOnCompletion] = useState(true);
+  const [deloadEveryRotations, setDeloadEveryRotations] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const assignedPlanIds = new Set(data.programs.flatMap((program) => program.planIds));
@@ -42,8 +44,13 @@ export function ProgramCreateModal({ data, onClose }: { data: PlannerData; onClo
       setError('Choose a valid start date and an interval from 1 to 30 days.');
       return undefined;
     }
+    const deloadEvery = Number(deloadEveryRotations);
+    if (scheduleKind === 'rolling' && deloadEveryRotations !== '' && (!Number.isInteger(deloadEvery) || deloadEvery < 2 || deloadEvery > 12)) {
+      setError('Deload frequency must be between 2 and 12 rotations, or left blank.');
+      return undefined;
+    }
     const timestamp = now();
-    return { id: uid(), name: name.trim(), planIds, ...(scheduleKind === 'rolling' ? { schedule: { kind: 'rolling' as const, startsOn, intervalDays: interval } } : {}), revision: 1, createdAt: timestamp, updatedAt: timestamp };
+    return { id: uid(), name: name.trim(), planIds, ...(scheduleKind === 'rolling' ? { schedule: { kind: 'rolling' as const, startsOn, intervalDays: interval, advanceOnCompletion, ...(deloadEveryRotations ? { deloadEveryRotations: deloadEvery } : {}) } } : {}), revision: 1, createdAt: timestamp, updatedAt: timestamp };
   }
 
   async function saveAndNavigate(destination: (program: WorkoutProgram) => string) {
@@ -80,7 +87,7 @@ export function ProgramCreateModal({ data, onClose }: { data: PlannerData; onClo
         </div>
         <form className="program-modal-form" onSubmit={submit}>
           <Field label="Program name" hint="Make the routine easy to recognize"><input autoFocus value={name} onChange={(event) => setName(event.target.value)} placeholder="e.g. Three-day strength" /></Field>
-          <div className="program-modal-schedule"><div className="section-heading"><div><p className="eyebrow">Schedule</p><h3>Choose the program rhythm</h3></div><CalendarDays size={18} /></div><ProgramScheduleFields kind={scheduleKind} startsOn={startsOn} intervalDays={intervalDays} onKindChange={setScheduleKind} onStartsOnChange={setStartsOn} onIntervalDaysChange={setIntervalDays} previewPlans={selectedPlans} /></div>
+          <div className="program-modal-schedule"><div className="section-heading"><div><p className="eyebrow">Schedule</p><h3>Choose the program rhythm</h3></div><CalendarDays size={18} /></div><ProgramScheduleFields kind={scheduleKind} startsOn={startsOn} intervalDays={intervalDays} onKindChange={setScheduleKind} onStartsOnChange={setStartsOn} onIntervalDaysChange={setIntervalDays} advanceOnCompletion={advanceOnCompletion} onAdvanceOnCompletionChange={setAdvanceOnCompletion} deloadEveryRotations={deloadEveryRotations} onDeloadEveryRotationsChange={setDeloadEveryRotations} previewPlans={selectedPlans} /></div>
           <div className="program-modal-plans">
             <div className="section-heading"><div><p className="eyebrow">Workouts</p><h3>Add unassigned plans</h3></div><span className="count-badge">{planIds.length}</span></div>
             {availablePlans.length ? <div className="program-plan-picker">{availablePlans.map((plan) => {

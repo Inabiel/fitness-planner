@@ -1,9 +1,9 @@
 # Repository Review — fitnessPal
 
-Review date: 2026-09-13
+Review date: 2026-09-15
 Review scope: current source, product documents, tests, static assets, and deployment setup.
 
-This review includes Workout Programs with optional calendar-based moving-day rotations, Live Tracking, streak/badge gamification, celebration feedback, and derived workout-energy summaries. Programs group ordered references to existing plans; program-level progress and completion-driven schedule shifting remain roadmap work.
+This review includes Workout Programs with optional calendar-based moving-day rotations, rotation progress, completion-driven shifting, skip/move controls, deload rotations, Live Tracking, session substitutions/notes, streak/badge gamification, derived training insights, and workout-energy summaries.
 
 ## Executive summary
 
@@ -20,9 +20,9 @@ Overall score: 7.2 / 10
 | Product coverage | 8.5 | The main planning, Program, Live Tracking, logging, history, progress, gamification, energy-summary, onboarding, and deletion flows exist. |
 | Domain modeling | 7.5 | Strong unions and snapshots; some compatibility fields and duplicate-ID edge cases remain. |
 | Architecture | 7.5 | Appropriate React/Vite/Dexie split with modest feature boundaries and no unnecessary backend. |
-| UX and accessibility baseline | 8.0 | Clear flows, custom modals, celebration feedback, labels, focus, responsive drawer, hover motion, and reduced-motion support; real-browser verification is still missing. |
+| UX and accessibility baseline | 8.0 | Clear flows, custom modals, celebration feedback, labels, focus, responsive drawer, mobile-safe modal/card layouts, hover motion, and reduced-motion support; real-browser verification is still missing. |
 | Data integrity | 6.5 | History snapshots and clear-all transaction are good; runtime validation, migrations, uniqueness, and conflict handling are missing. |
-| Test confidence | 5.5 | Twenty-seven pure-logic tests pass, but there are no browser journeys or persistence integration tests. |
+| Test confidence | 5.5 | Thirty-seven pure-logic tests pass, but there are no browser journeys or persistence integration tests. |
 | Content readiness | 5.0 | The static library is broad and now has local GIF demonstrations, but generated output still needs movement/content review. |
 | Deployment readiness | 6.5 | A Pages workflow and relative asset paths now exist; branch/settings assumptions remain. |
 
@@ -44,6 +44,9 @@ The implementation is not a collection of disconnected screens. A person can:
 - inspect historical snapshots;
 - see plan recommendations react to repeated logged performance.
 - see weekly consistency, milestone badges, completion celebrations, and estimated calories burned across useful calendar periods.
+- see program rotation progress, move or skip the next occurrence, and use lighter deload rotations;
+- personalize new plans with time/equipment limits, substitute an exercise for one session, and record per-set notes;
+- review personal records, weekly work-set volume, schedule adherence, and primary muscle-balance signals.
 
 That coherence is the strongest product quality in the repository.
 
@@ -74,6 +77,7 @@ The repository now includes:
 - hover/focus treatment across action controls;
 - whole-card plan navigation;
 - a mobile drawer with visible hamburger control and scrim;
+- mobile-safe modal scrolling, header offsets, and wrapped/stacked narrow-screen cards;
 - reduced-motion overrides;
 - optimized local WebP focus artwork in onboarding and plan surfaces;
 - an Exercise Order screen with drag/drop and arrow controls;
@@ -119,7 +123,7 @@ Recommendation: add small Zod parsers for each stored root entity, introduce exp
 
 ### 4. The test suite proves rules, not the application
 
-Evidence: the current suite has 31 Vitest tests for estimates/scheduling/suggestions, ordering, presets, progression, export formatting, progress metrics, gamification, calorie aggregation, shared profile bounds, and backup validation. package.json includes a browser test command, but there are no Playwright spec files or Playwright configuration. There are no IndexedDB integration tests.
+Evidence: the current suite has 37 Vitest tests for estimates/scheduling/suggestions, ordering, presets, progression, export formatting, progress metrics, gamification, calorie aggregation, shared profile bounds, backup validation, program progress, and workout insight derivation. package.json includes a browser test command, but there are no Playwright spec files or Playwright configuration. There are no IndexedDB integration tests.
 
 Impact: regressions in routes, forms, modals, snapshots, deletion, mobile navigation, and reload behavior can pass CI unnoticed.
 
@@ -230,11 +234,11 @@ Exit condition: every selectable exercise has reviewed written guidance and a ve
 
 ### Phase 2 — Make progression more useful without pretending certainty
 
-1. Split observed load, dose, RIR, and adherence into separate progress signals.
+1. Make the existing load, dose, RIR, and adherence signals more actionable.
 2. Add duration-specific and partial-session test cases.
 3. Show the evidence behind an adjustment and allow accept/skip.
-4. Define weekly volume only after choosing units and recovery assumptions.
-5. Add keyboard/touch alternatives for exercise ordering.
+4. Keep weekly volume explicitly defined as completed work-set count until a richer model is justified.
+5. Verify the existing keyboard/touch alternatives for exercise ordering and keep them primary on touch devices.
 
 Exit condition: progression is explainable, editable, and does not collapse unlike exercises into one unsupported score.
 
