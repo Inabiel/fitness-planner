@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Check, ChevronDown, ChevronUp, Dumbbell, GripVertical } from 'lucide-react';
 import { AREA_LABELS, AREAS, type Area, type Exercise, type Profile } from '../../domain';
 import { now, saveProfile } from '../../data/db';
@@ -13,11 +13,21 @@ export function ExerciseOrder({ profile }: { profile: Profile }) {
   const moveAnimations = useRef(new Map<string, Animation>());
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
+  const [canDrag, setCanDrag] = useState(() => typeof window !== 'undefined' && window.matchMedia?.('(pointer: fine)').matches === true);
   const [search, setSearch] = useState('');
   const [filterArea, setFilterArea] = useState<Area | 'aerobic' | 'all'>('all');
   const [saving, setSaving] = useState(false);
   const [snackbar, setSnackbar] = useState<{ message: string; tone: 'success' | 'error' } | null>(null);
   const dismissSnackbar = useCallback(() => setSnackbar(null), []);
+
+  useEffect(() => {
+    if (!window.matchMedia) return;
+    const media = window.matchMedia('(pointer: fine)');
+    const update = () => setCanDrag(media.matches);
+    update();
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, []);
 
   function move(id: string, direction: -1 | 1) {
     setSnackbar(null);
@@ -96,14 +106,14 @@ export function ExerciseOrder({ profile }: { profile: Profile }) {
       <div className="exercise-order-layout">
         <section className="editor-section exercise-order-card">
           <div className="section-heading"><div><p className="eyebrow">Library preference</p><h2>Your sequence</h2></div><span className="count-badge">{order.length} exercises</span></div>
-          <p className="section-explainer">Drag an exercise into place or use the arrows. This preference is shared by every new plan.</p>
+          <p className="section-explainer">Use the arrows on touch screens, or drag an exercise into place with a mouse. This preference is shared by every new plan.</p>
           <div className="search-box"><Dumbbell size={17} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search exercises" aria-label="Search exercises" /></div>
           <div className="filter-row" aria-label="Exercise groups"><button className={filterArea === 'all' ? 'active' : ''} type="button" onClick={() => setFilterArea('all')}>All</button><button className={filterArea === 'aerobic' ? 'active' : ''} type="button" onClick={() => setFilterArea('aerobic')}>Cardio (aerobic)</button>{AREAS.filter((area) => area !== 'full-body').map((area) => <button className={filterArea === area ? 'active' : ''} type="button" key={area} onClick={() => setFilterArea(area)}>{AREA_LABELS[area]}</button>)}</div>
           <p className="library-results">{visibleExercises.length} {visibleExercises.length === 1 ? 'exercise' : 'exercises'} shown</p>
           <div className="exercise-order-list">
             {visibleExercises.map((exercise) => {
               const index = order.indexOf(exercise.id);
-              return <ExerciseOrderItem key={exercise.id} exercise={exercise} index={index} dragged={draggedId === exercise.id} dropTarget={dropTargetId === exercise.id && draggedId !== exercise.id} canMoveUp={index > 0} canMoveDown={index < order.length - 1} itemRef={(element) => { if (element) itemRefs.current.set(exercise.id, element); else itemRefs.current.delete(exercise.id); }} onMove={move} onDragStart={(id) => { setDraggedId(id); setDropTargetId(null); }} onDragOver={previewReorder} onDragEnd={() => { setDraggedId(null); setDropTargetId(null); }} onDrop={(sourceId, targetId, before) => { reorder(sourceId, targetId, before); setDropTargetId(null); }} />;
+              return <ExerciseOrderItem key={exercise.id} exercise={exercise} index={index} dragged={draggedId === exercise.id} dropTarget={dropTargetId === exercise.id && draggedId !== exercise.id} canMoveUp={index > 0} canMoveDown={index < order.length - 1} canDrag={canDrag} itemRef={(element) => { if (element) itemRefs.current.set(exercise.id, element); else itemRefs.current.delete(exercise.id); }} onMove={move} onDragStart={(id) => { setDraggedId(id); setDropTargetId(null); }} onDragOver={previewReorder} onDragEnd={() => { setDraggedId(null); setDropTargetId(null); }} onDrop={(sourceId, targetId, before) => { reorder(sourceId, targetId, before); setDropTargetId(null); }} />;
             })}
           </div>
           <div className="exercise-order-actions">
@@ -131,12 +141,12 @@ function matchesExercise(exercise: Exercise, filterArea: Area | 'aerobic' | 'all
   return matchesArea && matchesType && searchableText.includes(search.toLowerCase());
 }
 
-function ExerciseOrderItem({ exercise, index, dragged, dropTarget, canMoveUp, canMoveDown, itemRef, onMove, onDragStart, onDragOver, onDragEnd, onDrop }: { exercise: typeof EXERCISES[number]; index: number; dragged: boolean; dropTarget: boolean; canMoveUp: boolean; canMoveDown: boolean; itemRef: (element: HTMLElement | null) => void; onMove: (id: string, direction: -1 | 1) => void; onDragStart: (id: string) => void; onDragOver: (id: string, before: boolean) => void; onDragEnd: () => void; onDrop: (sourceId: string, targetId: string, before: boolean) => void }) {
+function ExerciseOrderItem({ exercise, index, dragged, dropTarget, canMoveUp, canMoveDown, canDrag, itemRef, onMove, onDragStart, onDragOver, onDragEnd, onDrop }: { exercise: typeof EXERCISES[number]; index: number; dragged: boolean; dropTarget: boolean; canMoveUp: boolean; canMoveDown: boolean; canDrag: boolean; itemRef: (element: HTMLElement | null) => void; onMove: (id: string, direction: -1 | 1) => void; onDragStart: (id: string) => void; onDragOver: (id: string, before: boolean) => void; onDragEnd: () => void; onDrop: (sourceId: string, targetId: string, before: boolean) => void }) {
   const areas = exercise.primaryAreas.map((area) => AREA_LABELS[area]).join(', ');
   const details = [areas, exercise.equipment, exercise.exerciseType === 'aerobic' ? 'Cardio (aerobic)' : undefined].filter(Boolean).join(' · ');
 
   return (
-    <article ref={itemRef} className={`exercise-order-item ${dragged ? 'dragging' : ''} ${dropTarget ? 'drop-target' : ''}`} draggable onDragStart={(event) => { event.dataTransfer.effectAllowed = 'move'; event.dataTransfer.setData('text/plain', exercise.id); onDragStart(exercise.id); }} onDragEnd={onDragEnd} onDragOver={(event) => { event.preventDefault(); const bounds = event.currentTarget.getBoundingClientRect(); onDragOver(exercise.id, event.clientY < bounds.top + bounds.height / 2); }} onDrop={(event) => { event.preventDefault(); const bounds = event.currentTarget.getBoundingClientRect(); onDrop(event.dataTransfer.getData('text/plain'), exercise.id, event.clientY < bounds.top + bounds.height / 2); }}>
+    <article ref={itemRef} className={`exercise-order-item ${dragged ? 'dragging' : ''} ${dropTarget ? 'drop-target' : ''}`} draggable={canDrag} onDragStart={(event) => { event.dataTransfer.effectAllowed = 'move'; event.dataTransfer.setData('text/plain', exercise.id); onDragStart(exercise.id); }} onDragEnd={onDragEnd} onDragOver={(event) => { event.preventDefault(); const bounds = event.currentTarget.getBoundingClientRect(); onDragOver(exercise.id, event.clientY < bounds.top + bounds.height / 2); }} onDrop={(event) => { event.preventDefault(); const bounds = event.currentTarget.getBoundingClientRect(); onDrop(event.dataTransfer.getData('text/plain'), exercise.id, event.clientY < bounds.top + bounds.height / 2); }}>
       <GripVertical className="exercise-order-grip" size={17} aria-hidden="true" />
       <span className="sequence-number">{String(index + 1).padStart(2, '0')}</span>
       <div className="exercise-order-item-main"><strong>{exercise.name}</strong><small>{details}</small></div>

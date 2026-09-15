@@ -11,7 +11,7 @@ import {
   type Profile,
 } from '../../domain';
 import { now, saveBodyWeight, saveProfile as saveProfileRecord } from '../../data/db';
-import { Field } from '../../shared/ui';
+import { Field, Modal } from '../../shared/ui';
 import {
   emptyProfileForm,
   formToCalculationProfile,
@@ -204,7 +204,7 @@ function OnboardingStepper({ currentStep }: { currentStep: number }) {
 function ReviewConfirmationModal({ existing, form, error, saving, onCancel, onConfirm }: { existing: boolean; form: ProfileForm; error: string; saving: boolean; onCancel: () => void; onConfirm: () => void }) {
   return (
     <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !saving) onCancel(); }}>
-      <div className="review-confirmation-modal" role="dialog" aria-modal="true" aria-labelledby="review-confirmation-title">
+      <Modal className="review-confirmation-modal" labelledBy="review-confirmation-title" onClose={() => { if (!saving) onCancel(); }}>
         <div className="confirmation-icon"><Check size={20} /></div>
         <p className="eyebrow">Final review</p>
         <h2 id="review-confirmation-title">{existing ? 'Save these profile changes?' : 'Open your planner?'}</h2>
@@ -215,7 +215,7 @@ function ReviewConfirmationModal({ existing, form, error, saving, onCancel, onCo
           <button type="button" className="button ghost" onClick={onCancel} disabled={saving} autoFocus>Review again</button>
           <button type="button" className="button primary" onClick={onConfirm} disabled={saving}>{saving ? 'Saving…' : existing ? 'Confirm changes' : 'Confirm and open planner'} <ArrowRight size={16} /></button>
         </div>
-      </div>
+      </Modal>
     </div>
   );
 }

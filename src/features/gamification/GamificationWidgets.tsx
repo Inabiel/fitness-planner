@@ -1,7 +1,7 @@
-import { useEffect } from 'react';
 import { Award, CalendarDays, Check, Flame, Sparkles } from 'lucide-react';
 import type { GamificationCelebration, GamificationSummary, GamificationWeek } from '../../shared/gamification';
 import { formatShortDate, weekdayLabel } from '../../shared/formatters';
+import { Modal } from '../../shared/ui';
 
 export function WeeklyConsistencyCard({ summary }: { summary: GamificationSummary }) {
   const copy = getWeeklyCopy(summary);
@@ -18,17 +18,9 @@ export function WeeklyConsistencyCard({ summary }: { summary: GamificationSummar
 }
 
 export function GamificationCelebrationModal({ celebration, detail, onClose }: { celebration: GamificationCelebration; detail?: string; onClose: () => void }) {
-  useEffect(() => {
-    function closeOnEscape(event: KeyboardEvent) {
-      if (event.key === 'Escape') onClose();
-    }
-    window.addEventListener('keydown', closeOnEscape);
-    return () => window.removeEventListener('keydown', closeOnEscape);
-  }, [onClose]);
-
   return (
     <div className="modal-backdrop gamification-celebration-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-      <div className="gamification-celebration-modal" role="dialog" aria-modal="true" aria-labelledby="gamification-celebration-title" aria-describedby="gamification-celebration-message">
+      <Modal className="gamification-celebration-modal" labelledBy="gamification-celebration-title" describedBy="gamification-celebration-message" onClose={onClose}>
         <div className="gamification-celebration-icon"><Flame size={27} fill="currentColor" /></div>
         <p className="eyebrow">Consistency win</p>
         <h2 id="gamification-celebration-title">{celebration.title}</h2>
@@ -37,7 +29,7 @@ export function GamificationCelebrationModal({ celebration, detail, onClose }: {
         {celebration.badgeNames.length > 0 && <div className="gamification-celebration-badge"><Sparkles size={18} /><span><strong>{celebration.badgeNames.join(', ')}</strong><small>{celebration.badgeRequirement ?? 'New milestone unlocked'}</small></span></div>}
         {detail && <p className="gamification-celebration-detail">{detail}</p>}
         <div className="modal-actions"><button type="button" className="button primary" onClick={onClose} autoFocus>Keep the momentum</button></div>
-      </div>
+      </Modal>
     </div>
   );
 }

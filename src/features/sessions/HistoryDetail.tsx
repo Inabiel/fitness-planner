@@ -5,7 +5,7 @@ import { FOCUS_LABELS, INTENSITY_LABELS, type WorkoutRecord } from '../../domain
 import type { PlannerData } from '../../data/db';
 import { deleteWorkoutRecord, now } from '../../data/db';
 import { formatDateTime, formatLongDate } from '../../shared/formatters';
-import { EmptyState, Page } from '../../shared/ui';
+import { EmptyState, Modal, Page } from '../../shared/ui';
 
 export function HistoryDetail({ data }: { data: PlannerData }) {
   const { recordId } = useParams();
@@ -53,7 +53,7 @@ export function HistoryDetail({ data }: { data: PlannerData }) {
 }
 
 export function DeleteRecordModal({ recordName, error = '', deleting, onCancel, onDelete }: { recordName: string; error?: string; deleting: boolean; onCancel: () => void; onDelete: () => void }) {
-  return <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !deleting) onCancel(); }}><div className="delete-data-modal" role="dialog" aria-modal="true" aria-labelledby="delete-record-title"><div className="warning-icon"><Trash2 size={20} /></div><p className="eyebrow">Delete workout record</p><h2 id="delete-record-title">Delete this session?</h2><p>This removes the saved {recordName} record from your history. The workout plan itself will stay unchanged.</p>{error && <p className="form-error" role="alert">{error}</p>}<div className="modal-actions"><button type="button" className="button ghost" onClick={onCancel} disabled={deleting} autoFocus>Cancel</button><button type="button" className="button danger-button" onClick={onDelete} disabled={deleting}>{deleting ? 'Deleting…' : 'Delete record'}</button></div></div></div>;
+  return <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !deleting) onCancel(); }}><Modal className="delete-data-modal" labelledBy="delete-record-title" onClose={() => { if (!deleting) onCancel(); }}><div className="warning-icon"><Trash2 size={20} /></div><p className="eyebrow">Delete workout record</p><h2 id="delete-record-title">Delete this session?</h2><p>This removes the saved {recordName} record from your history. The workout plan itself will stay unchanged.</p>{error && <p className="form-error" role="alert">{error}</p>}<div className="modal-actions"><button type="button" className="button ghost" onClick={onCancel} disabled={deleting} autoFocus>Cancel</button><button type="button" className="button danger-button" onClick={onDelete} disabled={deleting}>{deleting ? 'Deleting…' : 'Delete record'}</button></div></Modal></div>;
 }
 
 function HistoryExercise({ prescription, index, record }: { prescription: WorkoutRecord['planSnapshot']['prescriptions'][number]; index: number; record: WorkoutRecord }) {
@@ -61,5 +61,5 @@ function HistoryExercise({ prescription, index, record }: { prescription: Workou
   const doseLabel = prescription.dose.kind === 'reps' ? 'reps' : 'sec';
   const recordedSets = record.sets.filter((set) => set.prescriptionId === prescription.id);
 
-  return <div className="history-exercise"><div><span className="sequence-number">{String(index + 1).padStart(2, '0')}</span><strong>{exerciseName}</strong></div><span>{prescription.sets} × {prescription.dose.value} {doseLabel}</span><div className="history-set-list">{recordedSets.map((set) => <span key={set.setNumber}>Set {set.setNumber}: {set.actualReps ?? set.actualDurationSeconds ?? '—'} · {set.loadKg === null ? 'weight/resistance unknown' : `${set.loadKg} kg`}{set.rir === null || set.rir === undefined ? '' : ` · ${set.rir} RIR (reps left)`}</span>)}</div></div>;
+  return <div className="history-exercise"><div><span className="sequence-number">{String(index + 1).padStart(2, '0')}</span><strong>{exerciseName}</strong></div><span>{prescription.sets} × {prescription.dose.value} {doseLabel}</span><div className="history-set-list">{recordedSets.map((set) => <span key={set.setNumber}>Set {set.setNumber}{set.setNumber > prescription.sets ? ' · Added' : ''}: {set.actualReps ?? set.actualDurationSeconds ?? '—'} · {set.loadKg === null ? 'weight/resistance unknown' : `${set.loadKg} kg`}{set.rir === null || set.rir === undefined ? '' : ` · ${set.rir} RIR (reps left)`}</span>)}</div></div>;
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { ArrowLeft, Calculator, Dumbbell, Info, LayoutDashboard, ListOrdered, Settings2, TrendingUp, X } from 'lucide-react';
 import { Link, NavLink, Outlet } from 'react-router';
 import { AREA_LABELS, GOAL_LABELS, type Area, type Profile } from '../domain';
@@ -14,11 +14,24 @@ export function LoadingScreen() {
 
 export function AppShell({ profile }: { profile: Profile }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.matchMedia?.('(max-width: 720px)').matches === true);
+  const sidebarRef = useRef<HTMLElement>(null);
   const closeMenu = () => setMenuOpen(false);
+
+  useEffect(() => {
+    if (!window.matchMedia) return;
+    const media = window.matchMedia('(max-width: 720px)');
+    const update = () => setIsMobile(media.matches);
+    update();
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, []);
+
+  useDialogFocus(menuOpen && isMobile, sidebarRef, closeMenu);
 
   return (
     <div className="app-shell">
-      <aside id="primary-navigation" className={`sidebar ${menuOpen ? 'open' : ''}`}>
+      <aside ref={sidebarRef} id="primary-navigation" className={`sidebar ${menuOpen ? 'open' : ''}`} role={isMobile && menuOpen ? 'dialog' : undefined} aria-modal={isMobile && menuOpen ? true : undefined} aria-label={isMobile && menuOpen ? 'Primary navigation' : undefined} aria-hidden={isMobile && !menuOpen ? true : undefined} inert={isMobile && !menuOpen ? true : undefined}>
         <div className="sidebar-top">
           <Link to="/" className="brand"><span className="brand-mark">F</span><span>fitnessPal</span></Link>
           <button className="icon-button mobile-menu-close" onClick={closeMenu} aria-label="Close navigation"><X size={20} /></button>
@@ -82,6 +95,65 @@ export function Page({ title, subtitle, action, backTo, children }: PageProps) {
       {children}
     </div>
   );
+}
+
+const FOCUSABLE_SELECTOR = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+export function useDialogFocus(open: boolean, containerRef: RefObject<HTMLElement | null>, onRequestClose?: () => void) {
+  const closeRef = useRef(onRequestClose);
+  closeRef.current = onRequestClose;
+  const restoreFocusRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (!open || !containerRef.current) return;
+    const container = containerRef.current;
+    const previousOverflow = document.body.style.overflow;
+    restoreFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    document.body.style.overflow = 'hidden';
+
+    const getFocusable = () => Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR));
+    const focusFirst = () => (container.querySelector<HTMLElement>('[autofocus]') ?? getFocusable()[0] ?? container).focus();
+    const focusLast = () => {
+      const focusable = getFocusable();
+      (focusable[focusable.length - 1] ?? container).focus();
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && closeRef.current) {
+        event.preventDefault();
+        closeRef.current();
+        return;
+      }
+      if (event.key !== 'Tab') return;
+      const focusable = getFocusable();
+      if (!focusable.length || !container.contains(document.activeElement)) {
+        event.preventDefault();
+        if (event.shiftKey) focusLast();
+        else focusFirst();
+        return;
+      }
+      if (event.shiftKey && document.activeElement === focusable[0]) {
+        event.preventDefault();
+        focusLast();
+      } else if (!event.shiftKey && document.activeElement === focusable[focusable.length - 1]) {
+        event.preventDefault();
+        focusFirst();
+      }
+    };
+
+    focusFirst();
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = previousOverflow;
+      if (restoreFocusRef.current?.isConnected) restoreFocusRef.current.focus();
+    };
+  }, [containerRef, open]);
+}
+
+export function Modal({ children, className, labelledBy, describedBy, label, onClose }: { children: ReactNode; className: string; labelledBy?: string; describedBy?: string; label?: string; onClose?: () => void }) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useDialogFocus(true, dialogRef, onClose);
+  return <div ref={dialogRef} className={className} role="dialog" aria-modal="true" aria-labelledby={labelledBy} aria-describedby={describedBy} aria-label={label} tabIndex={-1}>{children}</div>;
 }
 
 interface EmptyStateProps {

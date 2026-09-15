@@ -11,7 +11,7 @@ import {
 } from '../../domain';
 import { clearAllData, now, saveProfile } from '../../data/db';
 import type { BackupDocument } from '../../data/backup';
-import { Field, Page, Snackbar } from '../../shared/ui';
+import { Field, Modal, Page, Snackbar } from '../../shared/ui';
 import { formToCalculationProfile, isActivityLevel, isCompleteProfileForm, isExperience, isGoal, isSex, PROFILE_LIMITS, profileToForm } from './form';
 
 export function ProfileSettings({ profile }: { profile: Profile }) {
@@ -208,7 +208,7 @@ function ImportDataModal({ backup, importing, error, onCancel, onImport }: { bac
   const { profile: importedProfile, plans, programs, records, weights } = backup.data;
   return (
     <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !importing) onCancel(); }}>
-      <div className="delete-data-modal" role="dialog" aria-modal="true" aria-labelledby="import-data-modal-title">
+      <Modal className="delete-data-modal" labelledBy="import-data-modal-title" onClose={() => { if (!importing) onCancel(); }}>
         <div className="confirmation-icon"><Upload size={20} /></div>
         <p className="eyebrow">Import backup</p>
         <h2 id="import-data-modal-title">Replace local data?</h2>
@@ -219,7 +219,7 @@ function ImportDataModal({ backup, importing, error, onCancel, onImport }: { bac
           <button type="button" className="button ghost" onClick={onCancel} disabled={importing} autoFocus>Cancel</button>
           <button type="button" className="button primary" onClick={onImport} disabled={importing}>{importing ? 'Importing…' : 'Replace and import'} <Upload size={16} /></button>
         </div>
-      </div>
+      </Modal>
     </div>
   );
 }
@@ -227,7 +227,7 @@ function ImportDataModal({ backup, importing, error, onCancel, onImport }: { bac
 function DeleteDataModal({ deleting, error, onCancel, onDelete }: { deleting: boolean; error: string; onCancel: () => void; onDelete: () => void }) {
   return (
     <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !deleting) onCancel(); }}>
-      <div className="delete-data-modal" role="dialog" aria-modal="true" aria-labelledby="delete-data-modal-title">
+      <Modal className="delete-data-modal" labelledBy="delete-data-modal-title" onClose={() => { if (!deleting) onCancel(); }}>
         <div className="warning-icon"><Trash2 size={20} /></div>
         <p className="eyebrow">Danger zone</p>
         <h2 id="delete-data-modal-title">Delete all local data?</h2>
@@ -237,7 +237,7 @@ function DeleteDataModal({ deleting, error, onCancel, onDelete }: { deleting: bo
           <button type="button" className="button ghost" onClick={onCancel} disabled={deleting} autoFocus>Cancel</button>
           <button type="button" className="button danger-button" onClick={onDelete} disabled={deleting}>{deleting ? 'Deleting…' : 'Delete all data'}</button>
         </div>
-      </div>
+      </Modal>
     </div>
   );
 }

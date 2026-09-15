@@ -19,7 +19,7 @@ import { CopyPlanModal, DeletePlanModal } from '../plans/PlanActionModals';
 import { assessPlanIntensity, assessPrescriptionEffort, adjustPrescriptionsForIntensity, recommendNextIntensity, recommendNextPrescriptions, type EffortAssessment, type IntensityAssessment } from '../plans/recommendations';
 import { makePlanSnapshot } from './snapshot';
 import { DeleteRecordModal } from './HistoryDetail';
-import { SessionExercise, type SetValueField } from './SessionExercise';
+import { getVisibleSetCount, SessionExercise, type SetValueField } from './SessionExercise';
 
 export function Session({ data }: { data: PlannerData }) {
   const { planId, date } = useParams();
@@ -206,7 +206,7 @@ export function Session({ data }: { data: PlannerData }) {
           <div className="session-intro"><span className="session-date"><CalendarDays size={16} /> {formatLongDate(date)}</span><span className="area-pill">{FOCUS_LABELS[focus]} focus</span><span className="area-pill intensity-pill">Target: {INTENSITY_LABELS[intensity]}</span><h2>{snapshot.name}</h2><p className="muted">Log actual reps, weight/resistance, and optional RIR (reps in reserve). RIR means how many more good-form reps you could have done after a set. Blank fields stay unknown, and completion never requires performance details.</p></div>
           {snapshot.prescriptions.map((prescription, index) => {
             const exercise = snapshot.exercises.find((item) => item.id === prescription.exerciseId) ?? EXERCISES.find((item) => item.id === prescription.exerciseId);
-            return exercise ? <SessionExercise key={prescription.id} prescription={prescription} exercise={exercise} index={index} effort={assessPrescriptionEffort(prescription, plan.id, data.records)} showDetails getSet={getSet} updateSet={updateSet} /> : null;
+            return exercise ? <SessionExercise key={prescription.id} prescription={prescription} exercise={exercise} index={index} effort={assessPrescriptionEffort(prescription, plan.id, data.records)} setCount={getVisibleSetCount(prescription, sets)} showDetails getSet={getSet} updateSet={updateSet} /> : null;
           })}
           <div className="session-actions">
             <button className="button ghost" onClick={() => navigate(-1)}>Exit</button>

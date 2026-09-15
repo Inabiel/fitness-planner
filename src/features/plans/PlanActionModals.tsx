@@ -1,9 +1,10 @@
 import { Clipboard, Trash2 } from 'lucide-react';
+import { Modal } from '../../shared/ui';
 
 export function CopyPlanModal({ includeSteps, saving, onIncludeStepsChange, onCancel, onCopy }: { includeSteps: boolean; saving: boolean; onIncludeStepsChange: (value: boolean) => void; onCancel: () => void; onCopy: () => void }) {
   return (
     <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !saving) onCancel(); }}>
-      <div className="review-confirmation-modal" role="dialog" aria-modal="true" aria-labelledby="copy-plan-title">
+      <Modal className="review-confirmation-modal" labelledBy="copy-plan-title" onClose={() => { if (!saving) onCancel(); }}>
         <div className="confirmation-icon"><Clipboard size={20} /></div>
         <p className="eyebrow">Copy workout plan</p>
         <h2 id="copy-plan-title">Choose what to copy</h2>
@@ -16,11 +17,11 @@ export function CopyPlanModal({ includeSteps, saving, onIncludeStepsChange, onCa
           <button type="button" className="button ghost" onClick={onCancel} disabled={saving} autoFocus>Cancel</button>
           <button type="button" className="button primary" onClick={onCopy} disabled={saving}>{saving ? 'Copying…' : 'Copy plan text'} <Clipboard size={16} /></button>
         </div>
-      </div>
+      </Modal>
     </div>
   );
 }
 
 export function DeletePlanModal({ planName, error, saving, onCancel, onDelete }: { planName: string; error: string; saving: boolean; onCancel: () => void; onDelete: () => void }) {
-  return <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !saving) onCancel(); }}><div className="delete-data-modal" role="dialog" aria-modal="true" aria-labelledby="delete-plan-title"><div className="warning-icon"><Trash2 size={20} /></div><p className="eyebrow">Delete workout plan</p><h2 id="delete-plan-title">Delete {planName}?</h2><p>Future sessions will disappear, but recorded history will be retained.</p>{error && <p className="form-error" role="alert">{error}</p>}<div className="modal-actions"><button type="button" className="button ghost" onClick={onCancel} disabled={saving} autoFocus>Cancel</button><button type="button" className="button danger-button" onClick={onDelete} disabled={saving}>{saving ? 'Deleting…' : 'Delete plan'}</button></div></div></div>;
+  return <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !saving) onCancel(); }}><Modal className="delete-data-modal" labelledBy="delete-plan-title" onClose={() => { if (!saving) onCancel(); }}><div className="warning-icon"><Trash2 size={20} /></div><p className="eyebrow">Delete workout plan</p><h2 id="delete-plan-title">Delete {planName}?</h2><p>Future sessions will disappear, but recorded history will be retained.</p>{error && <p className="form-error" role="alert">{error}</p>}<div className="modal-actions"><button type="button" className="button ghost" onClick={onCancel} disabled={saving} autoFocus>Cancel</button><button type="button" className="button danger-button" onClick={onDelete} disabled={saving}>{saving ? 'Deleting…' : 'Delete plan'}</button></div></Modal></div>;
 }

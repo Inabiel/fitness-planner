@@ -4,7 +4,7 @@ import { Link, useNavigate, useParams } from 'react-router';
 import { formatProgramSchedule, localDate, occurrenceAfter, occursOn, type WorkoutPlan } from '../../domain';
 import { deleteProgram, type AuthenticatedPlannerData } from '../../data/db';
 import { formatLongDate } from '../../shared/formatters';
-import { EmptyState, Page } from '../../shared/ui';
+import { EmptyState, Modal, Page } from '../../shared/ui';
 import { PlanCard } from './PlansPage';
 
 export function ProgramDetail({ data }: { data: AuthenticatedPlannerData }) {
@@ -64,5 +64,5 @@ export function ProgramDetail({ data }: { data: AuthenticatedPlannerData }) {
 }
 
 function DeleteProgramModal({ programName, deleting, error, onCancel, onDelete }: { programName: string; deleting: boolean; error: string; onCancel: () => void; onDelete: () => void }) {
-  return <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !deleting) onCancel(); }}><div className="delete-data-modal" role="dialog" aria-modal="true" aria-labelledby="delete-program-title"><div className="warning-icon"><Trash2 size={20} /></div><p className="eyebrow">Delete program</p><h2 id="delete-program-title">Delete {programName}?</h2><p>The workout plans and their recorded history will stay safe. Only this program grouping will be removed.</p>{error && <p className="form-error" role="alert">{error}</p>}<div className="modal-actions"><button type="button" className="button ghost" onClick={onCancel} disabled={deleting} autoFocus>Cancel</button><button type="button" className="button danger-button" onClick={onDelete} disabled={deleting}>{deleting ? 'Deleting…' : 'Delete program'}</button></div></div></div>;
+  return <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !deleting) onCancel(); }}><Modal className="delete-data-modal" labelledBy="delete-program-title" onClose={() => { if (!deleting) onCancel(); }}><div className="warning-icon"><Trash2 size={20} /></div><p className="eyebrow">Delete program</p><h2 id="delete-program-title">Delete {programName}?</h2><p>The workout plans and their recorded history will stay safe. Only this program grouping will be removed.</p>{error && <p className="form-error" role="alert">{error}</p>}<div className="modal-actions"><button type="button" className="button ghost" onClick={onCancel} disabled={deleting} autoFocus>Cancel</button><button type="button" className="button danger-button" onClick={onDelete} disabled={deleting}>{deleting ? 'Deleting…' : 'Delete program'}</button></div></Modal></div>;
 }

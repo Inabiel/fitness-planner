@@ -3,7 +3,7 @@ import { CalendarDays, Check, Dumbbell, FolderPlus, Plus, X } from 'lucide-react
 import { useNavigate } from 'react-router';
 import { FOCUS_LABELS, dateIsValid, formatSchedule, localDate, type WorkoutPlan, type WorkoutProgram } from '../../domain';
 import { now, saveProgram, uid, type PlannerData } from '../../data/db';
-import { Field } from '../../shared/ui';
+import { Field, Modal } from '../../shared/ui';
 import { ProgramScheduleFields, type ProgramScheduleKind } from './ProgramScheduleFields';
 
 export function ProgramCreateModal({ data, onClose }: { data: PlannerData; onClose: () => void }) {
@@ -73,7 +73,7 @@ export function ProgramCreateModal({ data, onClose }: { data: PlannerData; onClo
 
   return (
     <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !saving) onClose(); }}>
-      <div className="review-confirmation-modal program-create-modal" role="dialog" aria-modal="true" aria-labelledby="program-create-title">
+      <Modal className="review-confirmation-modal program-create-modal" labelledBy="program-create-title" onClose={() => { if (!saving) onClose(); }}>
         <div className="program-modal-header">
           <div><div className="confirmation-icon"><FolderPlus size={20} /></div><p className="eyebrow">New program</p><h2 id="program-create-title">Keep workouts together</h2><p>Start with existing unassigned plans, or create the first plan in this program.</p></div>
           <button type="button" className="icon-button" onClick={onClose} disabled={saving} aria-label="Close new program dialog"><X size={18} /></button>
@@ -92,7 +92,7 @@ export function ProgramCreateModal({ data, onClose }: { data: PlannerData; onClo
           {error && <p className="form-error global-error" role="alert">{error}</p>}
           <div className="modal-actions"><button type="button" className="button ghost" onClick={onClose} disabled={saving}>Cancel</button><button type="button" className="button secondary program-modal-create-plan" onClick={createPlanHere} disabled={saving}><Plus size={16} /> Create plan here</button><button type="submit" className="button primary" disabled={saving}>{saving ? 'Saving…' : 'Create program'} <Check size={16} /></button></div>
         </form>
-      </div>
+      </Modal>
     </div>
   );
 }
