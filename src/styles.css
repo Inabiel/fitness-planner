@@ -555,3 +555,14 @@ select { appearance: auto; }
   .plan-card-footer .schedule-label { flex: 1 1 100%; min-width: 0; }
   .plan-card-footer .text-link { margin-left: auto; }
 }
+
+@media (max-width: 720px) {
+  .modal-backdrop { align-items: flex-start; }
+  .modal-backdrop > [role="dialog"] { min-width: 0; }
+  .program-modal-header > div:first-child, .live-tracking-header > div:first-child { min-width: 0; }
+  .schedule-card { align-items: flex-start; }
+  .schedule-card-main > * { min-width: 0; overflow-wrap: anywhere; }
+  .program-next-card > div { min-width: 0; }
+  .program-next-card h2 { overflow-wrap: anywhere; }
+  .rotation-preview-row strong { min-width: 0; overflow-wrap: anywhere; }
+}
