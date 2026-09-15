@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { ArrowLeft, ArrowRight, Check, Info } from 'lucide-react';
 import { Link, useNavigate } from 'react-router';
 import {
@@ -20,9 +20,8 @@ import {
   PROFILE_LIMITS,
   type ProfileForm,
   type ProfileFormValue,
-  positiveInteger,
-  positiveNumber,
 } from './form';
+import { positiveInteger, positiveNumber } from '../../shared/validation';
 
 interface OnboardingProps {
   existing: Profile | undefined;
@@ -40,21 +39,7 @@ export function Onboarding({ existing }: OnboardingProps) {
   const [error, setError] = useState('');
   const [errors, setErrors] = useState<FormErrors>({});
   const [form, setForm] = useState<ProfileForm>(() => existing ? profileToForm(existing) : emptyProfileForm());
-  const estimate = useMemo(
-    () => isCompleteProfileForm(form) ? calculateEstimates(formToCalculationProfile(form)) : null,
-    [form],
-  );
-
-  useEffect(() => {
-    if (!confirmModalOpen) return;
-
-    function closeOnEscape(event: KeyboardEvent) {
-      if (event.key === 'Escape' && !saving) setConfirmModalOpen(false);
-    }
-
-    window.addEventListener('keydown', closeOnEscape);
-    return () => window.removeEventListener('keydown', closeOnEscape);
-  }, [confirmModalOpen, saving]);
+  const estimate = isCompleteProfileForm(form) ? calculateEstimates(formToCalculationProfile(form)) : null;
 
   function update(field: keyof ProfileForm, value: ProfileFormValue) {
     setForm((current) => ({ ...current, [field]: value }));

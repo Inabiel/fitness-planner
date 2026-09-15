@@ -78,8 +78,6 @@ h3 { font-size: 1.05rem; line-height: 1.15; }
 .avatar { align-items: center; background: #c7efc2; border-radius: 50%; color: #275538; display: inline-flex; flex: 0 0 auto; font-size: 0.85rem; font-weight: 700; height: 31px; justify-content: center; width: 31px; }
 .avatar.large { font-size: 1.2rem; height: 48px; width: 48px; }
 .sidebar-scrim, .mobile-header { display: none; }
-.menu-icon { display: flex; flex-direction: column; gap: 4px; }
-.menu-icon span { background: currentColor; border-radius: 2px; display: block; height: 2px; width: 18px; }
 .main-content { flex: 1; margin-left: 242px; min-width: 0; }
 .content-wrap { margin: 0 auto; max-width: 1410px; padding: 50px 5.3vw 80px; }
 .page { animation: page-fade-in 260ms ease-out both; }

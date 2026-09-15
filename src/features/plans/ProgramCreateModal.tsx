@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { CalendarDays, Check, Dumbbell, FolderPlus, Plus, X } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { FOCUS_LABELS, dateIsValid, formatSchedule, localDate, type WorkoutPlan, type WorkoutProgram } from '../../domain';
@@ -20,15 +20,6 @@ export function ProgramCreateModal({ data, onClose }: { data: PlannerData; onClo
   const assignedPlanIds = new Set(data.programs.flatMap((program) => program.planIds));
   const selectedPlans = planIds.map((id) => data.plans.find((plan) => plan.id === id)).filter((plan): plan is WorkoutPlan => Boolean(plan));
   const availablePlans = data.plans.filter((plan) => !assignedPlanIds.has(plan.id) && !planIds.includes(plan.id));
-
-  useEffect(() => {
-    if (saving) return;
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') onClose();
-    }
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onClose, saving]);
 
   function togglePlan(planId: string) {
     setPlanIds((current) => current.includes(planId) ? current.filter((id) => id !== planId) : [...current, planId]);

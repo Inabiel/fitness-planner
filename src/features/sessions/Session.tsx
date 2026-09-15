@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { ArrowRight, CalendarDays, Check, CircleCheck, Clipboard, Dumbbell, Flame, Pencil, Timer, Trash2 } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router';
-import { FOCUS_LABELS, INTENSITY_LABELS, dateIsValid, isPlanRecurring, localDate, plannedVolume, type EstimateSnapshot, type Exercise, type PlanSnapshot, type SetRecord, type WorkoutIntensity, type WorkoutRecord } from '../../domain';
+import { FOCUS_LABELS, INTENSITY_LABELS, dateIsValid, isPlanRecurring, localDate, plannedVolume, type EstimateSnapshot, type Exercise, type PlanSnapshot, type SetRecord, type WorkoutRecord } from '../../domain';
 import type { PlannerData } from '../../data/db';
 import { advanceProgramsAfterCompletion, deletePlan as removePlan, deleteWorkoutRecord, now, saveWorkoutRecord, uid, updatePlanPrescriptions } from '../../data/db';
 import { EXERCISES } from '../../data/exercises';
@@ -16,10 +16,12 @@ import { GamificationCelebrationModal } from '../gamification';
 import { FocusIllustration } from '../plans/FocusIllustration';
 import { LiveTrackingModal } from '../plans/LiveTrackingModal';
 import { CopyPlanModal, DeletePlanModal } from '../plans/PlanActionModals';
-import { assessPlanIntensity, assessPrescriptionEffort, adjustPrescriptionsForIntensity, recommendNextIntensity, recommendNextPrescriptions, type EffortAssessment, type IntensityAssessment } from '../plans/recommendations';
+import { assessPlanIntensity, assessPrescriptionEffort, adjustPrescriptionsForIntensity, recommendNextIntensity, recommendNextPrescriptions } from '../plans/recommendations';
+import { EffortSummary, IntensityCard } from '../plans/ProgressionCards';
 import { makePlanSnapshot } from './snapshot';
 import { DeleteRecordModal } from './HistoryDetail';
 import { getVisibleSetCount, SessionExercise, type SetValueField } from './SessionExercise';
+import { getSessionSet, replaceExerciseInSnapshot, updateSessionSets } from './sessionState';
 
 export function Session({ data }: { data: PlannerData }) {
   const { planId, date } = useParams();
@@ -40,18 +42,6 @@ export function Session({ data }: { data: PlannerData }) {
   const [celebrationDetail, setCelebrationDetail] = useState('');
   const dismissSnackbar = useCallback(() => setSnackbar(null), []);
 
-  useEffect(() => {
-    if (!deletePlanOpen && !copyOpen) return;
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape' && !saving) {
-        setDeletePlanOpen(false);
-        setCopyOpen(false);
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [copyOpen, deletePlanOpen, saving]);
-
   if (!selectedPlan || !date || !dateIsValid(date)) {
     return <Page title="Session unavailable" subtitle="We couldn’t resolve this dated occurrence."><EmptyState icon={<CalendarDays size={22} />} title="Check the plan and date" body="This session may belong to a deleted plan or an invalid date." action={<Link className="button secondary" to="/plans">Back to plans</Link>} /></Page>;
   }
@@ -65,36 +55,15 @@ export function Session({ data }: { data: PlannerData }) {
   const progressPoints = isPlanRecurring(plan, data.programs) ? getProgressPoints(data.records, plan.id) : [];
 
   function getSet(prescriptionId: string, setNumber: number): SetRecord {
-    return sets.find((item) => item.prescriptionId === prescriptionId && item.setNumber === setNumber) ?? {
-      prescriptionId,
-      setNumber,
-      actualReps: null,
-      actualDurationSeconds: null,
-      loadKg: null,
-      rir: null,
-      notes: null,
-    };
+    return getSessionSet(sets, prescriptionId, setNumber);
   }
 
   function updateSet(prescriptionId: string, setNumber: number, field: SetValueField, value: string) {
-    const current = getSet(prescriptionId, setNumber);
-    const parsed = field === 'notes' ? (value.trim() || null) : value === '' ? null : Number(value);
-    const next = { ...current, [field]: parsed };
-    const hasValue = next.actualReps !== null || next.actualDurationSeconds !== null || next.loadKg !== null || next.rir !== null && next.rir !== undefined || Boolean(next.notes);
-
-    setSets((items) => {
-      const withoutCurrent = items.filter((item) => !(item.prescriptionId === prescriptionId && item.setNumber === setNumber));
-      return hasValue ? [...withoutCurrent, next] : withoutCurrent;
-    });
+    setSets((items) => updateSessionSets(items, prescriptionId, setNumber, field, value));
   }
 
   function replaceExercise(prescriptionId: string, exercise: Exercise) {
-    setSessionSnapshot((current) => {
-      const base = current ?? snapshot;
-      const prescriptions = base.prescriptions.map((item) => item.id === prescriptionId ? { ...item, exerciseId: exercise.id, dose: { ...item.dose, kind: exercise.doseKind } } : item);
-      const usedExerciseIds = new Set(prescriptions.map((item) => item.exerciseId));
-      return { ...base, prescriptions, exercises: [...base.exercises.filter((item) => usedExerciseIds.has(item.id)), ...(base.exercises.some((item) => item.id === exercise.id) ? [] : [exercise])] };
-    });
+    setSessionSnapshot((current) => replaceExerciseInSnapshot(current ?? snapshot, prescriptionId, exercise));
   }
 
   async function save(status: WorkoutRecord['status']) {
@@ -261,17 +230,4 @@ export function Session({ data }: { data: PlannerData }) {
 
 function SessionEstimateCard({ estimate }: { estimate?: EstimateSnapshot }) {
   return <div className="side-card saved-estimate"><div className="section-heading"><div><p className="eyebrow">Saved estimates</p><h3>{estimate ? `${estimate.dailyCalories.toLocaleString()} calories` : 'Not available'}</h3></div><span className="target-icon"><Flame size={17} /></span></div>{estimate ? <><div className="saved-macros"><span>{estimate.proteinGrams}g protein</span><span>{estimate.carbohydrateGrams}g carbohydrates</span><span>{estimate.fatGrams}g fat</span></div><p className="fine-print">Captured from profile revision {estimate.profileRevision} · {formatDateTime(estimate.calculatedAt)}</p></> : <p className="fine-print">This session has no saved estimate.</p>}</div>;
-}
-
-function EffortSummary({ assessments }: { assessments: EffortAssessment[] }) {
-  const increases = assessments.filter((assessment) => assessment.direction === 'increase').length;
-  const decreases = assessments.filter((assessment) => assessment.direction === 'decrease').length;
-  const trends = assessments.filter((assessment) => assessment.direction === 'insufficient-data').length;
-  const summary = decreases ? 'Some exercises need less effort.' : increases ? 'Some exercises are ready for more effort.' : trends === assessments.length ? 'Log two completed sessions to calculate changes.' : 'Your current effort is repeatable.';
-  return <div className="side-card effort-summary"><p className="eyebrow">Effort guidance</p><h3>{summary}</h3><div className="effort-summary-stats"><span><strong>{increases}</strong> increase</span><span><strong>{decreases}</strong> decrease</span><span><strong>{trends}</strong> building</span></div></div>;
-}
-
-function IntensityCard({ target, assessment }: { target: WorkoutIntensity; assessment: IntensityAssessment }) {
-  const pillClass = assessment.result === 'above' ? 'increase' : assessment.result === 'below' ? 'decrease' : assessment.result === 'on-target' ? 'hold' : 'insufficient-data';
-  return <div className="side-card intensity-card"><div className="section-heading"><div><p className="eyebrow">Target intensity</p><h3>{INTENSITY_LABELS[target]}</h3></div><span className={`effort-pill ${pillClass}`}>{assessment.label}</span></div><p className="effort-detail">{assessment.detail}</p></div>;
 }

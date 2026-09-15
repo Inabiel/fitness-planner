@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { ArrowRight, CalendarDays, Check, Dumbbell, Layers, Pencil, Plus, SkipForward, Trash2 } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { formatProgramSchedule, getProgramProgress, isProgramDeloadDate, localDate, occurrenceAfter, occursOn, type WorkoutPlan } from '../../domain';
@@ -15,15 +15,6 @@ export function ProgramDetail({ data }: { data: AuthenticatedPlannerData }) {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [moveDate, setMoveDate] = useState('');
   const [error, setError] = useState('');
-
-  useEffect(() => {
-    if (!deleteOpen) return;
-    function closeOnEscape(event: KeyboardEvent) {
-      if (event.key === 'Escape' && !saving) setDeleteOpen(false);
-    }
-    window.addEventListener('keydown', closeOnEscape);
-    return () => window.removeEventListener('keydown', closeOnEscape);
-  }, [deleteOpen, saving]);
 
   if (!selectedProgram) {
     return <Page title="Program not found" subtitle="This program may have been deleted."><EmptyState icon={<Layers size={22} />} title="No program here" body="Return to your workout plans to choose another program." action={<Link to="/plans" className="button secondary">Back to plans</Link>} /></Page>;

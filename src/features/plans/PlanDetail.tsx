@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useState } from 'react';
-import { ArrowRight, Check, CircleCheck, Clipboard, Clock3, Dumbbell, Flame, Info, Pencil, Timer, Trash2 } from 'lucide-react';
+import { useCallback, useState } from 'react';
+import { ArrowRight, Check, CircleCheck, Clipboard, Clock3, Dumbbell, Flame, Info, Pencil, RotateCcw, Timer, Trash2 } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router';
-import { AREA_LABELS, FOCUS_LABELS, INTENSITY_LABELS, calculateEstimates, formatPlanSchedule, isPlanRecurring, localDate, occurrenceAfter, occursOn, plannedVolume, snapshotEstimate, type EstimateSnapshot, type Exercise, type Prescription, type WorkoutIntensity } from '../../domain';
+import { AREA_LABELS, FOCUS_LABELS, INTENSITY_LABELS, calculateEstimates, formatPlanSchedule, isPlanRecurring, localDate, occurrenceAfter, occursOn, plannedVolume, snapshotEstimate, type EstimateSnapshot, type Exercise, type Prescription } from '../../domain';
 import { deletePlan as removePlan, now, updatePlanEstimate, type AuthenticatedPlannerData } from '../../data/db';
 import { EXERCISES } from '../../data/exercises';
 import { formatDateTime } from '../../shared/formatters';
@@ -15,7 +15,8 @@ import { FocusIllustration } from './FocusIllustration';
 import { LiveTrackingModal } from './LiveTrackingModal';
 import { CopyPlanModal, DeletePlanModal } from './PlanActionModals';
 import { copyToClipboard, formatWorkoutPlanText } from '../../shared/workoutExport';
-import { assessPlanIntensity, assessPrescriptionEffort, type EffortAssessment, type IntensityAssessment } from './recommendations';
+import { assessPlanIntensity, assessPrescriptionEffort, type EffortAssessment } from './recommendations';
+import { EffortSummary, IntensityCard } from './ProgressionCards';
 
 export function PlanDetail({ data }: { data: AuthenticatedPlannerData }) {
   const { planId } = useParams();
@@ -33,18 +34,6 @@ export function PlanDetail({ data }: { data: AuthenticatedPlannerData }) {
   const [celebrationDetail, setCelebrationDetail] = useState('');
   const [error, setError] = useState('');
   const dismissSnackbar = useCallback(() => setSnackbar(null), []);
-
-  useEffect(() => {
-    if (!deleteOpen && !copyOpen) return;
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape' && !saving) {
-        setDeleteOpen(false);
-        setCopyOpen(false);
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [copyOpen, deleteOpen, saving]);
 
   if (!selectedPlan) {
     return <Page title="Plan not found" subtitle="This plan may have been deleted."><EmptyState icon={<Info size={22} />} title="No plan here" body="Historical workout records are kept separately from plans." action={<Link to="/plans" className="button secondary">Back to plans</Link>} /></Page>;
@@ -151,7 +140,7 @@ export function PlanDetail({ data }: { data: AuthenticatedPlannerData }) {
 }
 
 function EstimateSnapshotCard({ estimate, onRecalculate }: { estimate?: EstimateSnapshot; onRecalculate: () => void }) {
-  return <div className="side-card saved-estimate"><div className="section-heading"><div><p className="eyebrow">Saved estimates</p><h3>{estimate ? `${estimate.dailyCalories.toLocaleString()} calories` : 'Not available'}</h3></div><span className="target-icon"><Flame size={17} /></span></div>{estimate ? <><div className="saved-macros"><span>{estimate.proteinGrams}g protein</span><span>{estimate.carbohydrateGrams}g carbohydrates</span><span>{estimate.fatGrams}g fat</span></div><p className="fine-print">Captured from profile revision {estimate.profileRevision} · {formatDateTime(estimate.calculatedAt)}</p></> : <p className="fine-print">This plan has no saved estimate yet.</p>}<button className="button small secondary full-width" onClick={onRecalculate}><RotateIcon /> Recalculate explicitly</button></div>;
+  return <div className="side-card saved-estimate"><div className="section-heading"><div><p className="eyebrow">Saved estimates</p><h3>{estimate ? `${estimate.dailyCalories.toLocaleString()} calories` : 'Not available'}</h3></div><span className="target-icon"><Flame size={17} /></span></div>{estimate ? <><div className="saved-macros"><span>{estimate.proteinGrams}g protein</span><span>{estimate.carbohydrateGrams}g carbohydrates</span><span>{estimate.fatGrams}g fat</span></div><p className="fine-print">Captured from profile revision {estimate.profileRevision} · {formatDateTime(estimate.calculatedAt)}</p></> : <p className="fine-print">This plan has no saved estimate yet.</p>}<button className="button small secondary full-width" onClick={onRecalculate}><RotateCcw size={15} /> Recalculate explicitly</button></div>;
 }
 
 function RecalculationModal({ estimate, previewEstimate, profileRevision, saving, onCancel, onSave }: { estimate?: EstimateSnapshot; previewEstimate: ReturnType<typeof calculateEstimates>; profileRevision: number; saving: boolean; onCancel: () => void; onSave: () => void }) {
@@ -161,19 +150,6 @@ function RecalculationModal({ estimate, previewEstimate, profileRevision, saving
 
 function EstimateCompare({ label, estimate }: { label: string; estimate?: EstimateSnapshot | (ReturnType<typeof calculateEstimates> & { calculatedAt: string; profileRevision: number }) }) {
   return <div className="compare-card"><span className="eyebrow">{label}</span>{estimate ? <><strong>{estimate.dailyCalories.toLocaleString()} <small>calories</small></strong><span>{estimate.proteinGrams}g protein · {estimate.carbohydrateGrams}g carbohydrates · {estimate.fatGrams}g fat</span><span>BMI (body mass index) {estimate.bmi.toFixed(1)}</span></> : <span className="muted">No saved estimate</span>}</div>;
-}
-
-function EffortSummary({ assessments }: { assessments: EffortAssessment[] }) {
-  const increases = assessments.filter((assessment) => assessment.direction === 'increase').length;
-  const decreases = assessments.filter((assessment) => assessment.direction === 'decrease').length;
-  const trends = assessments.filter((assessment) => assessment.direction === 'insufficient-data').length;
-  const summary = decreases ? 'Some exercises need less effort.' : increases ? 'Some exercises are ready for more effort.' : trends === assessments.length ? 'Log two completed sessions to calculate changes.' : 'Your current effort is repeatable.';
-  return <div className="side-card effort-summary"><p className="eyebrow">Effort guidance</p><h3>{summary}</h3><div className="effort-summary-stats"><span><strong>{increases}</strong> increase</span><span><strong>{decreases}</strong> decrease</span><span><strong>{trends}</strong> building</span></div></div>;
-}
-
-function IntensityCard({ target, assessment }: { target: WorkoutIntensity; assessment: IntensityAssessment }) {
-  const pillClass = assessment.result === 'above' ? 'increase' : assessment.result === 'below' ? 'decrease' : assessment.result === 'on-target' ? 'hold' : 'insufficient-data';
-  return <div className="side-card intensity-card"><div className="section-heading"><div><p className="eyebrow">Target intensity</p><h3>{INTENSITY_LABELS[target]}</h3></div><span className={`effort-pill ${pillClass}`}>{assessment.label}</span></div><p className="effort-detail">{assessment.detail}</p></div>;
 }
 
 function ExerciseDetail({ prescription, exercise, index, effort }: { prescription: Prescription; exercise: Exercise; index: number; effort: EffortAssessment }) {
@@ -188,5 +164,3 @@ function formatLoad(load: number | null | undefined): string {
   if (load === null || load === undefined) return 'Choose a weight/resistance';
   return `${load} kg`;
 }
-
-function RotateIcon() { return <span className="rotate-icon">↻</span>; }

@@ -7,6 +7,7 @@ import { getGamificationCelebration, getGamificationFeedback, getGamificationSum
 import { EmptyState, Modal } from '../../shared/ui';
 import { getVisibleSetCount, SessionExercise, type SetValueField } from '../sessions/SessionExercise';
 import { makePlanSnapshot } from '../sessions/snapshot';
+import { getSessionSet, replaceExerciseInSnapshot, updateSessionSets } from '../sessions/sessionState';
 
 interface TrackingStep {
   prescription: Prescription;
@@ -41,26 +42,15 @@ export function LiveTrackingModal({ plan, records, programs = [], onClose, onSav
   }, [restRemaining]);
 
   function getSet(prescriptionId: string, setNumber: number): SetRecord {
-    return sets.find((item) => item.prescriptionId === prescriptionId && item.setNumber === setNumber) ?? { prescriptionId, setNumber, actualReps: null, actualDurationSeconds: null, loadKg: null, rir: null, notes: null };
+    return getSessionSet(sets, prescriptionId, setNumber);
   }
 
   function updateSet(prescriptionId: string, setNumber: number, field: SetValueField, value: string) {
-    const current = getSet(prescriptionId, setNumber);
-    const parsed = field === 'notes' ? (value.trim() || null) : value === '' ? null : Number(value);
-    const next = { ...current, [field]: parsed };
-    const hasValue = next.actualReps !== null || next.actualDurationSeconds !== null || next.loadKg !== null || next.rir !== null && next.rir !== undefined || Boolean(next.notes);
-    setSets((items) => {
-      const withoutCurrent = items.filter((item) => !(item.prescriptionId === prescriptionId && item.setNumber === setNumber));
-      return hasValue ? [...withoutCurrent, next] : withoutCurrent;
-    });
+    setSets((items) => updateSessionSets(items, prescriptionId, setNumber, field, value));
   }
 
   function replaceExercise(prescriptionId: string, exercise: Exercise) {
-    setSnapshot((current) => {
-      const prescriptions = current.prescriptions.map((item) => item.id === prescriptionId ? { ...item, exerciseId: exercise.id, dose: { ...item.dose, kind: exercise.doseKind } } : item);
-      const usedExerciseIds = new Set(prescriptions.map((item) => item.exerciseId));
-      return { ...current, prescriptions, exercises: [...current.exercises.filter((item) => usedExerciseIds.has(item.id)), ...(current.exercises.some((item) => item.id === exercise.id) ? [] : [exercise])] };
-    });
+    setSnapshot((current) => replaceExerciseInSnapshot(current, prescriptionId, exercise));
   }
 
   function addSet(prescriptionId: string) {

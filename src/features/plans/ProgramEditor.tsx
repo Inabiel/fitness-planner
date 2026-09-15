@@ -75,36 +75,28 @@ export function ProgramEditor({ data }: { data: AuthenticatedPlannerData }) {
     };
   }
 
-  async function submit(event: FormEvent) {
-    event.preventDefault();
+  async function saveAndNavigate(destination: (program: WorkoutProgram) => string, failureMessage: string) {
     const program = buildProgram();
     if (!program) return;
-
     setSaving(true);
     setError('');
     try {
       await saveProgramRecord(program);
-      navigate(`/programs/${program.id}`);
+      navigate(destination(program));
     } catch {
-      setError('The program could not be saved. Your draft is still here—try again.');
+      setError(failureMessage);
     } finally {
       setSaving(false);
     }
   }
 
-  async function createPlanHere() {
-    const program = buildProgram();
-    if (!program) return;
-    setSaving(true);
-    setError('');
-    try {
-      await saveProgramRecord(program);
-      navigate(`/plans/new?programId=${program.id}`);
-    } catch {
-      setError('The program could not be saved before creating a plan. Try again.');
-    } finally {
-      setSaving(false);
-    }
+  function submit(event: FormEvent) {
+    event.preventDefault();
+    void saveAndNavigate((program) => `/programs/${program.id}`, 'The program could not be saved. Your draft is still here—try again.');
+  }
+
+  function createPlanHere() {
+    void saveAndNavigate((program) => `/plans/new?programId=${program.id}`, 'The program could not be saved before creating a plan. Try again.');
   }
 
   return (

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
+import { useCallback, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
 import { Check, Download, Info, Trash2, Upload, UserRound } from 'lucide-react';
 import {
   ACTIVITY_LABELS,
@@ -29,20 +29,6 @@ export function ProfileSettings({ profile }: { profile: Profile }) {
   const importInputRef = useRef<HTMLInputElement>(null);
   const estimate = isCompleteProfileForm(form) ? calculateEstimates(formToCalculationProfile(form)) : null;
   const dismissSnackbar = useCallback(() => setSnackbar(null), []);
-
-  useEffect(() => {
-    if (!deleteModalOpen && !pendingImport) return;
-
-    function closeOnEscape(event: KeyboardEvent) {
-      if (event.key !== 'Escape' || deleting || importing) return;
-      setDeleteModalOpen(false);
-      setPendingImport(null);
-      setImportError('');
-    }
-
-    window.addEventListener('keydown', closeOnEscape);
-    return () => window.removeEventListener('keydown', closeOnEscape);
-  }, [deleteModalOpen, deleting, importing, pendingImport]);
 
   async function save(event: FormEvent) {
     event.preventDefault();

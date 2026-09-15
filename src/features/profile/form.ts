@@ -1,4 +1,4 @@
-import { positiveInteger, positiveNumber } from '../../shared/validation';
+import { positiveInteger } from '../../shared/validation';
 import type { ActivityLevel, Experience, Goal, Profile, Sex } from '../../domain';
 
 export interface ProfileForm {
@@ -83,7 +83,6 @@ export function formToCalculationProfile(form: CompleteProfileForm): Omit<Profil
   };
 }
 
-export { positiveInteger, positiveNumber };
 
 function withinRange(value: string, min: number, max: number): boolean {
   const number = Number(value);

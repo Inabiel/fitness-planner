@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
-import { ArrowLeft, Calculator, Dumbbell, Info, LayoutDashboard, ListOrdered, Settings2, TrendingUp, X } from 'lucide-react';
+import { ArrowLeft, Calculator, Dumbbell, Info, LayoutDashboard, ListOrdered, Menu, Settings2, TrendingUp, X } from 'lucide-react';
 import { Link, NavLink, Outlet } from 'react-router';
 import { AREA_LABELS, GOAL_LABELS, type Area, type Profile } from '../domain';
 
@@ -57,16 +57,12 @@ export function AppShell({ profile }: { profile: Profile }) {
       <main className="main-content">
         <header className="mobile-header">
           <Link to="/" className="brand"><span className="brand-mark">F</span><span>fitnessPal</span></Link>
-          <button className="icon-button" onClick={() => setMenuOpen(true)} aria-label="Open navigation" aria-expanded={menuOpen} aria-controls="primary-navigation"><MenuIcon /></button>
+          <button className="icon-button" onClick={() => setMenuOpen(true)} aria-label="Open navigation" aria-expanded={menuOpen} aria-controls="primary-navigation"><Menu size={20} /></button>
         </header>
         <div className="content-wrap"><Outlet /></div>
       </main>
     </div>
   );
-}
-
-function MenuIcon() {
-  return <span className="menu-icon"><span /><span /><span /></span>;
 }
 
 function NavItem({ to, icon, label, onClick }: { to: string; icon: ReactNode; label: string; onClick: () => void }) {
